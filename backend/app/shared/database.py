@@ -41,28 +41,31 @@ async def init_db():
     """Crear todas las tablas y aplicar migraciones incrementales."""
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
-        # Incremental migrations: add new columns without dropping existing data
-        migrations = [
-            "ALTER TABLE agent_profiles ADD COLUMN scientific_format VARCHAR(32) NOT NULL DEFAULT 'apa'",
-            "ALTER TABLE agent_profiles ADD COLUMN output_language VARCHAR(8) NOT NULL DEFAULT 'es'",
-            "ALTER TABLE agent_profiles ADD COLUMN target_word_count INTEGER NOT NULL DEFAULT 0",
-            "ALTER TABLE notifications ADD COLUMN article_id CHAR(32) REFERENCES articles(id) ON DELETE CASCADE",
-            "ALTER TABLE articles ADD COLUMN project_id CHAR(32) REFERENCES projects(id) ON DELETE CASCADE",
-            "ALTER TABLE saved_flows ADD COLUMN project_id CHAR(32) REFERENCES projects(id) ON DELETE CASCADE",
-            "ALTER TABLE users ADD COLUMN assigned_project_id CHAR(32) REFERENCES projects(id) ON DELETE SET NULL",
-            """CREATE TABLE IF NOT EXISTS user_project_access (
-                id CHAR(32) PRIMARY KEY,
-                user_id CHAR(32) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-                project_id CHAR(32) NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
-                created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                UNIQUE(user_id, project_id)
-            )""",
-        ]
-        for sql in migrations:
-            try:
+    
+    # Incremental migrations: add new columns without dropping existing data
+    # Each migration runs in its own transaction to prevent transaction abort
+    migrations = [
+        "ALTER TABLE agent_profiles ADD COLUMN scientific_format VARCHAR(32) NOT NULL DEFAULT 'apa'",
+        "ALTER TABLE agent_profiles ADD COLUMN output_language VARCHAR(8) NOT NULL DEFAULT 'es'",
+        "ALTER TABLE agent_profiles ADD COLUMN target_word_count INTEGER NOT NULL DEFAULT 0",
+        "ALTER TABLE notifications ADD COLUMN article_id CHAR(32) REFERENCES articles(id) ON DELETE CASCADE",
+        "ALTER TABLE articles ADD COLUMN project_id CHAR(32) REFERENCES projects(id) ON DELETE CASCADE",
+        "ALTER TABLE saved_flows ADD COLUMN project_id CHAR(32) REFERENCES projects(id) ON DELETE CASCADE",
+        "ALTER TABLE users ADD COLUMN assigned_project_id CHAR(32) REFERENCES projects(id) ON DELETE SET NULL",
+        """CREATE TABLE IF NOT EXISTS user_project_access (
+            id CHAR(32) PRIMARY KEY,
+            user_id CHAR(32) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            project_id CHAR(32) NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+            created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(user_id, project_id)
+        )""",
+    ]
+    for sql in migrations:
+        try:
+            async with engine.begin() as conn:
                 await conn.execute(text(sql))
-            except Exception:
-                pass  # Column already exists
+        except Exception as e:
+            pass  # Column already exists or migration not applicable
 
 
 async def close_db():
