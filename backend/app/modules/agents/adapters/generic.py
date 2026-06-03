@@ -1,0 +1,188 @@
+"""Generic agent runner: executes custom agents defined via .agent.md profiles."""
+import logging
+from pathlib import Path
+from typing import Dict, Any, Optional
+
+import yaml
+
+from app.modules.agents.adapters.rag import fetch_agent_context
+from app.shared.llm import call_llm, call_llm_with_tools, get_default_model
+
+logger = logging.getLogger(__name__)
+
+_AGENTS_DIRS = [Path("app/agents"), Path("../app/agents")]
+
+_DEFAULT_TEMPLATE = (
+    "You are a specialized AI assistant called {agent_name}.\n\n"
+    "Article title: {title}\n"
+    "Keywords: {keywords}\n\n"
+    "{context_section}"
+    "Task: Process the article content and produce a useful output.\n\n"
+    "Respond concisely and in the same language as the title."
+)
+
+
+def _find_agents_dir() -> Optional[Path]:
+    for p in _AGENTS_DIRS:
+        if p.exists() and p.is_dir():
+            return p
+    return None
+
+
+def load_agent_profile(agent_name: str) -> Optional[Dict[str, Any]]:
+    """Read and parse the .agent.md file for the given agent name. Returns None if not found."""
+    agents_dir = _find_agents_dir()
+    if not agents_dir:
+        return None
+
+    filepath = agents_dir / f"{agent_name}.agent.md"
+    if not filepath.exists():
+        return None
+
+    try:
+        raw = filepath.read_text(encoding="utf-8")
+        frontmatter: Dict[str, Any] = {}
+        body = raw
+
+        if raw.startswith("---"):
+            parts = raw.split("---", 2)
+            if len(parts) >= 3:
+                try:
+                    frontmatter = yaml.safe_load(parts[1]) or {}
+                except Exception:
+                    pass
+                body = parts[2]
+
+        return {
+            "name": agent_name,
+            "model": frontmatter.get("model") or "llama3.2:1b",
+            "temperature": frontmatter.get("temperature", 0.7),
+            "prompt_template": frontmatter.get("prompt_template", "").strip(),
+            "rag_enabled": frontmatter.get("rag_enabled", False),
+            "rag_collection": frontmatter.get("rag_collection", "rag_docs"),
+            "tools_enabled": frontmatter.get("tools_enabled", False),
+            "tools": frontmatter.get("tools") or [],
+            "body": body.strip(),
+        }
+    except Exception as e:
+        logger.warning(f"Could not load profile for agent '{agent_name}': {e}")
+        return None
+
+
+def _render_template(template: str, agent_name: str, state: Dict[str, Any], rag_context: str) -> str:
+    """Substitute template variables with values from AgentState."""
+    context_section = f"### Context from knowledge base:\n{rag_context}\n\n" if rag_context else ""
+
+    variables = {
+        "agent_name": agent_name,
+        "title": state.get("title", ""),
+        "keywords": ", ".join(state.get("keywords") or []),
+        "research_data": state.get("research_data", ""),
+        "draft_text": state.get("draft_text", ""),
+        "feedback": "\n".join(f"- {f}" for f in (state.get("feedback") or [])),
+        "scientific_format": state.get("scientific_format", "apa"),
+        "context": rag_context,
+        "context_section": context_section,
+    }
+
+    try:
+        return template.format(**variables)
+    except KeyError as e:
+        logger.warning(f"Unknown template variable {e} in agent '{agent_name}' — using as-is")
+        return template
+
+
+async def run_generic_agent(agent_name: str, state: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Execute a custom agent by loading its .agent.md profile, rendering its
+    prompt_template with the current state, calling Ollama, and returning
+    the result under the 'agent_output' key.
+
+    Also injects RAG context if rag_enabled is set in the profile.
+    """
+    from app.core.config import settings  # imported here to avoid circular imports
+
+    profile = load_agent_profile(agent_name)
+    log = state.get("_log") or (lambda msg, level="info": None)
+
+    if not profile:
+        logger.warning(f"No profile found for '{agent_name}', running with defaults")
+        profile = {
+            "name": agent_name,
+            "model": get_default_model(),
+            "temperature": 0.7,
+            "prompt_template": "",
+            "rag_enabled": False,
+            "rag_collection": settings.QDRANT_COLLECTION,
+            "body": "",
+        }
+
+    # Fetch RAG context if enabled
+    rag_context = ""
+    if profile["rag_enabled"]:
+        log(f"🔎 Buscando contexto RAG en colección '{profile['rag_collection']}'...")
+        rag_context = await fetch_agent_context(
+            qdrant_url=settings.QDRANT_URL,
+            collection=profile["rag_collection"],
+            agent_name=agent_name,
+            api_key=settings.QDRANT_API_KEY,
+        )
+        if rag_context:
+            log(f"✅ RAG: {len(rag_context.split())} palabras de contexto encontradas.")
+        else:
+            log("ℹ️ RAG no devolvió contexto para este agente.")
+
+    # Build the prompt
+    template = profile["prompt_template"] or _DEFAULT_TEMPLATE
+    prompt = _render_template(template, agent_name, state, rag_context)
+
+    model = profile["model"] or get_default_model()
+    output_text = ""
+    log(f"🤖 Modelo: {model}")
+
+    # ── Tool calling path ────────────────────────────────────────────────────
+    tools_enabled = profile.get("tools_enabled", False)
+    tool_names: list = profile.get("tools") or []
+
+    if tools_enabled and tool_names:
+        from app.modules.agents.adapters.tools import get_tool_schemas, execute_tool
+        tool_schemas = get_tool_schemas(tool_names)
+        log(f"🔧 Tool calling habilitado: {', '.join(tool_names)}")
+
+        async def _logged_tool_executor(name: str, args: dict) -> str:
+            arg_summary = ", ".join(f"{k}={str(v)[:60]!r}" for k, v in args.items())
+            log(f"  🔧 Herramienta: {name}({arg_summary})")
+            result = await execute_tool(name, args)
+            preview = result[:120].replace("\n", " ")
+            log(f"  ↳ {preview}{'…' if len(result) > 120 else ''}")
+            return result
+
+        try:
+            output_text = await call_llm_with_tools(
+                system_prompt=(
+                    f"Eres un agente especializado llamado {agent_name}. "
+                    "Usa las herramientas disponibles cuando sea necesario para completar tu tarea."
+                ),
+                user_prompt=prompt,
+                tool_schemas=tool_schemas,
+                tool_executor=_logged_tool_executor,
+                model=model,
+                timeout=300.0,
+            )
+            log(f"✅ Resultado generado con tool calling ({len(output_text.split())} palabras).")
+        except Exception as e:
+            logger.error(f"Tool-calling LLM failed for agent '{agent_name}': {e}")
+            log(f"⚠️ Error en tool calling: {e}", "error")
+            output_text = f"[{agent_name}] Error: {str(e)}"
+    else:
+        # ── Standard (no tools) path ─────────────────────────────────────────
+        log("⏳ Generando respuesta...")
+        try:
+            output_text = await call_llm(prompt, model=model, timeout=300.0)
+            log(f"✅ Respuesta generada ({len(output_text.split())} palabras).")
+        except Exception as e:
+            logger.error(f"LLM call failed for agent '{agent_name}': {e}")
+            log(f"⚠️ Error al llamar al LLM: {e}", "error")
+            output_text = f"[{agent_name}] Error: {str(e)}"
+
+    return {"agent_output": output_text}

@@ -1,0 +1,173 @@
+import os
+from pathlib import Path
+from typing import Any, Optional
+
+import yaml
+from pydantic import BaseModel
+
+
+class Settings(BaseModel):
+    """Configuracion global de la aplicacion."""
+
+    # Core
+    APP_NAME: str = "Alejandria Magazine"
+    VERSION: str = "0.1.0"
+    DEBUG: bool = False
+
+    # Database
+    DATABASE_URL: str = "postgresql+asyncpg://postgres:password@localhost:5432/alejandria"
+
+    # Security
+    SECRET_KEY: str = ""
+    ALGORITHM: str = "HS256"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
+    REFRESH_TOKEN_EXPIRE_DAYS: int = 7
+
+    # Access controls — MUST be False in production
+    ENABLE_DEV_ROLE_PROMOTION: bool = False
+
+    # Redis
+    REDIS_URL: str = "redis://:password@localhost:6379/0"
+
+    # Ollama
+    OLLAMA_BASE_URL: str = "http://localhost:11434"
+    OLLAMA_MODEL: str = "llama3.2:1b"
+    OLLAMA_EMBED_MODEL: str = "nomic-embed-text"
+
+    # Qdrant
+    QDRANT_URL: str = "http://localhost:6333"
+    QDRANT_API_KEY: Optional[str] = None
+    QDRANT_COLLECTION: str = "rag_docs"
+    RAG_VECTOR_SIZE: int = 768
+
+    # LLM Provider — "ollama" (default, on-prem) | "openai" (OpenAI-compatible API)
+    LLM_PROVIDER: str = "ollama"
+
+    # OpenAI / OpenAI-compatible (Azure, vLLM, Groq, etc.)
+    OPENAI_API_KEY: str = ""
+    OPENAI_MODEL: str = "gpt-4o-mini"
+    OPENAI_EMBED_MODEL: str = "text-embedding-3-small"
+    # Override to use Azure OpenAI, vLLM compat layer, Groq, etc.
+    # Leave empty to use the official OpenAI endpoint.
+    OPENAI_BASE_URL: Optional[str] = None
+
+    # Investigador scraper
+    SCRAPER_SEMANTIC_RERANK: bool = True
+
+    # RAG global defaults
+    RAG_CHUNK_SIZE: int = 800
+    RAG_CHUNK_OVERLAP: int = 80
+    RAG_TOP_K: int = 6
+    RAG_SCORE_THRESHOLD: float = 0.0
+
+    # MinIO
+    MINIO_URL: str = "http://localhost:9000"
+    MINIO_ROOT_USER: str = "minioadmin"
+    MINIO_ROOT_PASSWORD: str = "minioadmin"
+
+
+def _to_bool(value: str) -> bool:
+    return value.strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _read_yaml_config() -> dict[str, Any]:
+    configured = os.getenv("CONFIG_YAML_PATH", "").strip()
+    candidates = []
+    if configured:
+        candidates.append(Path(configured))
+    candidates.extend(
+        [
+            Path("config.yaml"),
+            Path("../config.yaml"),
+            Path("../../config.yaml"),
+        ]
+    )
+
+    for candidate in candidates:
+        if candidate.exists():
+            with candidate.open("r", encoding="utf-8") as file:
+                return yaml.safe_load(file) or {}
+    return {}
+
+
+def _build_settings() -> Settings:
+    yaml_config = _read_yaml_config()
+
+    app = yaml_config.get("app", {})
+    security = yaml_config.get("security", {})
+    access = yaml_config.get("access_control", {})
+    database = yaml_config.get("database", {})
+    redis = yaml_config.get("redis", {})
+    ollama = yaml_config.get("ollama", {})
+    qdrant = yaml_config.get("qdrant", {})
+    minio = yaml_config.get("minio", {})
+
+    merged: dict[str, Any] = {
+        "APP_NAME": app.get("name", "Alejandria Magazine"),
+        "VERSION": app.get("version", "0.1.0"),
+        "DEBUG": app.get("debug", False),
+        "DATABASE_URL": database.get(
+            "url", "postgresql+asyncpg://postgres:password@localhost:5432/alejandria"
+        ),
+        "SECRET_KEY": security.get("secret_key", "your-secret-key-change-in-production"),
+        "ALGORITHM": security.get("algorithm", "HS256"),
+        "ACCESS_TOKEN_EXPIRE_MINUTES": security.get("access_token_expire_minutes", 30),
+        "REFRESH_TOKEN_EXPIRE_DAYS": security.get("refresh_token_expire_days", 7),
+        "ENABLE_DEV_ROLE_PROMOTION": access.get("enable_dev_role_promotion", True),
+        "REDIS_URL": redis.get("url", "redis://:password@localhost:6379/0"),
+        "OLLAMA_BASE_URL": ollama.get("base_url", "http://localhost:11434"),
+        "OLLAMA_MODEL": ollama.get("default_model", "llama3.2:1b"),
+        "OLLAMA_EMBED_MODEL": ollama.get("embed_model", "nomic-embed-text"),
+        "QDRANT_URL": qdrant.get("url", "http://localhost:6333"),
+        "QDRANT_API_KEY": qdrant.get("api_key"),
+        "QDRANT_COLLECTION": qdrant.get("collection", "rag_docs"),
+        "RAG_VECTOR_SIZE": qdrant.get("vector_size", 768),
+        "MINIO_URL": minio.get("url", "http://localhost:9000"),
+        "MINIO_ROOT_USER": minio.get("root_user", "minioadmin"),
+        "MINIO_ROOT_PASSWORD": minio.get("root_password", "minioadmin"),
+        # LLM provider
+        "LLM_PROVIDER": yaml_config.get("llm", {}).get("provider", "ollama"),
+        "OPENAI_API_KEY": yaml_config.get("openai", {}).get("api_key", ""),
+        "OPENAI_MODEL": yaml_config.get("openai", {}).get("model", "gpt-4o-mini"),
+        "OPENAI_EMBED_MODEL": yaml_config.get("openai", {}).get("embed_model", "text-embedding-3-small"),
+        "OPENAI_BASE_URL": yaml_config.get("openai", {}).get("base_url") or None,
+        # Investigador scraper — reads from agents.investigador first, then legacy investigador key
+        "SCRAPER_SEMANTIC_RERANK": (
+            yaml_config.get("agents", {}).get("investigador", {}).get("semantic_rerank")
+            if yaml_config.get("agents", {}).get("investigador", {}).get("semantic_rerank") is not None
+            else yaml_config.get("investigador", {}).get("semantic_rerank", True)
+        ),
+        # RAG global defaults
+        "RAG_CHUNK_SIZE": yaml_config.get("rag", {}).get("chunk_size", 800),
+        "RAG_CHUNK_OVERLAP": yaml_config.get("rag", {}).get("chunk_overlap", 80),
+        "RAG_TOP_K": yaml_config.get("rag", {}).get("top_k", 6),
+        "RAG_SCORE_THRESHOLD": yaml_config.get("rag", {}).get("score_threshold", 0.0),
+    }
+
+    # Environment variables override config.yaml
+    for key in list(merged.keys()):
+        env_value = os.getenv(key)
+        if env_value is None:
+            continue
+        if isinstance(merged[key], bool):
+            merged[key] = _to_bool(env_value)
+        elif isinstance(merged[key], int):
+            merged[key] = int(env_value)
+        else:
+            merged[key] = env_value
+
+    return Settings(**merged)
+
+
+def _validate_settings(s: Settings) -> None:
+    """Fail fast on insecure production configurations."""
+    insecure_defaults = {"", "your-secret-key-change-in-production", "local-dev-secret", "local-dev-secret-key-not-for-production"}
+    if not s.DEBUG and s.SECRET_KEY in insecure_defaults:
+        raise ValueError(
+            "SECRET_KEY must be set to a strong random value in production. "
+            "Generate one with: python -c \"import secrets; print(secrets.token_hex(32))\""
+        )
+
+
+settings = _build_settings()
+_validate_settings(settings)

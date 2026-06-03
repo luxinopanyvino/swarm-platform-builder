@@ -1,0 +1,58 @@
+app:
+  name: Alejandria Magazine
+  version: 0.1.0
+  debug: false
+llm:
+  provider: ollama
+ollama:
+  base_url: http://localhost:11434
+  default_model: mistral:7b
+  embed_model: nomic-embed-text
+openai:
+  api_key: ''
+  model: gpt-4o-mini
+  embed_model: text-embedding-3-small
+  base_url: null
+database:
+  url: sqlite+aiosqlite:///./dev.db
+security:
+  secret_key: CAMBIA-ESTO-EN-PRODUCCION-usa-openssl-rand-hex-32
+  algorithm: HS256
+  access_token_expire_minutes: 30
+  refresh_token_expire_days: 7
+access_control:
+  enable_dev_role_promotion: true
+qdrant:
+  url: http://localhost:6333
+  api_key: null
+  collection: rag_docs
+  vector_size: 768
+rag:
+  chunk_size: 800
+  chunk_overlap: 80
+  top_k: 6
+  score_threshold: 0.5
+agents:
+  investigador:
+    model: null
+    temperature: 0.3
+    rag_enabled: true
+    rag_collection: rag_docs
+    rag_top_k: 6
+    rag_chunk_size: 800
+    semantic_rerank: true
+  redactor:
+    model: llama3.2:3b
+    temperature: 0.7
+    rag_enabled: false
+  revisor:
+    model: llama3.2:3b
+    temperature: 0.2
+    rag_enabled: false
+  formateador:
+    model: llama3.2:1b
+    temperature: 0.4
+    rag_enabled: false
+  publicador:
+    model: llama3.2:1b
+    rag_enabled: false

@@ -1,0 +1,458 @@
+"""Articles router: CRUD and workflow for articles."""
+from uuid import UUID
+
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from sqlalchemy.orm import joinedload
+from app.models import (
+    ArticleModel, ArticleStatus, CreateArticleDTO, UpdateArticleDTO,
+    ArticleResponse, ArticleListResponse, UserModel, NotificationModel, UserRole
+)
+from app.database import get_session
+from app.routers.auth import get_current_user
+from pydantic import BaseModel
+
+
+router = APIRouter(prefix="/api/v1/articles", tags=["articles"])
+
+
+@router.get("", response_model=ArticleListResponse)
+async def list_articles(
+    status: ArticleStatus | None = None,
+    project_id: UUID | None = None,
+    skip: int = 0,
+    limit: int = 100,
+    token_data=Depends(get_current_user),
+    session: AsyncSession = Depends(get_session)
+):
+    """List articles.
+
+    - admin   → all articles (optionally filtered by project)
+    - redactor → all articles (optionally filtered by project)
+    - lector  → published articles only (read-only)
+    - publico → 403 (use public magazine endpoint instead)
+    """
+    role = token_data.get("role", "redactor")
+    if role == UserRole.PUBLICO:
+        raise HTTPException(status_code=403, detail="Acceso no permitido")
+
+    stmt = select(ArticleModel)
+    if role == UserRole.LECTOR:
+        stmt = stmt.where(ArticleModel.status == ArticleStatus.PUBLISHED)
+    # admin and redactor see all articles
+
+    if status and role != UserRole.LECTOR:
+        stmt = stmt.where(ArticleModel.status == status)
+
+    if project_id is not None:
+        stmt = stmt.where(ArticleModel.project_id == project_id)
+
+    count_stmt = stmt
+    stmt = stmt.options(joinedload(ArticleModel.author)).offset(skip).limit(limit)
+    result = await session.execute(stmt)
+    items = result.unique().scalars().all()
+
+    count_result = await session.execute(count_stmt)
+    total = len(count_result.scalars().all())
+
+    def _to_response(item: ArticleModel) -> ArticleResponse:
+        r = ArticleResponse.model_validate(item)
+        r.author_name = item.author.full_name if item.author else None
+        return r
+
+    return ArticleListResponse(
+        items=[_to_response(item) for item in items],
+        total=total,
+        page=skip // limit + 1,
+        size=limit,
+        pages=(total + limit - 1) // limit
+    )
+
+
+@router.post("", response_model=ArticleResponse, status_code=201)
+async def create_article(
+    req: CreateArticleDTO,
+    token_data=Depends(get_current_user),
+    session: AsyncSession = Depends(get_session)
+):
+    """Create a new article (admin and redactor only)."""
+    role = token_data.get("role", "redactor")
+    if role not in (UserRole.ADMIN, UserRole.REDACTOR):
+        raise HTTPException(status_code=403, detail="Sin permisos para crear artículos")
+
+    article = ArticleModel(
+        title=req.title,
+        body=req.body,
+        author_id=UUID(token_data["user_id"]),
+        project_id=req.project_id,
+    )
+    session.add(article)
+    await session.commit()
+    await session.refresh(article)
+    
+    return ArticleResponse.model_validate(article)
+
+
+@router.get("/{article_id}", response_model=ArticleResponse)
+async def get_article(
+    article_id: UUID,
+    token_data=Depends(get_current_user),
+    session: AsyncSession = Depends(get_session)
+):
+    """Get an article by ID. Unpublished articles are only visible to admins and their author."""
+    stmt = select(ArticleModel).where(ArticleModel.id == article_id)
+    result = await session.execute(stmt)
+    article = result.scalars().first()
+
+    if not article:
+        raise HTTPException(status_code=404, detail="Article not found")
+
+    role = token_data.get("role", "redactor")
+    user_id = token_data.get("user_id")
+    is_admin = role == UserRole.ADMIN
+    is_redactor = role == UserRole.REDACTOR
+    is_owner = str(article.author_id) == user_id
+    is_published = article.status == ArticleStatus.PUBLISHED
+    is_assigned_reviewer = article.reviewer_id and str(article.reviewer_id) == user_id
+
+    # admins and redactors (internal users) can view any article
+    # lectors can view published articles or articles where they are the assigned reviewer
+    if not is_admin and not is_redactor and not is_owner and not is_published and not is_assigned_reviewer:
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    return ArticleResponse.model_validate(article)
+
+
+@router.put("/{article_id}", response_model=ArticleResponse)
+async def update_article(
+    article_id: UUID,
+    req: UpdateArticleDTO,
+    token_data=Depends(get_current_user),
+    session: AsyncSession = Depends(get_session)
+):
+    """Update an article (admin or owner redactor only)."""
+    role = token_data.get("role", "redactor")
+    if role not in (UserRole.ADMIN, UserRole.REDACTOR):
+        raise HTTPException(status_code=403, detail="Sin permisos para editar artículos")
+
+    stmt = select(ArticleModel).where(ArticleModel.id == article_id)
+    result = await session.execute(stmt)
+    article = result.scalars().first()
+    
+    if not article:
+        raise HTTPException(status_code=404, detail="Article not found")
+    
+    if role != UserRole.ADMIN and str(article.author_id) != token_data["user_id"]:
+        raise HTTPException(status_code=403, detail="Forbidden")
+    
+    if req.title is not None:
+        article.title = req.title
+    if req.body is not None:
+        article.body = req.body
+    if req.scientific_format is not None:
+        article.scientific_format = req.scientific_format
+    
+    session.add(article)
+    await session.commit()
+    await session.refresh(article)
+    
+    return ArticleResponse.model_validate(article)
+
+
+@router.post("/{article_id}/submit", response_model=ArticleResponse)
+async def submit_for_review(
+    article_id: UUID,
+    token_data=Depends(get_current_user),
+    session: AsyncSession = Depends(get_session)
+):
+    """Submit article for review (draft â†’ in_review)."""
+    stmt = select(ArticleModel).where(ArticleModel.id == article_id)
+    result = await session.execute(stmt)
+    article = result.scalars().first()
+    
+    if not article:
+        raise HTTPException(status_code=404, detail="Article not found")
+    
+    if str(article.author_id) != token_data["user_id"]:
+        raise HTTPException(status_code=403, detail="Forbidden")
+    
+    if article.status != ArticleStatus.DRAFT:
+        raise HTTPException(status_code=409, detail="Article not in draft status")
+    
+    article.status = ArticleStatus.IN_REVIEW
+    session.add(article)
+    await session.commit()
+    await session.refresh(article)
+    
+    return ArticleResponse.model_validate(article)
+
+
+@router.post("/{article_id}/approve", response_model=ArticleResponse)
+async def approve_article(
+    article_id: UUID,
+    token_data=Depends(get_current_user),
+    session: AsyncSession = Depends(get_session)
+):
+    """Approve article (in_review → published). Admin, redactor, or the assigned reviewer."""
+    role = token_data.get("role", "redactor")
+    current_user_id = UUID(token_data["user_id"])
+
+    stmt = select(ArticleModel).where(ArticleModel.id == article_id)
+    result = await session.execute(stmt)
+    article = result.scalars().first()
+
+    if not article:
+        raise HTTPException(status_code=404, detail="Article not found")
+
+    is_assigned_reviewer = article.reviewer_id == current_user_id
+    if role != UserRole.ADMIN and not is_assigned_reviewer:
+        raise HTTPException(status_code=403, detail="Solo el administrador o el revisor asignado puede aprobar artículos")
+
+    if article.status != ArticleStatus.IN_REVIEW:
+        raise HTTPException(status_code=409, detail="Article not under review")
+    
+    article.status = ArticleStatus.PUBLISHED
+    article.reviewer_id = UUID(token_data["user_id"])
+    article.published_at = __import__("datetime").datetime.utcnow()
+    
+    session.add(article)
+
+    # Mark the reviewer's assignment notification as read
+    notif_stmt = select(NotificationModel).where(
+        NotificationModel.article_id == article_id,
+        NotificationModel.user_id == UUID(token_data["user_id"]),
+        NotificationModel.read == False  # noqa: E712
+    )
+    notif_res = await session.execute(notif_stmt)
+    for n in notif_res.scalars().all():
+        n.read = True
+        session.add(n)
+
+    # Notify the author
+    notification = NotificationModel(
+        user_id=article.author_id,
+        article_id=article.id,
+        title="Artículo aprobado y publicado",
+        message=f"Tu artículo '{article.title}' ha sido aprobado y publicado."
+    )
+    session.add(notification)
+
+    await session.commit()
+    await session.refresh(article)
+    
+    return ArticleResponse.model_validate(article)
+
+
+@router.post("/{article_id}/publish", response_model=ArticleResponse)
+async def publish_article_direct(
+    article_id: UUID,
+    token_data=Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+):
+    """Publish a draft article directly (draft → published). Admin or redactor only."""
+    role = token_data.get("role", "author")
+    if role not in (UserRole.ADMIN, UserRole.REDACTOR):
+        raise HTTPException(status_code=403, detail="Solo administradores y redactores pueden publicar directamente")
+
+    stmt = select(ArticleModel).where(ArticleModel.id == article_id)
+    result = await session.execute(stmt)
+    article = result.scalars().first()
+
+    if not article:
+        raise HTTPException(status_code=404, detail="Article not found")
+
+    if article.status == ArticleStatus.PUBLISHED:
+        raise HTTPException(status_code=409, detail="El artículo ya está publicado")
+
+    article.status = ArticleStatus.PUBLISHED
+    article.published_at = __import__("datetime").datetime.utcnow()
+    session.add(article)
+
+    # Notify the author if different from the publisher
+    if article.author_id != UUID(token_data["user_id"]):
+        notification = NotificationModel(
+            user_id=article.author_id,
+            article_id=article.id,
+            title="Artículo publicado",
+            message=f"Tu artículo '{article.title}' ha sido publicado.",
+        )
+        session.add(notification)
+
+    await session.commit()
+    await session.refresh(article)
+    return ArticleResponse.model_validate(article)
+
+
+@router.post("/{article_id}/reject", response_model=ArticleResponse)
+async def reject_article(
+    article_id: UUID,
+    comment: str,
+    token_data=Depends(get_current_user),
+    session: AsyncSession = Depends(get_session)
+):
+    """Reject article (in_review → draft). Admin, redactor, or the assigned reviewer."""
+    role = token_data.get("role", "redactor")
+    current_user_id = UUID(token_data["user_id"])
+
+    stmt = select(ArticleModel).where(ArticleModel.id == article_id)
+    result = await session.execute(stmt)
+    article = result.scalars().first()
+
+    if not article:
+        raise HTTPException(status_code=404, detail="Article not found")
+
+    is_assigned_reviewer = article.reviewer_id == current_user_id
+    if role != UserRole.ADMIN and not is_assigned_reviewer:
+        raise HTTPException(status_code=403, detail="Solo el administrador o el revisor asignado puede rechazar artículos")
+
+    if article.status != ArticleStatus.IN_REVIEW:
+        raise HTTPException(status_code=409, detail="Article not under review")
+    
+    article.status = ArticleStatus.REJECTED
+    article.rejection_comment = comment
+    article.reviewer_id = UUID(token_data["user_id"])
+    
+    session.add(article)
+
+    # Mark the reviewer's assignment notification as read
+    notif_stmt = select(NotificationModel).where(
+        NotificationModel.article_id == article_id,
+        NotificationModel.user_id == UUID(token_data["user_id"]),
+        NotificationModel.read == False  # noqa: E712
+    )
+    notif_res = await session.execute(notif_stmt)
+    for n in notif_res.scalars().all():
+        n.read = True
+        session.add(n)
+
+    # Notify the author
+    notification = NotificationModel(
+        user_id=article.author_id,
+        article_id=article.id,
+        title="Artículo rechazado",
+        message=f"Tu artículo '{article.title}' ha sido rechazado. Comentario: {comment}"
+    )
+    session.add(notification)
+
+    await session.commit()
+    await session.refresh(article)
+    
+    return ArticleResponse.model_validate(article)
+
+
+@router.delete("/{article_id}", status_code=204)
+async def delete_article(
+    article_id: UUID,
+    token_data=Depends(get_current_user),
+    session: AsyncSession = Depends(get_session)
+):
+    """Delete an article (author only)."""
+    stmt = select(ArticleModel).where(ArticleModel.id == article_id)
+    result = await session.execute(stmt)
+    article = result.scalars().first()
+
+    if not article:
+        raise HTTPException(status_code=404, detail="Article not found")
+
+    if str(article.author_id) != token_data["user_id"]:
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    await session.delete(article)
+    await session.commit()
+
+
+class AssignReviewerDTO(BaseModel):
+    # Accepts email address or full name (e.g. "Juan García" or "juan@example.com")
+    reviewer_identifier: str
+
+
+@router.post("/{article_id}/assign-reviewer", response_model=ArticleResponse)
+async def assign_reviewer(
+    article_id: UUID,
+    req: AssignReviewerDTO,
+    token_data=Depends(get_current_user),
+    session: AsyncSession = Depends(get_session)
+):
+    """Assign a reviewer to the article and set status to IN_REVIEW.
+
+    ``reviewer_identifier`` can be the reviewer's email address or full name.
+    """
+    stmt = select(ArticleModel).where(ArticleModel.id == article_id)
+    res = await session.execute(stmt)
+    article = res.scalars().first()
+    if not article:
+        raise HTTPException(status_code=404, detail="Article not found")
+
+    if str(article.author_id) != token_data["user_id"]:
+        raise HTTPException(status_code=403, detail="Forbidden: Only the author can assign a reviewer")
+
+    identifier = req.reviewer_identifier.strip()
+
+    # Try email first, then full_name
+    res_user = await session.execute(select(UserModel).where(UserModel.email == identifier))
+    reviewer = res_user.scalars().first()
+    if not reviewer:
+        res_user = await session.execute(select(UserModel).where(UserModel.full_name == identifier))
+        reviewer = res_user.scalars().first()
+    if not reviewer:
+        raise HTTPException(status_code=404, detail="Reviewer not found (tried email and full name)")
+
+    article.reviewer_id = reviewer.id
+    article.status = ArticleStatus.IN_REVIEW
+    session.add(article)
+
+    # Create an in-app notification
+    notification = NotificationModel(
+        user_id=reviewer.id,
+        article_id=article.id,
+        title="Nueva revisión asignada",
+        message=f"Has sido asignado como revisor para el artículo '{article.title}'."
+    )
+    session.add(notification)
+
+    await session.commit()
+    await session.refresh(article)
+    return ArticleResponse.model_validate(article)
+
+
+@router.post("/{article_id}/format-body", response_model=ArticleResponse)
+async def format_article_body(
+    article_id: UUID,
+    token_data=Depends(get_current_user),
+    session: AsyncSession = Depends(get_session)
+):
+    """Run the formateador agent on the article body and save the formatted result.
+
+    Useful after manual plain-text edits to convert prose to markdown with
+    proper citation formatting.
+    """
+    stmt = select(ArticleModel).where(ArticleModel.id == article_id)
+    res = await session.execute(stmt)
+    article = res.scalars().first()
+    if not article:
+        raise HTTPException(status_code=404, detail="Article not found")
+    if str(article.author_id) != token_data["user_id"]:
+        raise HTTPException(status_code=403, detail="Forbidden")
+    if not (article.body or "").strip():
+        raise HTTPException(status_code=422, detail="Article body is empty — nothing to format")
+
+    from app.modules.agents.adapters.formateador import run_formateador
+
+    scientific_format = (article.scientific_format.value if article.scientific_format else None) or "apa"
+    state = {
+        "draft_text": article.body,
+        "scientific_format": scientific_format,
+        "agent_settings": {},
+    }
+    result_state = await run_formateador(state)
+    formatted = result_state.get("formatted_text") or article.body
+    article.body = formatted
+
+    session.add(article)
+    await session.commit()
+    await session.refresh(article)
+    return ArticleResponse.model_validate(article)
+
+
