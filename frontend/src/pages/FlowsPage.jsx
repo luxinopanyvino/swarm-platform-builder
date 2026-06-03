@@ -1,0 +1,107 @@
+import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Zap, Play, Pencil, Trash2, Plus, GitBranch, Clock } from 'lucide-react';
+import { useFlowStore } from '../store/flowStore';
+import { AGENT_META } from '../components/flow/AgentNode';
+import toast from 'react-hot-toast';
+
+export default function FlowsPage() {
+  const navigate = useNavigate();
+  const { flows, fetchFlows, loadFlow, deleteFlow, newFlow, isLoading } = useFlowStore();
+
+  useEffect(() => { fetchFlows(); }, []);
+
+  const handleEdit = async (flow) => {
+    await loadFlow(flow.id);
+    navigate('/dashboard/flow-designer');
+  };
+
+  const handleDelete = async (id) => {
+    if (!confirm('¿Eliminar este flujo?')) return;
+    try {
+      await deleteFlow(id);
+      toast.success('Flujo eliminado');
+    } catch { toast.error('Error al eliminar'); }
+  };
+
+  const handleNew = () => {
+    newFlow();
+    navigate('/dashboard/flow-designer');
+  };
+
+  const hasPublicador = (flow) =>
+    (flow.flow_sequence || []).includes('publicador');
+
+  return (
+    <div className="page-body">
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-6)' }}>
+        <div>
+          <h2 style={{ marginBottom: 4 }}>Flujos</h2>
+          <p style={{ fontSize: 'var(--font-size-sm)' }}>Pipelines guardados</p>
+        </div>
+        <button className="btn btn-primary" onClick={handleNew}>
+          <Plus size={15} /> Nuevo flujo
+        </button>
+      </div>
+
+      {isLoading ? (
+        <div className="empty-state"><div className="spinner spinner-lg" /></div>
+      ) : flows.length === 0 ? (
+        <div className="empty-state">
+          <div className="empty-state-icon"><GitBranch size={28} /></div>
+          <h3>Sin flujos guardados</h3>
+          <p>Crea tu primer pipeline en el Flow Designer.</p>
+          <button className="btn btn-primary" onClick={handleNew}><Plus size={14} /> Crear flujo</button>
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
+          {flows.map(flow => (
+            <div key={flow.id} className="card" style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)', padding: 'var(--space-4) var(--space-5)' }}>
+              <div style={{ width: 40, height: 40, background: 'var(--brand-primary-light)', borderRadius: 'var(--radius-md)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <Zap size={20} style={{ color: 'var(--brand-primary)' }} />
+              </div>
+
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontWeight: 600, fontSize: 'var(--font-size-base)', marginBottom: 4 }}>{flow.name}</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
+                  {(flow.flow_sequence || []).map((agentId, i) => {
+                    const meta = AGENT_META[agentId];
+                    return (
+                      <React.Fragment key={i}>
+                        <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 3 }}>
+                          {meta?.emoji} {meta?.label || agentId}
+                        </span>
+                        {i < flow.flow_sequence.length - 1 && (
+                          <span style={{ color: 'var(--text-muted)', fontSize: 10 }}>→</span>
+                        )}
+                      </React.Fragment>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
+                {hasPublicador(flow)
+                  ? <span className="badge badge-published">Auto-publica</span>
+                  : <span className="badge badge-pending">Revisión manual</span>
+                }
+                <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <Clock size={11} />
+                  {new Date(flow.updated_at || flow.created_at).toLocaleDateString('es-ES')}
+                </div>
+                <div style={{ display: 'flex', gap: 4 }}>
+                  <button className="btn btn-ghost btn-sm btn-icon" title="Editar" onClick={() => handleEdit(flow)}>
+                    <Pencil size={14} />
+                  </button>
+                  <button className="btn btn-ghost btn-sm btn-icon" title="Eliminar" onClick={() => handleDelete(flow.id)}>
+                    <Trash2 size={14} style={{ color: 'var(--status-error)' }} />
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}

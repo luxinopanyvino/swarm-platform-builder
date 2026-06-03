@@ -1,0 +1,74 @@
+@echo off
+setlocal
+
+set "ROOT_DIR=%~dp0"
+set "BACKEND_DIR=%ROOT_DIR%backend"
+set "FRONTEND_DIR=%ROOT_DIR%frontend"
+set "UVICORN_EXE=%BACKEND_DIR%\.venv\Scripts\uvicorn.exe"
+
+if not exist "%UVICORN_EXE%" (
+  echo [error] No se encontro %UVICORN_EXE%
+  echo Crea el entorno virtual con: cd backend ^&^& python -m venv .venv ^&^& .venv\Scripts\pip install -r requirements.txt
+  exit /b 1
+)
+
+if not exist "%FRONTEND_DIR%\package.json" (
+  echo [error] No se encontro el frontend en %FRONTEND_DIR%
+  exit /b 1
+)
+
+:: ── Qdrant (vector DB) ───────────────────────────────────────
+echo.
+echo Verificando Qdrant...
+curl -sf http://localhost:6333/healthz >nul 2>&1
+if not errorlevel 1 (
+  echo [OK] Qdrant ya esta corriendo en http://localhost:6333
+  goto :qdrant_ok
+)
+
+set "QDRANT_EXE=%ROOT_DIR%qdrant\qdrant.exe"
+if not exist "%QDRANT_EXE%" set "QDRANT_EXE=C:\qdrant\qdrant.exe"
+
+if not exist "%QDRANT_EXE%" goto :qdrant_missing
+start "Qdrant" /D "%ROOT_DIR%" /min "%QDRANT_EXE%"
+echo [OK] Qdrant iniciado ^(storage: %ROOT_DIR%storage^)
+echo     Esperando 4s para que arranque...
+ping -n 5 127.0.0.1 >nul
+goto :qdrant_ok
+
+:qdrant_missing
+echo [AVISO] Qdrant no encontrado. La biblioteca vectorial no funcionara.
+echo         Descarga qdrant.exe y ponlo en una de estas rutas:
+echo           - %ROOT_DIR%qdrant\qdrant.exe  ^(recomendado, junto al proyecto^)
+echo           - C:\qdrant\qdrant.exe
+echo         Descarga: https://github.com/qdrant/qdrant/releases
+
+:qdrant_ok
+
+echo Iniciando backend en una nueva ventana...
+set DATABASE_URL=sqlite+aiosqlite:///./dev.db
+set SECRET_KEY=local-dev-secret
+set DEBUG=true
+set ENABLE_DEV_ROLE_PROMOTION=true
+start "Alex Backend" /D "%BACKEND_DIR%" "%UVICORN_EXE%" app.main:app --reload --port 8000
+
+echo Iniciando frontend en una nueva ventana...
+start "Alex Frontend" /D "%FRONTEND_DIR%" npm.cmd run dev
+
+set "DOCS_DIR=%ROOT_DIR%docs"
+if exist "%DOCS_DIR%\package.json" (
+  echo Iniciando docs ^(VitePress^) en una nueva ventana...
+  start "Alex Docs" /D "%DOCS_DIR%" cmd /k "node node_modules\vitepress\bin\vitepress.js dev"
+)
+
+echo.
+echo Qdrant:   http://localhost:6333
+echo Backend:  http://127.0.0.1:8000
+echo Frontend: http://localhost:5173
+if exist "%DOCS_DIR%\package.json" (
+  echo Docs:     http://localhost:5174
+)
+echo.
+echo Si ya habia procesos corriendo en esos puertos, cierra esas ventanas y vuelve a ejecutar este script.
+
+endlocal

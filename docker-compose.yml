@@ -1,0 +1,154 @@
+name: alejandria-magazine
+
+networks:
+  alexandria_network:
+    driver: bridge
+
+services:
+  # ─────────────────────────────────────────
+  # Relational DB
+  # ─────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: alejandria_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: alejandria
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - alexandria_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d alejandria"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ─────────────────────────────────────────
+  # Vector DB (RAG)
+  # ─────────────────────────────────────────
+  qdrant:
+    image: qdrant/qdrant:v1.13.6
+    container_name: alejandria_qdrant
+    restart: unless-stopped
+    ports:
+      - "6333:6333"   # REST + gRPC dashboard
+      - "6334:6334"   # gRPC
+    volumes:
+      - qdrant_data:/qdrant/storage
+    networks:
+      - alexandria_network
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:6333/healthz || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ─────────────────────────────────────────
+  # LLM inference (Ollama)
+  # ─────────────────────────────────────────
+  ollama:
+    image: ollama/ollama:latest
+    container_name: alejandria_ollama
+    restart: unless-stopped
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    networks:
+      - alexandria_network
+    # Pull all required models on first start.
+    # Order: embed model first (small/fast), then generation models largest → smallest.
+    entrypoint: >
+      sh -c "ollama serve &
+             sleep 8 &&
+             ollama pull nomic-embed-text &&
+             ollama pull llama3.2:1b &&
+             ollama pull llama3.2:3b &&
+             ollama pull mistral:7b &&
+             wait"
+    healthcheck:
+      test: ["CMD-SHELL", "ollama list >/dev/null 2>&1 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 300s  # allow time for model downloads on first run
+
+  # ─────────────────────────────────────────
+  # Backend (FastAPI + LangGraph)
+  # ─────────────────────────────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: alejandria_backend
+    restart: unless-stopped
+    environment:
+      # ── Aplicación ──────────────────────────────────────────
+      DEBUG: "false"
+      # ── Base de datos ────────────────────────────────────────
+      DATABASE_URL: "postgresql+asyncpg://postgres:password@postgres:5432/alejandria"
+      # ── Seguridad JWT ────────────────────────────────────────
+      # IMPORTANT: override SECRET_KEY in production with a strong random value
+      # Generate with: openssl rand -hex 32
+      SECRET_KEY: "local-dev-secret-key-change-in-production"
+      # ── Acceso ──────────────────────────────────────────────
+      ENABLE_DEV_ROLE_PROMOTION: "false"
+      # ── Ollama ──────────────────────────────────────────────
+      OLLAMA_BASE_URL: "http://ollama:11434"
+      OLLAMA_MODEL: "mistral:7b"
+      OLLAMA_EMBED_MODEL: "nomic-embed-text"
+      # ── Qdrant ──────────────────────────────────────────────
+      QDRANT_URL: "http://qdrant:6333"
+      QDRANT_COLLECTION: "rag_docs"
+      # ── CORS ────────────────────────────────────────────────
+      ALLOWED_ORIGINS: "http://localhost:8080,http://127.0.0.1:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      qdrant:
+        condition: service_started
+      ollama:
+        condition: service_healthy
+    volumes:
+      # Mount source for hot-reload in dev; remove in production image builds
+      - ./backend:/app
+      - ./config.yaml:/app/config.yaml:ro
+      - rag_local_data:/app/app/.rag_local
+    ports:
+      - "8000:8000"
+    networks:
+      - alexandria_network
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+  # ─────────────────────────────────────────
+  # Frontend (React + Vite → Nginx)
+  # ─────────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        - VITE_API_URL=http://localhost:8000
+    container_name: alejandria_frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "8080:80"
+    networks:
+      - alexandria_network
+
+volumes:
+  postgres_data:
+    driver: local
+  qdrant_data:
+    driver: local
+  ollama_data:
+    driver: local
+  rag_local_data:
+    driver: local

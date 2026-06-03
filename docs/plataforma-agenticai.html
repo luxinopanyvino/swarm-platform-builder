@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AlexandrIA — Plataforma de IA Agéntica</title>
+  <style>
+    :root {
+      --bg: #0d0f14;
+      --surface: #13161e;
+      --elevated: #1a1e28;
+      --border: #252a38;
+      --brand: #6366f1;
+      --brand-light: #818cf8;
+      --accent: #22d3ee;
+      --green: #34d399;
+      --yellow: #fbbf24;
+      --red: #f87171;
+      --text: #e2e8f0;
+      --muted: #64748b;
+      --radius: 12px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.7;
+    }
+
+    /* ── NAV ─────────────────────────────────────────────── */
+    nav {
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(13,15,20,0.92);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 40px;
+      display: flex; align-items: center; gap: 32px;
+    }
+    nav .logo { font-size: 1.2rem; font-weight: 800; color: var(--text); }
+    nav .logo span { color: var(--brand-light); }
+    nav a { color: var(--muted); text-decoration: none; font-size: .875rem; transition: color .2s; }
+    nav a:hover { color: var(--text); }
+
+    /* ── HERO ─────────────────────────────────────────────── */
+    .hero {
+      text-align: center;
+      padding: 100px 40px 80px;
+      background: radial-gradient(ellipse at 50% 0%, rgba(99,102,241,.18) 0%, transparent 70%);
+    }
+    .hero .badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: rgba(99,102,241,.15); border: 1px solid rgba(99,102,241,.35);
+      color: var(--brand-light); font-size: .75rem; font-weight: 600;
+      padding: 4px 12px; border-radius: 20px; margin-bottom: 24px;
+    }
+    .hero h1 { font-size: clamp(2.2rem, 5vw, 3.6rem); font-weight: 800; line-height: 1.15; margin-bottom: 20px; }
+    .hero h1 span { color: var(--brand-light); }
+    .hero p { font-size: 1.1rem; color: var(--muted); max-width: 680px; margin: 0 auto; }
+
+    /* ── LAYOUT ───────────────────────────────────────────── */
+    .container { max-width: 1100px; margin: 0 auto; padding: 0 40px; }
+    section { padding: 80px 0; }
+    section + section { border-top: 1px solid var(--border); }
+
+    h2 {
+      font-size: 1.8rem; font-weight: 700; margin-bottom: 12px;
+      display: flex; align-items: center; gap: 12px;
+    }
+    h2 .icon { font-size: 1.4rem; }
+    .section-lead { color: var(--muted); margin-bottom: 48px; font-size: 1.05rem; }
+
+    /* ── CARDS ───────────────────────────────────────────── */
+    .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; }
+    .card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 24px; transition: border-color .2s, transform .2s;
+    }
+    .card:hover { border-color: var(--brand); transform: translateY(-2px); }
+    .card .card-icon { font-size: 1.8rem; margin-bottom: 14px; }
+    .card h3 { font-size: 1rem; font-weight: 700; margin-bottom: 8px; }
+    .card p { font-size: .875rem; color: var(--muted); }
+
+    /* ── ROLE CARDS ──────────────────────────────────────── */
+    .role-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; }
+    .role-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 20px; position: relative; overflow: hidden;
+    }
+    .role-card::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+    }
+    .role-admin::before   { background: var(--brand); }
+    .role-redactor::before { background: var(--accent); }
+    .role-lector::before  { background: var(--green); }
+    .role-publico::before { background: var(--muted); }
+    .role-card .role-badge {
+      display: inline-block; font-size: .7rem; font-weight: 700;
+      padding: 2px 10px; border-radius: 20px; margin-bottom: 12px; letter-spacing: .05em; text-transform: uppercase;
+    }
+    .role-admin   .role-badge { background: rgba(99,102,241,.2); color: var(--brand-light); }
+    .role-redactor .role-badge { background: rgba(34,211,238,.15); color: var(--accent); }
+    .role-lector  .role-badge { background: rgba(52,211,153,.15); color: var(--green); }
+    .role-publico .role-badge { background: rgba(100,116,139,.15); color: var(--muted); }
+    .role-card h3 { font-size: .95rem; font-weight: 700; margin-bottom: 8px; }
+    .role-card ul { list-style: none; padding: 0; }
+    .role-card ul li { font-size: .8rem; color: var(--muted); padding: 3px 0; padding-left: 14px; position: relative; }
+    .role-card ul li::before { content: '→'; position: absolute; left: 0; color: var(--brand); font-size: .7rem; top: 4px; }
+
+    /* ── PIPELINE ────────────────────────────────────────── */
+    .pipeline {
+      display: flex; align-items: flex-start; gap: 0;
+      overflow-x: auto; padding: 32px 0;
+    }
+    .pipeline-step {
+      display: flex; flex-direction: column; align-items: center; min-width: 150px;
+    }
+    .pipeline-node {
+      width: 112px; height: 112px; border-radius: 50%;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      border: 2px solid var(--border); background: var(--surface);
+      font-size: .75rem; font-weight: 700; text-align: center;
+      padding: 8px; gap: 4px; transition: border-color .2s;
+      cursor: default;
+    }
+    .pipeline-node:hover { border-color: var(--brand); }
+    .pipeline-node .node-icon { font-size: 1.6rem; }
+    .pipeline-label { font-size: .7rem; color: var(--muted); margin-top: 10px; text-align: center; max-width: 120px; }
+    .pipeline-arrow {
+      display: flex; align-items: center; padding: 0 4px; margin-top: -20px;
+      color: var(--muted); font-size: 1.4rem;
+    }
+    .pipeline-loop {
+      display: flex; flex-direction: column; align-items: center; gap: 2px; margin-top: -20px;
+    }
+    .loop-line {
+      display: flex; align-items: center; gap: 4px;
+      font-size: .65rem; color: var(--yellow); font-weight: 600;
+      background: rgba(251,191,36,.1); border: 1px solid rgba(251,191,36,.25);
+      padding: 2px 10px; border-radius: 10px;
+    }
+
+    /* ── STATE MACHINE ───────────────────────────────────── */
+    .state-flow { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin: 32px 0; }
+    .state-pill {
+      padding: 8px 20px; border-radius: 20px; font-size: .8rem; font-weight: 700;
+      letter-spacing: .04em; border: 1px solid;
+    }
+    .s-draft    { background: rgba(100,116,139,.15); border-color: var(--muted); color: var(--muted); }
+    .s-review   { background: rgba(251,191,36,.12); border-color: var(--yellow); color: var(--yellow); }
+    .s-approved { background: rgba(52,211,153,.12); border-color: var(--green); color: var(--green); }
+    .s-published{ background: rgba(99,102,241,.15); border-color: var(--brand); color: var(--brand-light); }
+    .s-rejected { background: rgba(248,113,113,.12); border-color: var(--red); color: var(--red); }
+    .state-arrow { color: var(--muted); font-size: 1rem; font-weight: 300; }
+
+    /* ── PROJECT TYPES ───────────────────────────────────── */
+    .project-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px; }
+    .project-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 20px 24px;
+    }
+    .project-card .tag {
+      font-size: .65rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+      padding: 2px 8px; border-radius: 4px; margin-bottom: 12px; display: inline-block;
+    }
+    .tag-magazine  { background: rgba(99,102,241,.2); color: var(--brand-light); }
+    .tag-dev       { background: rgba(34,211,238,.15); color: var(--accent); }
+    .tag-marketing { background: rgba(251,191,36,.15); color: var(--yellow); }
+    .tag-support   { background: rgba(248,113,113,.12); color: var(--red); }
+    .tag-design    { background: rgba(52,211,153,.12); color: var(--green); }
+    .tag-custom    { background: rgba(100,116,139,.15); color: var(--muted); }
+    .project-card h3 { font-size: .95rem; font-weight: 700; margin-bottom: 8px; }
+    .project-card ul { list-style: none; padding: 0; }
+    .project-card ul li { font-size: .78rem; color: var(--muted); padding: 2px 0; padding-left: 12px; position: relative; }
+    .project-card ul li::before { content: '·'; position: absolute; left: 0; color: var(--brand); }
+
+    /* ── AGENT DETAIL ────────────────────────────────────── */
+    .agent-table { width: 100%; border-collapse: collapse; margin-top: 24px; }
+    .agent-table th {
+      text-align: left; padding: 10px 16px; font-size: .75rem;
+      font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .06em;
+      border-bottom: 1px solid var(--border); background: var(--surface);
+    }
+    .agent-table td { padding: 14px 16px; font-size: .85rem; border-bottom: 1px solid var(--border); vertical-align: top; }
+    .agent-table tr:last-child td { border-bottom: none; }
+    .agent-table tr:hover td { background: var(--elevated); }
+    .pill {
+      display: inline-block; font-size: .7rem; font-weight: 600;
+      padding: 2px 10px; border-radius: 10px; white-space: nowrap;
+    }
+    .pill-brand  { background: rgba(99,102,241,.2); color: var(--brand-light); }
+    .pill-cyan   { background: rgba(34,211,238,.15); color: var(--accent); }
+    .pill-green  { background: rgba(52,211,153,.15); color: var(--green); }
+    .pill-yellow { background: rgba(251,191,36,.15); color: var(--yellow); }
+    .pill-red    { background: rgba(248,113,113,.12); color: var(--red); }
+    .pill-gray   { background: rgba(100,116,139,.15); color: var(--muted); }
+
+    /* ── INFO BOX ────────────────────────────────────────── */
+    .info-box {
+      background: rgba(99,102,241,.08); border: 1px solid rgba(99,102,241,.25);
+      border-radius: var(--radius); padding: 20px 24px; margin: 24px 0;
+      font-size: .9rem; color: #c7d2fe;
+    }
+    .info-box strong { color: var(--brand-light); }
+
+    /* ── FOOTER ──────────────────────────────────────────── */
+    footer {
+      border-top: 1px solid var(--border); padding: 40px;
+      text-align: center; font-size: .8rem; color: var(--muted);
+    }
+    footer strong { color: var(--brand-light); }
+
+    /* ── SCROLLBAR ───────────────────────────────────────── */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  </style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="logo">Alex<span>andrIA</span></div>
+  <a href="#proyectos">Proyectos</a>
+  <a href="#flujo">Flujo Agéntico</a>
+  <a href="#agentes">Agentes</a>
+  <a href="#estados">Estados del Artículo</a>
+  <a href="#roles">Roles de Usuario</a>
+</nav>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="badge">⚡ Plataforma de IA Agéntica</div>
+  <h1>Cómo funciona<br /><span>AlexandrIA</span></h1>
+  <p>Una plataforma multi-proyecto que orquesta agentes de IA para generar, revisar y publicar contenido de forma autónoma mediante grafos LangGraph.</p>
+</div>
+
+<!-- SECTION 1: PROYECTOS -->
+<section id="proyectos">
+  <div class="container">
+    <h2><span class="icon">📁</span> Tipos de Proyectos</h2>
+    <p class="section-lead">Cada proyecto es un espacio aislado con sus propios agentes, artículos y flujos. Al crear un proyecto se siembran automáticamente los agentes predefinidos para ese caso de uso.</p>
+
+    <div class="project-grid">
+      <div class="project-card">
+        <span class="tag tag-magazine">Alexandria Magazine</span>
+        <h3>Revista científica IA</h3>
+        <ul>
+          <li>Investigador → Redactor → Revisor → Formateador → Publicador</li>
+          <li>RAG con Qdrant para búsqueda documental</li>
+          <li>Ciclos de revisión automáticos</li>
+          <li>Formatos APA, IEEE, Vancouver</li>
+          <li>Artículos con ciclo editorial completo</li>
+        </ul>
+      </div>
+      <div class="project-card">
+        <span class="tag tag-dev">Desarrollo</span>
+        <h3>Ingeniería de software</h3>
+        <ul>
+          <li>Arquitecto, Backend Dev, Frontend Dev</li>
+          <li>QA Engineer, Security Auditor</li>
+          <li>DevOps, Code Reviewer</li>
+        </ul>
+      </div>
+      <div class="project-card">
+        <span class="tag tag-marketing">Marketing</span>
+        <h3>Estrategia de contenido</h3>
+        <ul>
+          <li>Estratega de Marketing, Copywriter</li>
+          <li>SEO Specialist, Social Media Manager</li>
+          <li>Analytics Analyst</li>
+        </ul>
+      </div>
+      <div class="project-card">
+        <span class="tag tag-support">Soporte (Tiqueting)</span>
+        <h3>Atención al cliente</h3>
+        <ul>
+          <li>Clasificador, Escalador</li>
+          <li>Resolutor, QA Calidad</li>
+          <li>Gestión de SLAs y matriz de escalado</li>
+        </ul>
+      </div>
+      <div class="project-card">
+        <span class="tag tag-design">Diseño</span>
+        <h3>Diseño UI/UX</h3>
+        <ul>
+          <li>Art Director, UI Designer</li>
+          <li>UX Researcher, Revisor Visual</li>
+          <li>Motion Designer</li>
+        </ul>
+      </div>
+      <div class="project-card">
+        <span class="tag tag-custom">Custom</span>
+        <h3>Proyecto personalizado</h3>
+        <ul>
+          <li>Sin agentes preinstalados</li>
+          <li>El usuario diseña desde cero</li>
+          <li>Agentes definibles por YAML/Markdown</li>
+          <li>Flujos visuales totalmente libres</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SECTION 2: FLUJO AGÉNTICO -->
+<section id="flujo">
+  <div class="container">
+    <h2><span class="icon">🔄</span> Flujo Agéntico — Alexandria Magazine</h2>
+    <p class="section-lead">El pipeline estándar convierte un <em>topic</em> en un artículo científico publicado mediante un grafo LangGraph que coordina agentes especializados de forma autónoma.</p>
+
+    <div class="pipeline">
+      <!-- Orquestador -->
+      <div class="pipeline-step">
+        <div class="pipeline-node" style="border-color:var(--brand)">
+          <span class="node-icon">🎛️</span>
+          <span>Orquestador</span>
+        </div>
+        <div class="pipeline-label">Construye y lanza el grafo LangGraph</div>
+      </div>
+      <div class="pipeline-arrow">→</div>
+
+      <!-- Investigador -->
+      <div class="pipeline-step">
+        <div class="pipeline-node">
+          <span class="node-icon">🔬</span>
+          <span>Investigador</span>
+        </div>
+        <div class="pipeline-label">Búsqueda RAG + APIs científicas (EuropePMC, OpenAlex)</div>
+      </div>
+      <div class="pipeline-arrow">→</div>
+
+      <!-- Redactor -->
+      <div class="pipeline-step">
+        <div class="pipeline-node">
+          <span class="node-icon">✍️</span>
+          <span>Redactor</span>
+        </div>
+        <div class="pipeline-label">Genera borrador académico en Markdown</div>
+      </div>
+      <div class="pipeline-arrow">→</div>
+
+      <!-- Revisor con loop -->
+      <div class="pipeline-step">
+        <div class="pipeline-node" style="border-color:var(--yellow)">
+          <span class="node-icon">🧐</span>
+          <span>Revisor</span>
+        </div>
+        <div class="pipeline-label">Evalúa calidad (score 0-100). Si &lt;80 y &lt;3 ciclos → vuelve al Redactor</div>
+        <div class="loop-line" style="margin-top:8px">↩ bucle si score &lt; 80</div>
+      </div>
+      <div class="pipeline-arrow">→</div>
+
+      <!-- Formateador -->
+      <div class="pipeline-step">
+        <div class="pipeline-node">
+          <span class="node-icon">📐</span>
+          <span>Formateador</span>
+        </div>
+        <div class="pipeline-label">Aplica estilo bibliográfico (APA / IEEE / Vancouver)</div>
+      </div>
+      <div class="pipeline-arrow">→</div>
+
+      <!-- Publicador -->
+      <div class="pipeline-step">
+        <div class="pipeline-node" style="border-color:var(--green)">
+          <span class="node-icon">🚀</span>
+          <span>Publicador</span>
+        </div>
+        <div class="pipeline-label">Persiste en DB, marca PUBLISHED, genera metadatos</div>
+      </div>
+    </div>
+
+    <div class="info-box">
+      <strong>Cómo se lanza:</strong> El usuario diseña la secuencia de agentes en el <strong>Flow Designer</strong> (canvas visual React Flow) y presiona "Ejecutar". El frontend envía la <code>flow_sequence</code> al endpoint <code>POST /api/v1/agents/run</code>. El backend construye el <code>StateGraph</code> de LangGraph dinámicamente con los nodos solicitados y transmite eventos en tiempo real al cliente por <strong>SSE (Server-Sent Events)</strong>.
+    </div>
+
+    <h3 style="margin: 40px 0 20px; font-size:1.1rem; font-weight:700;">Flujo de datos entre agentes</h3>
+    <div class="card-grid">
+      <div class="card">
+        <div class="card-icon">📥</div>
+        <h3>Input del usuario</h3>
+        <p>Topic o pregunta de investigación. Se asigna a un artículo en estado <code>draft</code> en la base de datos.</p>
+      </div>
+      <div class="card">
+        <div class="card-icon">🧠</div>
+        <h3>Estado compartido (AgentState)</h3>
+        <p>Diccionario mutable que se propaga entre nodos: <code>research_data</code>, <code>draft_text</code>, <code>approval_score</code>, <code>feedback</code>, <code>formatted_text</code>.</p>
+      </div>
+      <div class="card">
+        <div class="card-icon">📡</div>
+        <h3>Streaming SSE</h3>
+        <p>Cada nodo emite eventos al cliente a medida que procesa. El frontend muestra el progreso en tiempo real en la página de Ejecución.</p>
+      </div>
+      <div class="card">
+        <div class="card-icon">💾</div>
+        <h3>Persistencia</h3>
+        <p>Cada ejecución queda registrada en <code>AgentRunModel</code> con estado, tokens usados, payload de entrada/salida y timestamp.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SECTION 3: AGENTES -->
+<section id="agentes">
+  <div class="container">
+    <h2><span class="icon">🤖</span> Agentes de Alexandria Magazine</h2>
+    <p class="section-lead">Cada agente es un archivo <code>.agent.md</code> con frontmatter YAML que define su modelo, temperatura y capacidades RAG. El Orquestador los carga y los convierte en nodos del grafo.</p>
+
+    <table class="agent-table">
+      <thead>
+        <tr>
+          <th>Agente</th>
+          <th>Rol</th>
+          <th>Modelo LLM</th>
+          <th>Temperatura</th>
+          <th>RAG</th>
+          <th>Output</th>
+          <th>Posición en flujo</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>🎛️ Orquestador</strong></td>
+          <td>Construye y ejecuta el StateGraph dinámico. No genera contenido.</td>
+          <td><span class="pill pill-gray">Ninguno</span></td>
+          <td>—</td>
+          <td>No</td>
+          <td><code>final_state</code></td>
+          <td><span class="pill pill-brand">Coordinador</span></td>
+        </tr>
+        <tr>
+          <td><strong>🔬 Investigador</strong></td>
+          <td>Búsqueda documental: RAG local (Qdrant) + EuropePMC + OpenAlex. Consolida fuentes en bloque estructurado.</td>
+          <td><span class="pill pill-cyan">llama3.2:1b</span></td>
+          <td>0.3</td>
+          <td><span class="pill pill-green">Sí (rag_docs)</span></td>
+          <td><code>research_data + sources[]</code></td>
+          <td><span class="pill pill-gray">1º nodo</span></td>
+        </tr>
+        <tr>
+          <td><strong>✍️ Redactor</strong></td>
+          <td>Genera borrador académico en Markdown (Abstract, Intro, Metodología, Resultados, Discusión) a partir del contexto de investigación. Incorpora feedback del Revisor en ciclos.</td>
+          <td><span class="pill pill-cyan">llama3.2:1b</span></td>
+          <td>0.7</td>
+          <td>No</td>
+          <td><code>draft_text (Markdown)</code></td>
+          <td><span class="pill pill-gray">2º nodo</span></td>
+        </tr>
+        <tr>
+          <td><strong>🧐 Revisor</strong></td>
+          <td>Revisión por pares: evalúa rigor científico, claridad y estructura. Genera score 0-100 y feedback accionable. Si score &lt; 80 y loop_count &lt; 3, reenvía al Redactor.</td>
+          <td><span class="pill pill-cyan">llama3.2:1b</span></td>
+          <td>0.2</td>
+          <td>No</td>
+          <td><code>approval_score, feedback[], loop_count</code></td>
+          <td><span class="pill pill-yellow">3º nodo (bucle)</span></td>
+        </tr>
+        <tr>
+          <td><strong>📐 Formateador</strong></td>
+          <td>Reformatea citas y referencias según estilo bibliográfico solicitado (APA 7ª ed., IEEE, Vancouver) sin alterar el contenido principal.</td>
+          <td><span class="pill pill-cyan">llama3.2:1b</span></td>
+          <td>0.1</td>
+          <td>No</td>
+          <td><code>formatted_text (Markdown)</code></td>
+          <td><span class="pill pill-gray">4º nodo</span></td>
+        </tr>
+        <tr>
+          <td><strong>🚀 Publicador</strong></td>
+          <td>Persiste texto final en DB, actualiza estado a PUBLISHED, genera metadatos: word count, reading time, URL pública, licencia CC-BY-4.0.</td>
+          <td><span class="pill pill-gray">Ninguno</span></td>
+          <td>—</td>
+          <td>No</td>
+          <td><code>published_url + metadata</code></td>
+          <td><span class="pill pill-green">Último nodo</span></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="info-box" style="margin-top:32px">
+      <strong>Agentes personalizados:</strong> Además de los built-in, cualquier usuario puede crear agentes propios desde la sección <strong>Agentes</strong> del dashboard. El nombre del agente debe coincidir con su <code>slug</code> en el <code>.agent.md</code> para que el Orquestador pueda localizarlo en la <code>flow_sequence</code>.
+    </div>
+  </div>
+</section>
+
+<!-- SECTION 4: ESTADOS ARTÍCULO -->
+<section id="estados">
+  <div class="container">
+    <h2><span class="icon">📄</span> Ciclo de Vida del Artículo</h2>
+    <p class="section-lead">Cada artículo pasa por una máquina de estados gestionada por el pipeline automático y/o por acciones manuales del equipo editorial.</p>
+
+    <div class="state-flow">
+      <span class="state-pill s-draft">DRAFT</span>
+      <span class="state-arrow">→ submit_for_review</span>
+      <span class="state-pill s-review">IN_REVIEW</span>
+      <span class="state-arrow">→ approve</span>
+      <span class="state-pill s-approved">APPROVED</span>
+      <span class="state-arrow">→ publish</span>
+      <span class="state-pill s-published">PUBLISHED</span>
+    </div>
+    <div class="state-flow" style="margin-top:8px">
+      <span class="state-pill s-review">IN_REVIEW</span>
+      <span class="state-arrow">→ reject</span>
+      <span class="state-pill s-rejected">REJECTED</span>
+      <span class="state-arrow">→ (editar y reenviar)</span>
+      <span class="state-pill s-draft">DRAFT</span>
+    </div>
+
+    <div class="card-grid" style="margin-top:40px">
+      <div class="card">
+        <div class="card-icon">🖊️</div>
+        <h3>DRAFT</h3>
+        <p>Artículo creado (manualmente o por el Publicador). Solo visible para el autor y el admin. El redactor puede editar libremente.</p>
+      </div>
+      <div class="card">
+        <div class="card-icon">👁️</div>
+        <h3>IN_REVIEW</h3>
+        <p>Enviado a revisión. Se asigna un revisor (humano o automático). El revisor recibe una notificación in-app.</p>
+      </div>
+      <div class="card">
+        <div class="card-icon">✅</div>
+        <h3>APPROVED / PUBLISHED</h3>
+        <p>El revisor aprueba. El artículo se marca como publicado y aparece en la revista pública y en la vista del Lector.</p>
+      </div>
+      <div class="card">
+        <div class="card-icon">❌</div>
+        <h3>REJECTED</h3>
+        <p>El revisor rechaza con comentario. El autor recibe notificación con el motivo y puede corregir y reenviar.</p>
+      </div>
+    </div>
+
+    <h3 style="margin: 40px 0 16px; font-size:1.1rem; font-weight:700;">Sistema de Notificaciones</h3>
+    <div class="card-grid">
+      <div class="card">
+        <div class="card-icon">🔔</div>
+        <h3>Asignación de revisor</h3>
+        <p>Al asignar revisor a un artículo → notificación al revisor con enlace al artículo.</p>
+      </div>
+      <div class="card">
+        <div class="card-icon">🎉</div>
+        <h3>Artículo aprobado</h3>
+        <p>Al aprobar → notificación al autor. La notificación del revisor se marca como leída automáticamente.</p>
+      </div>
+      <div class="card">
+        <div class="card-icon">🔁</div>
+        <h3>Artículo rechazado</h3>
+        <p>Al rechazar → notificación al autor con el comentario de rechazo. Polling cada 30 segundos desde el cliente.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SECTION 5: ROLES -->
+<section id="roles">
+  <div class="container">
+    <h2><span class="icon">👥</span> Roles de Usuario</h2>
+    <p class="section-lead">La plataforma tiene cuatro roles con permisos distintos sobre proyectos, artículos y flujos. El Admin asigna roles y proyectos desde el panel de gestión de usuarios.</p>
+
+    <div class="role-grid">
+      <div class="role-card role-admin">
+        <span class="role-badge">Admin</span>
+        <h3>Administrador</h3>
+        <ul>
+          <li>Ve y gestiona <strong>todos</strong> los proyectos</li>
+          <li>Ve todos los artículos y flujos sin filtro</li>
+          <li>Gestiona usuarios: asignar roles y proyectos</li>
+          <li>Puede aprobar o rechazar artículos</li>
+          <li>Acceso completo al dashboard</li>
+          <li>Puede eliminar proyectos ajenos</li>
+        </ul>
+      </div>
+      <div class="role-card role-redactor">
+        <span class="role-badge">Redactor</span>
+        <h3>Redactor</h3>
+        <ul>
+          <li>Ve solo los proyectos que él creó</li>
+          <li>Puede crear proyectos de cualquier tipo</li>
+          <li>Crea y edita artículos en su proyecto</li>
+          <li>Diseña y ejecuta flujos agénticos</li>
+          <li>Envía artículos a revisión</li>
+          <li>Recibe notificaciones de aprobación/rechazo</li>
+        </ul>
+      </div>
+      <div class="role-card role-lector">
+        <span class="role-badge">Lector</span>
+        <h3>Lector</h3>
+        <ul>
+          <li>Accede directamente a la vista de revista</li>
+          <li>Ve solo el proyecto que el admin le asignó</li>
+          <li>Solo puede leer artículos publicados</li>
+          <li>No tiene acceso al dashboard ni a flujos</li>
+          <li>Recibe notificaciones in-app</li>
+          <li>Sin permisos de escritura</li>
+        </ul>
+      </div>
+      <div class="role-card role-publico">
+        <span class="role-badge">Público</span>
+        <h3>Público / Anónimo</h3>
+        <ul>
+          <li>No requiere cuenta</li>
+          <li>Acceso a <code>/magazine</code> (slideshow público)</li>
+          <li>Solo ve artículos publicados</li>
+          <li>Sin acceso a ninguna función editorial</li>
+          <li>Sin notificaciones</li>
+        </ul>
+      </div>
+    </div>
+
+    <h3 style="margin: 48px 0 16px; font-size:1.1rem; font-weight:700;">Matriz de permisos</h3>
+    <table class="agent-table">
+      <thead>
+        <tr>
+          <th>Acción</th>
+          <th>Admin</th>
+          <th>Redactor</th>
+          <th>Lector</th>
+          <th>Público</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Ver proyectos</td>
+          <td><span class="pill pill-green">Todos</span></td>
+          <td><span class="pill pill-cyan">Solo propios</span></td>
+          <td><span class="pill pill-yellow">Solo asignado</span></td>
+          <td><span class="pill pill-gray">No</span></td>
+        </tr>
+        <tr>
+          <td>Crear proyectos</td>
+          <td><span class="pill pill-green">Sí</span></td>
+          <td><span class="pill pill-green">Sí (cualquier tipo)</span></td>
+          <td><span class="pill pill-gray">No</span></td>
+          <td><span class="pill pill-gray">No</span></td>
+        </tr>
+        <tr>
+          <td>Ver artículos</td>
+          <td><span class="pill pill-green">Todos</span></td>
+          <td><span class="pill pill-cyan">Su proyecto activo</span></td>
+          <td><span class="pill pill-yellow">Publicados (proyecto asignado)</span></td>
+          <td><span class="pill pill-gray">Solo revista pública</span></td>
+        </tr>
+        <tr>
+          <td>Crear/editar artículos</td>
+          <td><span class="pill pill-green">Sí</span></td>
+          <td><span class="pill pill-green">Sí</span></td>
+          <td><span class="pill pill-gray">No</span></td>
+          <td><span class="pill pill-gray">No</span></td>
+        </tr>
+        <tr>
+          <td>Aprobar / Rechazar</td>
+          <td><span class="pill pill-green">Sí</span></td>
+          <td><span class="pill pill-gray">No</span></td>
+          <td><span class="pill pill-gray">No</span></td>
+          <td><span class="pill pill-gray">No</span></td>
+        </tr>
+        <tr>
+          <td>Ver/crear flujos</td>
+          <td><span class="pill pill-green">Todos</span></td>
+          <td><span class="pill pill-cyan">Su proyecto activo</span></td>
+          <td><span class="pill pill-gray">No</span></td>
+          <td><span class="pill pill-gray">No</span></td>
+        </tr>
+        <tr>
+          <td>Ejecutar pipeline agéntico</td>
+          <td><span class="pill pill-green">Sí</span></td>
+          <td><span class="pill pill-green">Sí</span></td>
+          <td><span class="pill pill-gray">No</span></td>
+          <td><span class="pill pill-gray">No</span></td>
+        </tr>
+        <tr>
+          <td>Gestionar usuarios</td>
+          <td><span class="pill pill-green">Sí</span></td>
+          <td><span class="pill pill-gray">No</span></td>
+          <td><span class="pill pill-gray">No</span></td>
+          <td><span class="pill pill-gray">No</span></td>
+        </tr>
+        <tr>
+          <td>Asignar proyecto a usuario</td>
+          <td><span class="pill pill-green">Sí</span></td>
+          <td><span class="pill pill-gray">No</span></td>
+          <td><span class="pill pill-gray">No</span></td>
+          <td><span class="pill pill-gray">No</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <strong>AlexandrIA</strong> — Plataforma de IA Agéntica &nbsp;·&nbsp;
+  FastAPI + LangGraph + React + Qdrant &nbsp;·&nbsp;
+  Generado automáticamente por GitHub Copilot
+</footer>
+
+</body>
+</html>

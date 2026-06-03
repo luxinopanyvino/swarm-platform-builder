@@ -1,0 +1,14 @@
+{
+  "name": "plataforma-agentica-docs",
+  "version": "0.1.0",
+  "description": "Documentación de la Plataforma Agéntica Multiproyecto",
+  "type": "module",
+  "scripts": {
+    "dev": "vitepress dev",
+    "build": "vitepress build",
+    "preview": "vitepress preview"
+  },
+  "devDependencies": {
+    "vitepress": "^1.6.4"
+  }
+}
