@@ -458,6 +458,7 @@ textarea.input { resize: vertical; min-height: 80px; line-height: 1.6; }
 
 .page-body {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
   padding: var(--space-6);
 }
