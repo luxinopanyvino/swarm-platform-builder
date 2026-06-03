@@ -5,7 +5,7 @@ WORKDIR /app
 
 # Copiar manifiestos e instalar dependencias usando npm ci para mayor estabilidad
 COPY package*.json ./
-RUN npm ci
+RUN npm ci --include=dev
 
 # Copiar código fuente y generar la carpeta dist
 COPY . .
