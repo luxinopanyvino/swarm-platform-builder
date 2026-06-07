@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { useAuthStore } from './store/authStore';
 
@@ -17,6 +17,21 @@ import ExecutionPage     from './pages/ExecutionPage';
 import UsersPage         from './pages/UsersPage';
 import MagazinePage      from './pages/MagazinePage';
 import LectorPage        from './pages/LectorPage';
+
+function RouteTitleHandler() {
+  const location = useLocation();
+
+  useEffect(() => {
+    const path = location.pathname;
+    if (path.startsWith('/projects') || path.startsWith('/auth') || path === '/') {
+      document.title = 'SwarmPlatformBuilder';
+    } else {
+      document.title = 'AlejandrIA Magazine';
+    }
+  }, [location]);
+
+  return null;
+}
 
 function AppBootGate({ children }) {
   const [hasHydrated, setHasHydrated] = useState(() => useAuthStore.persist?.hasHydrated?.() ?? true);
@@ -76,6 +91,7 @@ function PublicRoute({ children }) {
 export default function App() {
   return (
     <BrowserRouter>
+      <RouteTitleHandler />
       <AppBootGate>
         <Toaster
           position="top-right"

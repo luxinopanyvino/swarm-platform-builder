@@ -1,7 +1,7 @@
 app:
-  name: Alejandria Magazine
-  version: 0.1.0
-  debug: false
+  name: AlejandrIA Magazine
+  version: 0.2.0
+  debug: true
 llm:
   provider: ollama
 ollama:

@@ -9,7 +9,7 @@ El **Flow Designer** es el editor visual donde conectas agentes para construir p
 3. Arrastra los agentes al canvas y **conecta sus salidas y entradas** en el orden deseado.
 4. Guarda el flujo con un nombre. Podrás reutilizarlo en múltiples ejecuciones.
 
-## Ejemplo de flujo completo (AlexandrIA Magazine)
+## Ejemplo de flujo completo (AlejandrIA Magazine)
 
 ```
 investigador → redactor → revisor → formateador → publicador

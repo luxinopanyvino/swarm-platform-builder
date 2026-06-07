@@ -4,7 +4,7 @@ from typing import Dict, Any
 
 from app.core.config import settings
 from app.modules.agents.adapters.rag import semantic_search_context
-from app.shared.llm import call_llm, get_default_model
+from app.shared.llm import call_llm, call_llm_stream, get_default_model
 
 logger = logging.getLogger(__name__)
 
@@ -49,6 +49,30 @@ _FEEDBACK_HEADER_EN = (
     "\n### Feedback from Reviewer:\n"
     "The reviewer rejected the previous draft with the following comments. "
     "You MUST address these issues in the new draft:\n"
+)
+
+_CORRECTION_TEMPLATE_ES = (
+    "Identidad: Eres un Ingeniero Senior de Software Experto en LLMOps y sistemas multi-agente.\n"
+    "Stack tecnológico exacto: Python, FastAPI, LangGraph (v2), Qdrant y un motor de inferencia local (como Ollama/vLLM).\n\n"
+    "MODO: Edición y Corrección de Manuscrito Científico.\n"
+    "Ignora el prompt inicial genérico de creación. Tu única prioridad es revisar el borrador actual "
+    "y corregir de forma estricta los puntos críticos señalados por el Revisor.\n\n"
+    "Borrador actual:\n{draft_text}\n\n"
+    "Feedback del Revisor:\n{feedback_section}\n\n"
+    "{context_section}\n"
+    "Escribe el borrador científico corregido y mejorado completo en Markdown:"
+)
+
+_CORRECTION_TEMPLATE_EN = (
+    "Identity: You are a Senior Software Engineer Expert in LLMOps and multi-agent systems.\n"
+    "Exact technology stack: Python, FastAPI, LangGraph (v2), Qdrant and a local inference engine (like Ollama/vLLM).\n\n"
+    "MODE: Scientific Manuscript Editing and Correction.\n"
+    "Ignore the generic initial creation prompt. Your sole priority is to review the current draft "
+    "and strictly address the review comments provided by the Reviewer.\n\n"
+    "Current draft:\n{draft_text}\n\n"
+    "Reviewer Feedback:\n{feedback_section}\n\n"
+    "{context_section}\n"
+    "Write the complete corrected and improved scientific draft in Markdown:"
 )
 
 
@@ -184,6 +208,14 @@ async def run_redactor(state: Dict[str, Any]) -> Dict[str, Any]:
             word_count_header=word_count_header,
             word_count_footer=word_count_footer,
         )
+    elif feedback:
+        # MODO Edición y Corrección
+        base = _CORRECTION_TEMPLATE_ES if language == "es" else _CORRECTION_TEMPLATE_EN
+        prompt = base.format(
+            draft_text=state.get("draft_text") or "",
+            feedback_section=feedback_section,
+            context_section=context_section,
+        )
     else:
         base = _DEFAULT_TEMPLATE_ES if language == "es" else _DEFAULT_TEMPLATE_EN
         prompt = base.format(
@@ -201,8 +233,15 @@ async def run_redactor(state: Dict[str, Any]) -> Dict[str, Any]:
     logger.info(f"Redactor timeout: {timeout:.0f}s")
     log(f"⏳ Generando borrador (timeout: {timeout:.0f}s)...")
 
+    emit_token = state.get("_emit_token") or (lambda t: None)
+
     try:
-        draft_text = await call_llm(prompt, model=model, timeout=timeout, num_ctx=4096, keep_alive=0)
+        draft_chunks = []
+        async for token in call_llm_stream(prompt, model=model, timeout=timeout, num_ctx=4096, keep_alive=0):
+            emit_token(token)
+            draft_chunks.append(token)
+        draft_text = "".join(draft_chunks)
+
         if not draft_text:
             raise RuntimeError("LLM devolvió una respuesta vacía al generar el borrador")
 
@@ -242,7 +281,11 @@ async def run_redactor(state: Dict[str, Any]) -> Dict[str, Any]:
                     f"EXPANDED DRAFT ({target_word_count} words):"
                 )
             try:
-                expanded = await call_llm(expand_prompt, model=model, timeout=timeout, num_ctx=4096, keep_alive=0)
+                expanded_chunks = []
+                async for token in call_llm_stream(expand_prompt, model=model, timeout=timeout, num_ctx=4096, keep_alive=0):
+                    emit_token(token)
+                    expanded_chunks.append(token)
+                expanded = "".join(expanded_chunks)
                 if expanded:
                     expanded_words = len(expanded.split())
                     if expanded_words > actual_words:

@@ -13,8 +13,8 @@ import toast from 'react-hot-toast';
 
 const USE_CASES = [
   {
-    value: 'alexandria_magazine',
-    label: 'AlexandrIA Magazine',
+    value: 'alejandria_magazine',
+    label: 'AlejandrIA Magazine',
     description: 'Flujo editorial completo para revista científica.',
     icon: <Newspaper size={22} />,
     color: 'var(--brand-primary)',
@@ -70,7 +70,7 @@ function NewProjectModal({ onClose, onCreated }) {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
 
-  const options = USE_CASES.filter(u => u.value !== 'alexandria_magazine');
+  const options = USE_CASES.filter(u => u.value !== 'alejandria_magazine');
 
   const handleSelectType = (value) => {
     setSelectedType(value);
@@ -375,7 +375,7 @@ export default function ProjectSelectionPage() {
             <BookOpen size={15} color="white" />
           </div>
           <span style={{ color: 'var(--text-primary)', fontWeight: 700, fontSize: '1rem' }}>
-            Alex<span style={{ color: 'var(--brand-accent)' }}>andrIA</span>
+            Alej<span style={{ color: 'var(--brand-accent)' }}>andrIA</span>
           </span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>

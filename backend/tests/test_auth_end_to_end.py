@@ -33,7 +33,8 @@ async def test_register_login_and_get_current_user() -> None:
             "full_name": "Test User",
         }
 
-        async with AsyncClient(app=app, base_url="http://testserver") as client:
+        from httpx import ASGITransport
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://testserver") as client:
             response = await client.post("/api/v1/auth/register", json=register_payload)
 
             assert response.status_code == 200
