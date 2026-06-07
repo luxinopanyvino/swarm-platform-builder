@@ -106,7 +106,7 @@ export default function UsersPage() {
   }
 
   return (
-    <div className="page-body" style={{ maxWidth: 860, margin: '0 auto' }}>
+    <div className="page-body" style={{ width: '100%', maxWidth: 1140, margin: '0 auto' }}>
       {/* Header */}
       <div style={{ marginBottom: 'var(--space-6)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
