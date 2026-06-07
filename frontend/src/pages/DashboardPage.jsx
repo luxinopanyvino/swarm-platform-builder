@@ -12,7 +12,7 @@ import api from '../api/client';
 import toast from 'react-hot-toast';
 
 const USE_CASE_ICON = {
-  alexandria_magazine: <Newspaper size={16} />,
+  alejandria_magazine: <Newspaper size={16} />,
   desarrollo:          <Code2 size={16} />,
   marketing:           <Megaphone size={16} />,
   tiqueting:           <Ticket size={16} />,
@@ -21,7 +21,7 @@ const USE_CASE_ICON = {
 };
 
 const USE_CASE_LABEL = {
-  alexandria_magazine: 'Revista científica',
+  alejandria_magazine: 'Revista científica',
   desarrollo:          'Desarrollo de software',
   marketing:           'Marketing',
   tiqueting:           'Tiqueting',
@@ -30,7 +30,7 @@ const USE_CASE_LABEL = {
 };
 
 const USE_CASE_COLOR = {
-  alexandria_magazine: 'var(--brand-primary)',
+  alejandria_magazine: 'var(--brand-primary)',
   desarrollo:          '#10b981',
   marketing:           '#f59e0b',
   tiqueting:           '#06b6d4',
@@ -159,7 +159,7 @@ export default function DashboardPage() {
               <BookOpen size={16} color="white" />
             </div>
             <span className="sidebar-logo-text">
-              Alex<span>andrIA</span>
+              Alej<span>andrIA</span>
             </span>
           </div>
         )}

@@ -21,7 +21,7 @@ export default defineConfig({
 
     nav: [
       { text: 'Guía', link: '/guide/introduction' },
-      { text: 'Proyectos', link: '/projects/alexandria' },
+      { text: 'Proyectos', link: '/projects/alejandria' },
       { text: 'API', link: '/api/endpoints' },
       {
         text: 'v0.1.0',
@@ -63,8 +63,8 @@ export default defineConfig({
         {
           text: 'Proyectos',
           items: [
-            { text: 'AlexandrIA Magazine', link: '/projects/alexandria' },
-            { text: 'Flujo de redacción', link: '/projects/alexandria-flow' },
+            { text: 'AlejandrIA Magazine', link: '/projects/alejandria' },
+            { text: 'Flujo de redacción', link: '/projects/alejandria-flow' },
             { text: 'Gestión de artículos', link: '/projects/articles' },
             { text: 'Customizar agentes', link: '/projects/agents' },
           ],
