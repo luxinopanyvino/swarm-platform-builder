@@ -21,7 +21,7 @@ curl -X POST http://localhost:8000/api/v1/agents/claude-defs \
     "model": "llama3.2:1b",
     "temperature": 0.5,
     "rag_enabled": true,
-    "rag_collection": "biblioteca",
+    "rag_collection": "rag_docs",
     "prompt_template": "Eres un experto en síntesis científica. Responde siempre en español.",
     "output_language": "spanish",
     "target_word_count": 800
