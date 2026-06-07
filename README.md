@@ -2,7 +2,7 @@
 
 Plataforma de construcción y orquestación de agentes IA construida sobre **FastAPI**, **LangGraph** y **Qdrant**. Permite crear proyectos independientes, cada uno con su propio swarm de agentes configurables, base documental RAG y flujo de trabajo personalizado.
 
-El proyecto de referencia incluido es **AlejandrIA Magazine**: un pipeline de cinco agentes especializados para la investigación, redacción, revisión, formateo y publicación de artículos de revista científica, con soporte de re-ejecución parcial, cancelación en caliente y publicación directa por parte de administradores.
+El proyecto de referencia incluido es **AlexandrIA Magazine**: un pipeline de cinco agentes especializados para la investigación, redacción, revisión, formateo y publicación de artículos de revista científica, con soporte de re-ejecución parcial, cancelación en caliente y publicación directa por parte de administradores.
 
 ---
 
@@ -12,7 +12,7 @@ El proyecto de referencia incluido es **AlejandrIA Magazine**: un pipeline de ci
 2. [Instalación local](#instalación-local)
 3. [Cómo funciona la plataforma](#cómo-funciona-la-plataforma)
 4. [Gestión de proyectos y agentes](#gestión-de-proyectos-y-agentes)
-5. [Proyecto: AlejandrIA Magazine](#proyecto-alejandría-magazine)
+5. [Proyecto: AlexandrIA Magazine](#proyecto-alexandría-magazine)
    - [Flujo de redacción de papers](#flujo-de-redacción-de-papers)
    - [Roles y usuarios](#roles-y-usuarios)
    - [Asignar revisor a un artículo](#asignar-revisor-a-un-artículo)
@@ -164,14 +164,14 @@ docker compose up --build
 
 La plataforma organiza el trabajo en **proyectos**. Cada proyecto tiene:
 
-- Un **tipo de caso de uso** (`alejandria_magazine`, `desarrollo`, `marketing`, `tiqueting`, `diseno`, `custom`)
+- Un **tipo de caso de uso** (`alexandria_magazine`, `desarrollo`, `marketing`, `tiqueting`, `diseno`, `custom`)
 - Un conjunto de **agentes** creados a partir de perfiles configurables (modelo LLM, temperatura, RAG, prompt template)
 - Una **biblioteca documental** propia indexada en Qdrant para dotar a los agentes de contexto
 - Un **diseñador de flujos visual** donde se conectan los agentes en el orden deseado
 
 ```
 Plataforma
-├── Proyecto A: AlejandrIA Magazine
+├── Proyecto A: AlexandrIA Magazine
 │   ├── Agentes: investigador, redactor, revisor, formateador, publicador
 │   └── Flujo: investigador → redactor → revisor → formateador → publicador
 │
@@ -216,9 +216,9 @@ En el **Flow Designer**, los agentes del proyecto aparecen como nodos arrastrabl
 
 ---
 
-## Proyecto: AlejandrIA Magazine
+## Proyecto: AlexandrIA Magazine
 
-AlejandrIA Magazine es el proyecto de referencia de la plataforma. Implementa un flujo editorial completo para la producción de artículos de revista científica mediante un swarm de cinco agentes especializados.
+AlexandrIA Magazine es el proyecto de referencia de la plataforma. Implementa un flujo editorial completo para la producción de artículos de revista científica mediante un swarm de cinco agentes especializados.
 
 ### Flujo de redacción de papers
 

@@ -27,7 +27,7 @@ async def run_publicador(state: Dict[str, Any]) -> Dict[str, Any]:
     word_count = len(final_text.split())
     metadata = {
         "indexed": True,
-        "publisher": "AlejandrIA Magazine Editorial",
+        "publisher": "AlexandrIA Magazine Editorial",
         "license": "CC-BY-4.0",
         "word_count": word_count,
         "reading_time_minutes": max(1, word_count // 200),

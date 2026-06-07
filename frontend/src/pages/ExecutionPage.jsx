@@ -91,11 +91,6 @@ export default function ExecutionPage() {
         if (data.type === 'agent_start') {
           markStepStatus(data.agent, 'running');
           addLog(`▶ ${data.agent} iniciado`, 'info');
-          if (data.agent === 'redactor' || data.agent === 'formateador') {
-            setPreview('');
-          }
-        } else if (data.type === 'token') {
-          setPreview((current) => current + data.token);
         } else if (data.type === 'agent_end') {
           markStepStatus(data.agent, 'completed', data.output);
           addLog(`✓ ${data.agent} completado`, 'success');
