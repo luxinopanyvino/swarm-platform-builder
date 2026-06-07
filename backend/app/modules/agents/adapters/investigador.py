@@ -131,6 +131,10 @@ async def run_investigador(state: Dict[str, Any]) -> Dict[str, Any]:
                 research_chunks.append(f"[RAG Source: local-{index}] {text}")
                 sources.append({
                     "title": f"Local Document Chunk ({index + 1})",
+                    "authors": "Biblioteca Local",
+                    "journal": "Base de Conocimiento",
+                    "year": "N/A",
+                    "doi": "",
                     "url": f"local://investigador/{index + 1}",
                     "snippet": text[:200],
                 })
@@ -168,7 +172,11 @@ async def run_investigador(state: Dict[str, Any]) -> Dict[str, Any]:
                         f"Journal: {journal} ({pub_year})\nAbstract: {abstract[:300]}..."
                     )
                     sources.append({
-                        "title": f"{title} ({pub_year})",
+                        "title": title,
+                        "authors": author_string,
+                        "journal": journal,
+                        "year": pub_year,
+                        "doi": doi or "",
                         "url": paper_url,
                         "snippet": abstract[:200],
                     })
@@ -215,8 +223,13 @@ async def run_investigador(state: Dict[str, Any]) -> Dict[str, Any]:
                 continue
             chunk_header = f"[Web: {page.title or page.url}] (relevance={page.relevance:.2f})"
             research_chunks.append(f"{chunk_header}\nURL: {page.url}\n\n{page.text[:3000]}")
+            import datetime
             sources.append({
-                "title": page.title or page.url,
+                "title": page.title or "Página Web",
+                "authors": "N/A",
+                "journal": "Búsqueda Web",
+                "year": datetime.datetime.now().year,
+                "doi": "",
                 "url": page.url,
                 "snippet": page.snippet(200),
             })

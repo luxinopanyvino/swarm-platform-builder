@@ -4,7 +4,7 @@
 
 ### Añadido
 - Plataforma Agéntica Multiproyecto
-- Proyecto de referencia: **AlexandrIA Magazine**
+- Proyecto de referencia: **AlejandrIA Magazine**
 - Swarm de 5 agentes con LangGraph: investigador, redactor, revisor, formateador, publicador
 - RAG con Qdrant 1.18 y embeddings `nomic-embed-text` (768 dim)
 - Soporte multiproveedor LLM: Ollama y OpenAI/compatible
