@@ -347,10 +347,19 @@ DRAFT ────────────────────────�
 | **lector** | Solo lectura del proyecto asignado |
 | **publico** | Acceso únicamente al endpoint público de la revista (sin autenticación) |
 
-El primer usuario administrador se crea automáticamente al arrancar en modo SQLite:
+Al arrancar en modo desarrollo, se crean automáticamente los siguientes usuarios por defecto:
 
+**Admin**:
 - Email: `admin@admin`
-- Contraseña: configurable vía `DEV_ADMIN_PASSWORD` (por defecto `admin123` **solo en dev**)
+- Contraseña: `admin123`
+
+**Redactor de Pruebas**:
+- Email: `redactor@example.com`
+- Contraseña: `redactor123`
+
+**Revisor Académico**:
+- Email: `revisor@example.com`
+- Contraseña: `revisor123`
 
 > **Publicación directa**: los roles `admin` y `redactor` ven el botón **Publicar borrador** en el panel lateral del artículo. Este botón publica el artículo inmediatamente sin enviarlo a revisión humana.
 

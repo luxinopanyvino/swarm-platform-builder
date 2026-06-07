@@ -15,12 +15,21 @@
 - Los tokens de **refresco** expiran a los 7 días.
 - Un token de refresco **no puede usarse** como token de acceso (validación por campo `type`).
 
-## Usuario administrador de desarrollo
+## Usuarios por defecto de desarrollo
 
-Al arrancar con SQLite (`DEBUG=true`), se crea automáticamente:
+Al arrancar en modo desarrollo, se crean automáticamente los siguientes usuarios:
 
+**Admin**:
 - **Email:** `admin@admin`
-- **Contraseña:** configurable con `DEV_ADMIN_PASSWORD` (por defecto `admin123`)
+- **Contraseña:** `admin123`
+
+**Redactor de Pruebas**:
+- **Email:** `redactor@example.com`
+- **Contraseña:** `redactor123`
+
+**Revisor Académico**:
+- **Email:** `revisor@example.com`
+- **Contraseña:** `revisor123`
 
 ::: danger
 No usar credenciales de desarrollo en producción. Cambiar `SECRET_KEY` y la contraseña de admin antes de cualquier despliegue.
