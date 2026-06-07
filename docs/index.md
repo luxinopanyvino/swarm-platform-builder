@@ -24,7 +24,7 @@ features:
     title: LangGraph Orchestrator
     details: El orquestador ejecuta el StateGraph en segundo plano y emite eventos en tiempo real vía Server-Sent Events (SSE).
   - icon: 📰
-    title: AlexandrIA Magazine
+    title: AlejandrIA Magazine
     details: Proyecto de referencia. Un swarm de 5 agentes produce artículos científicos completos con investigación, redacción, revisión y formato APA/IEEE/Vancouver.
   - icon: 🔒
     title: Seguridad integrada

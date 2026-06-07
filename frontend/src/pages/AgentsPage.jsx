@@ -16,7 +16,7 @@ const BUILTIN_SLUGS = new Set(['investigador', 'redactor', 'revisor', 'formatead
 ]);
 
 const BUILTIN_META = {
-  // Alexandria Magazine
+  // AlejandrIA Magazine
   investigador:   { emoji: '🔍', color: '#06b6d4' },
   redactor:       { emoji: '✍️',  color: '#7c3aed' },
   revisor:        { emoji: '👁️',  color: '#f59e0b' },

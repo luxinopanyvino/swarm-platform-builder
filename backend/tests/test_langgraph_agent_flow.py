@@ -18,6 +18,27 @@ async def test_basic_langgraph_flow_monkeypatched_logs(monkeypatch):
     monkeypatch.setattr(orquestador, "log_run_start", noop_log_start)
     monkeypatch.setattr(orquestador, "log_run_end", noop_log_end)
 
+    # Mock the LLM calls to avoid hitting local Ollama/OpenAI in tests
+    import app.shared.llm
+    import app.modules.agents.adapters.redactor as redactor_adapter
+    import app.modules.agents.adapters.revisor as revisor_adapter
+
+    async def mock_call_llm(prompt, **kwargs):
+        if "revisor" in prompt.lower() or "reviewer" in prompt.lower():
+            return '{"approval_score": 85, "feedback": ["Looks good but add details"]}'
+        return "Resumen de investigacion o texto formateado."
+
+    async def mock_call_llm_stream(prompt, **kwargs):
+        tokens = ["# ", "Test ", "Draft ", "\n", "This ", "is ", "a ", "test ", "draft."]
+        for token in tokens:
+            yield token
+
+    monkeypatch.setattr(app.shared.llm, "call_llm", mock_call_llm)
+    monkeypatch.setattr(app.shared.llm, "call_llm_stream", mock_call_llm_stream)
+    monkeypatch.setattr(redactor_adapter, "call_llm_stream", mock_call_llm_stream)
+    monkeypatch.setattr(redactor_adapter, "call_llm", mock_call_llm)
+    monkeypatch.setattr(revisor_adapter, "call_llm", mock_call_llm)
+
     # Use a small flow: investigador -> redactor -> revisor
     flow = ["investigador", "redactor", "revisor"]
 
