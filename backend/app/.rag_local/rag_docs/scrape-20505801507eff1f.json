@@ -1,0 +1,31 @@
+{
+  "doc_id": "scrape-20505801507eff1f",
+  "agent_name": "investigador",
+  "filename": "[Scrape] [2410.12601v3] CCSBench: Evaluating Compositional Controllability in LLMs for Sc.txt",
+  "chunks": [
+    {
+      "chunk_index": 0,
+      "text": "Computer Science > Computation and Language arXiv:2410.12601v3 (cs) [Submitted on 16 Oct 2024 ( v1 ), last revised 4 Aug 2025 (this version, v3)] Title: CCSBench: Evaluating Compositional Controllability in LLMs for Scientific Document Summarization Authors: Yixi Ding , Jiaying Wu , Tongyao Zhu , Yanxia Qin , Qian Liu , Min-Yen Kan View a PDF of the paper titled CCSBench: Evaluating Compositional Controllability in LLMs for Scientific Document Summarization, by Yixi Ding and 5 other authors View PDF HTML (experimental) Abstract: To broaden the dissemination of scientific knowledge to diverse audiences, it is desirable for scientific document summarization systems to simultaneously control multiple attributes such as length and empirical focus. However, existing research typically focuses"
+    },
+    {
+      "chunk_index": 1,
+      "text": "such as length and empirical focus. However, existing research typically focuses on controlling single attributes, leaving the compositional control of multiple attributes underexplored. To address this gap, we introduce CCSBench, the first evaluation benchmark for compositional controllable summarization in the scientific domain. Our benchmark enables fine-grained control over both explicit attributes (e.g., length), which are objective and straightforward, and implicit attributes (e.g., conceptual or empirical focus), which are more subjective and abstract. We conduct extensive experiments using various large language models (LLMs) under various settings, including in-context learning, parameter-efficient fine-tuning, and two-stage modular methods for balancing control over different attributes. Our findings reveal significant limitations in LLMs capabilities in"
+    },
+    {
+      "chunk_index": 2,
+      "text": "attributes. Our findings reveal significant limitations in LLMs capabilities in balancing trade-offs between control attributes, especially implicit ones that require deeper understanding and abstract reasoning. Comments: Accepted to KDD 2025 SciSoc LLM Workshop: Large Language Models for Scientific and Societal Advances Subjects: Computation and Language (cs.CL) Cite as: arXiv:2410.12601 [cs.CL] (or arXiv:2410.12601v3 [cs.CL] for this version) https://doi.org/10.48550/arXiv.2410.12601 arXiv-issued DOI via DataCite Submission history From: Jiaying Wu [ view email ] [v1] Wed, 16 Oct 2024 14:21:52 UTC (313 KB) [v2] Mon, 21 Jul 2025 13:34:09 UTC (346 KB) [v3] Mon, 4 Aug 2025 14:11:45 UTC (346 KB) Full-text links: Access Paper: View a PDF of the paper titled CCSBench: Evaluating Compositional Controllability in LLMs for Scientific Document Summarization, by Yixi Ding and"
+    },
+    {
+      "chunk_index": 3,
+      "text": "Controllability in LLMs for Scientific Document Summarization, by Yixi Ding and 5 other authors View PDF HTML (experimental) TeX Source view license Current browse context: cs.CL < prev | next > new | recent | 2024-10 Change to browse by: cs References & Citations NASA ADS Google Scholar Semantic Scholar Loading... BibTeX formatted citation loading... Data provided by: Bookmark Bibliographic Tools Bibliographic and Citation Tools Bibliographic Explorer Toggle Bibliographic Explorer ( What is the Explorer? ) Connected Papers Toggle Connected Papers ( What is Connected Papers? ) Litmaps Toggle Litmaps ( What is Litmaps? ) scite.ai Toggle scite Smart Citations ( What are Smart Citations? ) Code, Data, Media Code, Data and Media Associated with this Article alphaXiv Toggle alphaXiv ( What is alphaXiv? ) Links to Code Toggle CatalyzeX Code Finder for Papers ( What is"
+    },
+    {
+      "chunk_index": 4,
+      "text": "t is alphaXiv? ) Links to Code Toggle CatalyzeX Code Finder for Papers ( What is CatalyzeX? ) DagsHub Toggle DagsHub ( What is DagsHub? ) GotitPub Toggle Gotit.pub ( What is GotitPub? ) Huggingface Toggle Hugging Face ( What is Huggingface? ) ScienceCast Toggle ScienceCast ( What is ScienceCast? ) Demos Demos Replicate Toggle Replicate ( What is Replicate? ) Spaces Toggle Hugging Face Spaces ( What is Spaces? ) Spaces Toggle TXYZ.AI ( What is TXYZ.AI? ) Related Papers Recommenders and Search Tools Link to Influence Flower Influence Flower ( What are Influence Flowers? ) Core recommender toggle CORE Recommender ( What is CORE? ) Author Venue Institution Topic About arXivLabs arXivLabs: experimental projects with community collaborators arXivLabs is a framework that allows collaborators to develop and share new arXiv features directly on our website. Both individuals and"
+    },
+    {
+      "chunk_index": 5,
+      "text": "velop and share new arXiv features directly on our website. Both individuals and organizations that work with arXivLabs have embraced and accepted our values of openness, community, excellence, and user data privacy. arXiv is committed to these values and only works with partners that adhere to them. Have an idea for a project that will add value for arXiv's community? Learn more about arXivLabs . Which authors of this paper are endorsers? | Disable MathJax ( What is MathJax? )"
+    }
+  ]
+}

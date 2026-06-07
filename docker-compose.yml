@@ -1,7 +1,7 @@
 name: alejandria-magazine
 
 networks:
-  alejandria_network:
+  alexandria_network:
     driver: bridge
 
 services:
@@ -21,7 +21,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
-      - alejandria_network
+      - alexandria_network
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d alejandria"]
       interval: 10s
@@ -41,7 +41,7 @@ services:
     volumes:
       - qdrant_data:/qdrant/storage
     networks:
-      - alejandria_network
+      - alexandria_network
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:6333/healthz || exit 1"]
       interval: 10s
@@ -60,7 +60,7 @@ services:
     volumes:
       - ollama_data:/root/.ollama
     networks:
-      - alejandria_network
+      - alexandria_network
     # Pull all required models on first start.
     # Order: embed model first (small/fast), then generation models largest → smallest.
     entrypoint: >
@@ -122,7 +122,7 @@ services:
     ports:
       - "8000:8000"
     networks:
-      - alejandria_network
+      - alexandria_network
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
   # ─────────────────────────────────────────
@@ -141,7 +141,7 @@ services:
     ports:
       - "8080:80"
     networks:
-      - alejandria_network
+      - alexandria_network
 
 volumes:
   postgres_data:

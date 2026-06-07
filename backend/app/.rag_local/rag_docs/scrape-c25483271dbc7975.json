@@ -1,0 +1,31 @@
+{
+  "doc_id": "scrape-c25483271dbc7975",
+  "agent_name": "investigador",
+  "filename": "[Scrape] [2412.12881v1] RAG-Star: Enhancing Deliberative Reasoning with Retrieval Augment.txt",
+  "chunks": [
+    {
+      "chunk_index": 0,
+      "text": "Computer Science > Computation and Language arXiv:2412.12881v1 (cs) [Submitted on 17 Dec 2024] Title: RAG-Star: Enhancing Deliberative Reasoning with Retrieval Augmented Verification and Refinement Authors: Jinhao Jiang , Jiayi Chen , Junyi Li , Ruiyang Ren , Shijie Wang , Wayne Xin Zhao , Yang Song , Tao Zhang View a PDF of the paper titled RAG-Star: Enhancing Deliberative Reasoning with Retrieval Augmented Verification and Refinement, by Jinhao Jiang and 7 other authors View PDF HTML (experimental) Abstract: Existing large language models (LLMs) show exceptional problem-solving capabilities but might struggle with complex reasoning tasks. Despite the successes of chain-of-thought and tree-based search methods, they mainly depend on the internal knowledge of LLMs to search over"
+    },
+    {
+      "chunk_index": 1,
+      "text": "rch methods, they mainly depend on the internal knowledge of LLMs to search over intermediate reasoning steps, limited to dealing with simple tasks involving fewer reasoning steps. In this paper, we propose \\textbf{RAG-Star}, a novel RAG approach that integrates the retrieved information to guide the tree-based deliberative reasoning process that relies on the inherent knowledge of LLMs. By leveraging Monte Carlo Tree Search, RAG-Star iteratively plans intermediate sub-queries and answers for reasoning based on the LLM itself. To consolidate internal and external knowledge, we propose an retrieval-augmented verification that utilizes query- and answer-aware reward modeling to provide feedback for the inherent reasoning of LLMs. Our experiments involving Llama-3.1-8B-Instruct and GPT-4o demonstrate that RAG-Star significantly outperforms previous RAG and reasoning"
+    },
+    {
+      "chunk_index": 2,
+      "text": "o demonstrate that RAG-Star significantly outperforms previous RAG and reasoning methods. Comments: LLM;RAG;MCTS Subjects: Computation and Language (cs.CL) ; Artificial Intelligence (cs.AI) Cite as: arXiv:2412.12881 [cs.CL] (or arXiv:2412.12881v1 [cs.CL] for this version) https://doi.org/10.48550/arXiv.2412.12881 arXiv-issued DOI via DataCite Submission history From: Jinhao Jiang [ view email ] [v1] Tue, 17 Dec 2024 13:05:36 UTC (362 KB) Full-text links: Access Paper: View a PDF of the paper titled RAG-Star: Enhancing Deliberative Reasoning with Retrieval Augmented Verification and Refinement, by Jinhao Jiang and 7 other authors View PDF HTML (experimental) TeX Source view license Current browse context: cs.CL < prev | next > new | recent | 2024-12 Change to browse by: cs cs.AI References & Citations NASA ADS Google Scholar Semantic Scholar Loading... BibTeX formatted"
+    },
+    {
+      "chunk_index": 3,
+      "text": "& Citations NASA ADS Google Scholar Semantic Scholar Loading... BibTeX formatted citation loading... Data provided by: Bookmark Bibliographic Tools Bibliographic and Citation Tools Bibliographic Explorer Toggle Bibliographic Explorer ( What is the Explorer? ) Connected Papers Toggle Connected Papers ( What is Connected Papers? ) Litmaps Toggle Litmaps ( What is Litmaps? ) scite.ai Toggle scite Smart Citations ( What are Smart Citations? ) Code, Data, Media Code, Data and Media Associated with this Article alphaXiv Toggle alphaXiv ( What is alphaXiv? ) Links to Code Toggle CatalyzeX Code Finder for Papers ( What is CatalyzeX? ) DagsHub Toggle DagsHub ( What is DagsHub? ) GotitPub Toggle Gotit.pub ( What is GotitPub? ) Huggingface Toggle Hugging Face ( What is Huggingface? ) ScienceCast Toggle ScienceCast ( What is ScienceCast? ) Demos Demos Replicate Toggle Replicate ("
+    },
+    {
+      "chunk_index": 4,
+      "text": "le ScienceCast ( What is ScienceCast? ) Demos Demos Replicate Toggle Replicate ( What is Replicate? ) Spaces Toggle Hugging Face Spaces ( What is Spaces? ) Spaces Toggle TXYZ.AI ( What is TXYZ.AI? ) Related Papers Recommenders and Search Tools Link to Influence Flower Influence Flower ( What are Influence Flowers? ) Core recommender toggle CORE Recommender ( What is CORE? ) Author Venue Institution Topic About arXivLabs arXivLabs: experimental projects with community collaborators arXivLabs is a framework that allows collaborators to develop and share new arXiv features directly on our website. Both individuals and organizations that work with arXivLabs have embraced and accepted our values of openness, community, excellence, and user data privacy. arXiv is committed to these values and only works with partners that adhere to them. Have an idea for a project that will"
+    },
+    {
+      "chunk_index": 5,
+      "text": "ly works with partners that adhere to them. Have an idea for a project that will add value for arXiv's community? Learn more about arXivLabs . Which authors of this paper are endorsers? | Disable MathJax ( What is MathJax? )"
+    }
+  ]
+}

@@ -28,9 +28,7 @@ async def run_revisor(state: Dict[str, Any]) -> Dict[str, Any]:
     log(f"👁️ Evaluando borrador — modelo: {model} | iteración: {loop_count + 1} | {len(draft_text.split())} palabras")
 
     prompt = (
-        f"Identity: You are a Senior Software Engineer Expert in LLMOps and multi-agent systems.\n"
-        f"Exact technology stack: Python, FastAPI, LangGraph (v2), Qdrant and a local inference engine (like Ollama/vLLM).\n\n"
-        f"You are acting as a peer reviewer for a scientific journal. Evaluate the following draft.\n\n"
+        f"You are a peer reviewer for a scientific journal. Evaluate the following draft.\n\n"
         f"Draft Content:\n{draft_text}\n\n"
         f"Evaluate the draft for scientific rigor, clarity, structure, and academic style.\n"
         f"You must return your evaluation in JSON format. Do not write markdown blocks before the JSON.\n"

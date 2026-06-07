@@ -38,7 +38,7 @@ class ArticleStatus(str, Enum):
 
 class ProjectUseCaseType(str, Enum):
     """Project use case types."""
-    ALEJANDRIA_MAGAZINE = "alejandria_magazine"
+    ALEXANDRIA_MAGAZINE = "alexandria_magazine"
     DESARROLLO = "desarrollo"
     MARKETING = "marketing"
     TIQUETING = "tiqueting"

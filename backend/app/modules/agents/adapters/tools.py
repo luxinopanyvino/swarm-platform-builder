@@ -165,7 +165,7 @@ async def _fetch_url(url: str) -> str:
     if not url.startswith(("http://", "https://")):
         return "URL inválida. Debe empezar por http:// o https://"
     try:
-        headers = {"User-Agent": "Mozilla/5.0 (compatible; AlejandrIA/1.0; +research)"}
+        headers = {"User-Agent": "Mozilla/5.0 (compatible; AlexandrIA/1.0; +research)"}
         async with httpx.AsyncClient(timeout=15.0, follow_redirects=True) as client:
             resp = await client.get(url, headers=headers)
         if resp.status_code != 200:

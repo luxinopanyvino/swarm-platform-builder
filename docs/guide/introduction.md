@@ -6,7 +6,7 @@ La **Plataforma Agéntica Multiproyecto** es un framework de orquestación de ag
 
 ```
 Plataforma
-├── Proyecto A: AlejandrIA Magazine
+├── Proyecto A: AlexandrIA Magazine
 │   ├── Agentes: investigador, redactor, revisor, formateador, publicador
 │   └── Flujo: investigador → redactor → revisor → formateador → publicador
 │
@@ -32,7 +32,7 @@ Plataforma
 
 | Tipo | Descripción |
 |---|---|
-| `alejandria_magazine` | Revista científica con swarm editorial |
+| `alexandria_magazine` | Revista científica con swarm editorial |
 | `desarrollo` | Ciclo de desarrollo de software |
 | `marketing` | Producción de contenido y campañas |
 | `tiqueting` | Gestión y resolución de tickets de soporte |

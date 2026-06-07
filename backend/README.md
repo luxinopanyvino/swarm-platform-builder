@@ -1,4 +1,4 @@
-# Backend — AlejandrIA Magazine
+# Backend — AlexandrIA Magazine
 
 Backend FastAPI con arquitectura modular, pipeline de agentes IA orquestado con **LangGraph**, RAG con **Qdrant** y modelos locales vía **Ollama**. Soporta cancelación en caliente de pipelines, streaming SSE en tiempo real y publicación directa por roles privilegiados.
 

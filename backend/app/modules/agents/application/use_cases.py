@@ -162,18 +162,13 @@ def make_node_wrapper(agent_name: str, run_fn):
             """Emit a detailed SSE log event for this agent's execution."""
             publish_event(article_id, {"type": "log", "agent": agent_name, "message": message, "level": level})
 
-        def emit_token_fn(token: str) -> None:
-            """Emit a word-by-word token SSE event for visual typing."""
-            publish_event(article_id, {"type": "token", "agent": agent_name, "token": token})
-
         publish_event(article_id, {"type": "agent_start", "agent": agent_name})
 
         run_id = await log_run_start(agent_name, article_id, author_id, input_data)
 
-        # Inject log_fn and emit_token_fn into state so adapters can emit SSE events
+        # Inject log_fn into state so adapters can emit detailed SSE log events
         enriched_state = dict(state)
         enriched_state["_log"] = log_fn
-        enriched_state["_emit_token"] = emit_token_fn
 
         try:
             res = await run_fn(enriched_state)

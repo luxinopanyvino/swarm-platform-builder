@@ -42,7 +42,7 @@ logger = logging.getLogger(__name__)
 
 # ── Constants ─────────────────────────────────────────────────────────────────
 
-_UA = "Mozilla/5.0 (compatible; AlejandrIA/1.0; +research)"
+_UA = "Mozilla/5.0 (compatible; AlexandrIA/1.0; +research)"
 _HEADERS = {"User-Agent": _UA, "Accept-Language": "es,en;q=0.9"}
 _MAX_PAGE_BYTES = 50_000          # 50 KB cap on raw HTML per page
 _MIN_TEXT_RATIO = 0.08            # below this → probably JS-heavy → try Playwright

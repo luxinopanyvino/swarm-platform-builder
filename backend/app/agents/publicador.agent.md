@@ -26,7 +26,7 @@ Determinismo total. No usa LLM. Opera directamente sobre la base de datos. Si el
   "published_url": "http://localhost:8080/articles/<id>/view",
   "metadata": {
     "indexed": true,
-    "publisher": "AlejandrIA Magazine Editorial",
+    "publisher": "AlexandrIA Magazine Editorial",
     "license": "CC-BY-4.0",
     "word_count": 1200,
     "reading_time_minutes": 6,

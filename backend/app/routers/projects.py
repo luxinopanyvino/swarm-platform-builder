@@ -51,8 +51,8 @@ async def list_projects(
     """Return projects visible to the current user.
 
     - admin    → all projects
-    - redactor → only alejandria_magazine projects (system + own)
-    - lector   → only alejandria_magazine projects (system + own)
+    - redactor → only alexandria_magazine projects (system + own)
+    - lector   → only alexandria_magazine projects (system + own)
     - others   → system projects + own projects
     """
     if current_user.role == UserRole.ADMIN:

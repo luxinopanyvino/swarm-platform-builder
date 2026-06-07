@@ -10,7 +10,7 @@ from app.shared.database import AsyncSessionLocal
 
 # ── Agent templates per use-case type ─────────────────────────────────────────
 
-def _alejandria_magazine_agents() -> list[dict]:
+def _alexandria_magazine_agents() -> list[dict]:
     """Try to load from .agent.md files; fall back to hardcoded."""
     search_paths = [Path("app/agents"), Path("../app/agents")]
     agents_dir = next((p for p in search_paths if p.exists()), None)
@@ -149,7 +149,7 @@ def _diseno_agents() -> list[dict]:
 
 
 _AGENTS_BY_TYPE = {
-    ProjectUseCaseType.ALEJANDRIA_MAGAZINE: _alejandria_magazine_agents,
+    ProjectUseCaseType.ALEXANDRIA_MAGAZINE: _alexandria_magazine_agents,
     ProjectUseCaseType.DESARROLLO:          _desarrollo_agents,
     ProjectUseCaseType.MARKETING:           _marketing_agents,
     ProjectUseCaseType.TIQUETING:           _tiqueting_agents,
