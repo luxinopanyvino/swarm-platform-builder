@@ -60,3 +60,8 @@ Thumbs.db
 .pytest_cache/
 .coverage
 htmlcov/
+
+# Local cache and DB storage
+storage/
+backend/app/.rag_local/
+docs/.vitepress/cache/
