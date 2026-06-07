@@ -14,7 +14,7 @@ export default function DocumentsPage() {
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [dragging, setDragging] = useState(false);
-  const [uploadCollection, setUploadCollection] = useState('biblioteca');
+  const [uploadCollection, setUploadCollection] = useState('rag_docs');
   const [showUpload, setShowUpload] = useState(false);
   const inputRef = useRef(null);
 
@@ -38,7 +38,7 @@ export default function DocumentsPage() {
     for (const file of files) {
       setUploading(true);
       try {
-        const res = await agentsApi.uploadLibraryDocument(file, uploadCollection || 'biblioteca');
+        const res = await agentsApi.uploadLibraryDocument(file, uploadCollection || 'rag_docs');
         toast.success(`${res.filename} indexado · ${res.chunks} chunks en "${res.collection}"`);
       } catch (err) {
         toast.error(err?.response?.data?.detail || `Error al subir ${file.name}`);
@@ -112,7 +112,7 @@ export default function DocumentsPage() {
                 className="input"
                 value={uploadCollection}
                 onChange={(e) => setUploadCollection(e.target.value)}
-                placeholder="biblioteca"
+                placeholder="rag_docs"
                 style={{ maxWidth: 200 }}
               />
             </div>

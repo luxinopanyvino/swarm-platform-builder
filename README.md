@@ -228,7 +228,7 @@ flowchart TD
 
     subgraph INV_BLOCK["Etapa 1 — Investigación"]
         INV["🔍 Investigador"]
-        RAG_LOCAL["RAG local\n(colección: biblioteca)"]
+        RAG_LOCAL["RAG local\n(colección: rag_docs)"]
         EUROPMC["EuropePMC API"]
         SCRAPER["Web scraping\narXiv · Wikipedia · Semantic Scholar"]
         SYNTH["Síntesis LLM\nmistral:7b con fuentes\nllama3.2:1b sin fuentes"]
@@ -419,7 +419,7 @@ curl -X POST http://localhost:8000/api/v1/agents/claude-defs \
     "model": "llama3.2:1b",
     "temperature": 0.5,
     "rag_enabled": true,
-    "rag_collection": "biblioteca",
+    "rag_collection": "rag_docs",
     "prompt_template": "Eres un experto en síntesis científica. Responde siempre en español.",
     "output_language": "spanish",
     "target_word_count": 800
@@ -460,14 +460,14 @@ Desde la API:
 curl -X POST http://localhost:8000/api/v1/agents/rag/library/upload \
   -H "Authorization: Bearer <token>" \
   -F "file=@mi-paper.pdf" \
-  -F "collection=biblioteca"
+  -F "collection=rag_docs"
 ```
 
 ### Estructura interna
 
 ```
 Qdrant
-└── colección: biblioteca          # documentos generales del proyecto
+└── colección: rag_docs          # documentos generales del proyecto
     ├── punto UUID (chunk 1)
     │   ├── vector: [768 floats]   # nomic-embed-text
     │   └── payload: { doc_id, filename, agent_name, text }

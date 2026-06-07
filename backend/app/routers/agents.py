@@ -250,7 +250,7 @@ async def upload_to_rag_library(
     if not text.strip():
         raise HTTPException(status_code=422, detail="No se pudo extraer texto del archivo")
 
-    col = (collection or "biblioteca").strip() or "biblioteca"
+    col = (collection or settings.QDRANT_COLLECTION).strip() or settings.QDRANT_COLLECTION
     c_size = max(100, min(int(chunk_size or settings.RAG_CHUNK_SIZE if hasattr(settings, "RAG_CHUNK_SIZE") else 500), 4000))
     c_overlap = max(0, min(int(chunk_overlap or 50), 499))
 

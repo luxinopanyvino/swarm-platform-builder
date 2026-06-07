@@ -6,7 +6,7 @@
 curl -X POST http://localhost:8000/api/v1/agents/rag/library/upload \
   -H "Authorization: Bearer <token>" \
   -F "file=@paper.pdf" \
-  -F "collection=biblioteca" \
+  -F "collection=rag_docs" \
   -F "chunk_size=500" \
   -F "chunk_overlap=50"
 ```
@@ -18,7 +18,7 @@ Respuesta:
   "status": "indexed",
   "doc_id": "550e8400-e29b-41d4-a716-446655440000",
   "filename": "paper.pdf",
-  "collection": "biblioteca",
+  "collection": "rag_docs",
   "chunks": 42
 }
 ```
@@ -34,7 +34,7 @@ curl http://localhost:8000/api/v1/agents/rag/library \
 
 ```bash
 curl -X DELETE \
-  "http://localhost:8000/api/v1/agents/rag/library/biblioteca/<doc_id>" \
+  "http://localhost:8000/api/v1/agents/rag/library/rag_docs/<doc_id>" \
   -H "Authorization: Bearer <token>"
 ```
 

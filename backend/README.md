@@ -85,7 +85,7 @@ flowchart TD
     START([START]) --> Investigador
 
     subgraph INV["Etapa 1 — Investigación (Investigador)"]
-        RAG["RAG local\n(Qdrant: biblioteca)"]
+        RAG["RAG local\n(Qdrant: rag_docs)"]
         PMC["EuropePMC API"]
         WEB["Web scraping\narXiv · Wikipedia · Semantic Scholar"]
         SYNTH["Síntesis LLM\nmistral:7b con fuentes · llama3.2:1b sin fuentes\ntimeout 600s · num_ctx 8192"]

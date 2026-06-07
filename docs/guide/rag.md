@@ -18,14 +18,14 @@ La plataforma incluye una **biblioteca documental** por colección. Los agentes 
 curl -X POST http://localhost:8000/api/v1/agents/rag/library/upload \
   -H "Authorization: Bearer <token>" \
   -F "file=@mi-paper.pdf" \
-  -F "collection=biblioteca"
+  -F "collection=rag_docs"
 ```
 
 ## Parámetros de indexación
 
 | Parámetro | Default | Descripción |
 |---|---|---|
-| `collection` | `biblioteca` | Colección Qdrant destino |
+| `collection` | `rag_docs` | Colección Qdrant destino |
 | `chunk_size` | `500` | Caracteres por fragmento |
 | `chunk_overlap` | `50` | Solapamiento entre fragmentos |
 
@@ -33,7 +33,7 @@ curl -X POST http://localhost:8000/api/v1/agents/rag/library/upload \
 
 ```
 Qdrant
-└── colección: biblioteca
+└── colección: rag_docs
     ├── punto UUID (chunk 1)
     │   ├── vector: [768 floats]   ← nomic-embed-text
     │   └── payload: { doc_id, filename, agent_name, text }
@@ -44,6 +44,6 @@ Qdrant
 
 ```bash
 curl -X DELETE \
-  "http://localhost:8000/api/v1/agents/rag/library/biblioteca/<doc_id>" \
+  "http://localhost:8000/api/v1/agents/rag/library/rag_docs/<doc_id>" \
   -H "Authorization: Bearer <token>"
 ```
