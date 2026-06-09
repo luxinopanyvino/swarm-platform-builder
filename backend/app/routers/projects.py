@@ -63,7 +63,7 @@ async def list_projects(
             return []
         stmt = select(ProjectModel).where(ProjectModel.id == current_user.assigned_project_id)
     else:
-        # Own projects + projects explicitly granted by admin
+        # Own projects + system projects + projects explicitly granted by admin
         granted_stmt = select(UserProjectAccessModel.project_id).where(
             UserProjectAccessModel.user_id == current_user.id
         )
@@ -72,6 +72,7 @@ async def list_projects(
 
         stmt = select(ProjectModel).where(
             or_(
+                ProjectModel.is_system == True,  # noqa: E712
                 ProjectModel.owner_id == current_user.id,
                 ProjectModel.id.in_(granted_ids),
             )
