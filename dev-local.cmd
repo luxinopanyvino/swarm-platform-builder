@@ -4,7 +4,38 @@ setlocal
 set "ROOT_DIR=%~dp0"
 set "BACKEND_DIR=%ROOT_DIR%backend"
 set "FRONTEND_DIR=%ROOT_DIR%frontend"
-set "UVICORN_EXE=%BACKEND_DIR%\.venv\Scripts\uvicorn.exe"
+set "VENV_DIR=%BACKEND_DIR%\.venv"
+set "UVICORN_EXE=%VENV_DIR%\Scripts\uvicorn.exe"
+
+echo.
+echo Verificando entorno virtual en %VENV_DIR%...
+pushd "%BACKEND_DIR%"
+if not exist "%VENV_DIR%\Scripts\python.exe" (
+  echo [info] Creando entorno virtual en %VENV_DIR%...
+  python -m venv .venv
+  if errorlevel 1 (
+    popd
+    echo [error] No se pudo crear el entorno virtual.
+    exit /b 1
+  )
+)
+
+if exist "%VENV_DIR%\Scripts\activate.bat" (
+  call "%VENV_DIR%\Scripts\activate.bat"
+) else (
+  popd
+  echo [error] No se encontro %VENV_DIR%\Scripts\activate.bat
+  exit /b 1
+)
+
+echo [info] Instalando dependencias de backend...
+"%VENV_DIR%\Scripts\python.exe" -m pip install -r requirements.txt
+if errorlevel 1 (
+  popd
+  echo [error] Fallo la instalacion de dependencias.
+  exit /b 1
+)
+popd
 
 if not exist "%UVICORN_EXE%" (
   echo [error] No se encontro %UVICORN_EXE%
@@ -15,6 +46,19 @@ if not exist "%UVICORN_EXE%" (
 if not exist "%FRONTEND_DIR%\package.json" (
   echo [error] No se encontro el frontend en %FRONTEND_DIR%
   exit /b 1
+)
+
+set "FRONTEND_VITE_BIN=%FRONTEND_DIR%\node_modules\.bin\vite"
+if not exist "%FRONTEND_VITE_BIN%" (
+  echo [info] Instalando dependencias de frontend en %FRONTEND_DIR%...
+  pushd "%FRONTEND_DIR%"
+  npm.cmd install
+  if errorlevel 1 (
+    popd
+    echo [error] Fallo la instalacion de dependencias de frontend.
+    exit /b 1
+  )
+  popd
 )
 
 :: ── Qdrant (vector DB) ───────────────────────────────────────
