@@ -37,6 +37,10 @@ if errorlevel 1 (
 )
 popd
 
+pushd "%BACKEND_DIR%"
+if not exist "data" mkdir data
+popd
+
 if not exist "%UVICORN_EXE%" (
   echo [error] No se encontro %UVICORN_EXE%
   echo Crea el entorno virtual con: cd backend ^&^& python -m venv .venv ^&^& .venv\Scripts\pip install -r requirements.txt
@@ -90,7 +94,7 @@ echo         Descarga: https://github.com/qdrant/qdrant/releases
 :qdrant_ok
 
 echo Iniciando backend en una nueva ventana...
-set DATABASE_URL=sqlite+aiosqlite:///./dev.db
+set DATABASE_URL=sqlite+aiosqlite:///./data/dev.db
 set SECRET_KEY=local-dev-secret
 set DEBUG=true
 set ENABLE_DEV_ROLE_PROMOTION=true

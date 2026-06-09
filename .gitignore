@@ -43,11 +43,6 @@ docs/.vitepress/dist/
 .env
 .env.local
 
-# Database
-*.db
-*.sqlite
-*.sqlite3
-
 # Logs
 *.log
 logs/

@@ -14,7 +14,7 @@ openai:
   embed_model: text-embedding-3-small
   base_url: null
 database:
-  url: sqlite+aiosqlite:///./dev.db
+  url: sqlite+aiosqlite:///./backend/data/dev.db
 security:
   secret_key: CAMBIA-ESTO-EN-PRODUCCION-usa-openssl-rand-hex-32
   algorithm: HS256

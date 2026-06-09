@@ -10,6 +10,7 @@ VENV_DIR="$BACKEND_DIR/.venv"
 printf "\n[info] Configurando entorno de desarrollo local\n"
 
 cd "$BACKEND_DIR"
+mkdir -p data
 if [ ! -f "$VENV_DIR/bin/python" ]; then
   printf "[info] Creando entorno virtual en %s\n" "$VENV_DIR"
   python3 -m venv "$VENV_DIR" || python -m venv "$VENV_DIR"
@@ -54,7 +55,7 @@ fi
 
 printf "[info] Iniciando backend...\n"
 cd "$BACKEND_DIR"
-DATABASE_URL="sqlite+aiosqlite:///./dev.db" \
+DATABASE_URL="sqlite+aiosqlite:///./data/dev.db" \
 SECRET_KEY="local-dev-secret" \
 DEBUG=true \
 ENABLE_DEV_ROLE_PROMOTION=true \

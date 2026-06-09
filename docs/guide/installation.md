@@ -32,7 +32,7 @@ cp .env.example backend/.env.local
 Variables mínimas para desarrollo:
 
 ```env
-DATABASE_URL=sqlite+aiosqlite:///./dev.db
+DATABASE_URL=sqlite+aiosqlite:///./data/dev.db
 SECRET_KEY=<genera con: python -c "import secrets; print(secrets.token_hex(32))">
 DEBUG=true
 ENABLE_DEV_ROLE_PROMOTION=true

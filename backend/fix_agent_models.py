@@ -1,7 +1,8 @@
 """Fix agent_profiles: update model from llama3.2:1b to mistral:7b"""
 import sqlite3
+from pathlib import Path
 
-conn = sqlite3.connect("dev.db")
+conn = sqlite3.connect(Path("data") / "dev.db")
 cur = conn.cursor()
 
 # Show current state

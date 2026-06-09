@@ -257,7 +257,7 @@ python -m venv .venv
 pip install -r requirements.txt
 
 # Variables mínimas (Windows PowerShell)
-$env:DATABASE_URL = "sqlite+aiosqlite:///./dev.db"
+$env:DATABASE_URL = "sqlite+aiosqlite:///./data/dev.db"
 $env:SECRET_KEY   = "local-dev-secret"
 $env:DEBUG        = "true"
 $env:ENABLE_DEV_ROLE_PROMOTION = "true"
