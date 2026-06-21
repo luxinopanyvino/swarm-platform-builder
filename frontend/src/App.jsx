@@ -72,8 +72,9 @@ function AppBootGate({ children }) {
 function ProtectedRoute({ children, allowedRoles }) {
   const { isAuthenticated, user } = useAuthStore();
   if (!isAuthenticated) return <Navigate to="/auth" replace />;
-  // Lectors must stay in their own reader view
-  if (user?.role === 'lector' && allowedRoles && !allowedRoles.includes('lector')) {
+  // Lectors and Publicos must stay in their own reader view
+  const isReaderRole = user?.role === 'lector' || user?.role === 'publico';
+  if (isReaderRole && (!allowedRoles || !allowedRoles.includes(user.role))) {
     return <Navigate to="/reader" replace />;
   }
   if (allowedRoles && !allowedRoles.includes(user?.role)) return <Navigate to="/dashboard/articles" replace />;
@@ -83,7 +84,8 @@ function ProtectedRoute({ children, allowedRoles }) {
 function PublicRoute({ children }) {
   const { isAuthenticated, user } = useAuthStore();
   if (isAuthenticated) {
-    return <Navigate to={user?.role === 'lector' ? '/reader' : '/projects'} replace />;
+    const isReaderRole = user?.role === 'lector' || user?.role === 'publico';
+    return <Navigate to={isReaderRole ? '/reader' : '/projects'} replace />;
   }
   return children;
 }
@@ -115,7 +117,7 @@ export default function App() {
 
           {/* Lector reader view */}
           <Route path="/reader" element={
-            <ProtectedRoute allowedRoles={['lector']}><LectorPage /></ProtectedRoute>
+            <ProtectedRoute allowedRoles={['lector', 'publico']}><LectorPage /></ProtectedRoute>
           } />
 
           {/* Project selection (requires auth, not for lectors) */}

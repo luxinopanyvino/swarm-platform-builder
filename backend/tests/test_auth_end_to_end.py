@@ -76,3 +76,36 @@ async def test_register_login_and_get_current_user() -> None:
                 TEST_DB_PATH.unlink()
             except Exception:
                 pass
+
+
+@pytest.mark.asyncio
+async def test_seeded_public_user_login() -> None:
+    await _create_test_database()
+    from app.main import ensure_dev_users
+    await ensure_dev_users()
+    try:
+        from httpx import ASGITransport
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://testserver") as client:
+            login_payload = {
+                "email": "publico@example.com",
+                "password": "publico123",
+            }
+            response = await client.post("/api/v1/auth/login", json=login_payload)
+            assert response.status_code == 200
+            response_data = response.json()
+            assert "access_token" in response_data
+            
+            access_token = response_data["access_token"]
+            headers = {"Authorization": f"Bearer {access_token}"}
+            me_res = await client.get("/api/v1/auth/me", headers=headers)
+            assert me_res.status_code == 200
+            me_data = me_res.json()
+            assert me_data["email"] == "publico@example.com"
+            assert me_data["role"] == "publico"
+    finally:
+        await engine.dispose()
+        if TEST_DB_PATH.exists():
+            try:
+                TEST_DB_PATH.unlink()
+            except Exception:
+                pass

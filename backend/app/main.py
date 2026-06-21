@@ -75,6 +75,12 @@ async def ensure_dev_users() -> None:
             "full_name": "Revisor Académico",
             "role": UserRole.REDACTOR,
         },
+        {
+            "email": "publico@example.com",
+            "password": "publico123",
+            "full_name": "Público General",
+            "role": UserRole.PUBLICO,
+        },
     ]
 
     async with AsyncSessionLocal() as session:

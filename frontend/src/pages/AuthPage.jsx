@@ -31,7 +31,7 @@ export default function AuthPage() {
     if (result.ok) {
       toast.success(tab === 'login' ? '¡Bienvenido de vuelta!' : '¡Cuenta creada!');
       const role = useAuthStore.getState().user?.role;
-      navigate(role === 'lector' ? '/reader' : '/projects');
+      navigate((role === 'lector' || role === 'publico') ? '/reader' : '/projects');
     } else {
       toast.error(result.error);
     }

@@ -32,10 +32,11 @@ export default function LectorPage() {
   }, []);
 
   useEffect(() => {
+    if (user?.role === 'publico') return;
     fetchNotifications();
     const id = setInterval(fetchNotifications, 30000);
     return () => clearInterval(id);
-  }, [fetchNotifications]);
+  }, [fetchNotifications, user?.role]);
 
   useEffect(() => {
     const handler = (e) => {
@@ -49,12 +50,19 @@ export default function LectorPage() {
 
   // Fetch published articles (authenticated, scoped to assigned project if any)
   useEffect(() => {
-    const params = user?.assigned_project_id ? { project_id: user.assigned_project_id } : {};
-    api.get('/api/v1/articles', { params })
-      .then(r => setArticles(r.data?.items ?? []))
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, []);
+    if (user?.role === 'publico') {
+      api.get('/api/v1/magazine')
+        .then(r => setArticles(r.data ?? []))
+        .catch(() => {})
+        .finally(() => setLoading(false));
+    } else {
+      const params = user?.assigned_project_id ? { project_id: user.assigned_project_id } : {};
+      api.get('/api/v1/articles', { params })
+        .then(r => setArticles(r.data?.items ?? []))
+        .catch(() => {})
+        .finally(() => setLoading(false));
+    }
+  }, [user]);
 
   const prev = useCallback(() => setCurrent(c => (c - 1 + articles.length) % articles.length), [articles.length]);
   const next = useCallback(() => setCurrent(c => (c + 1) % articles.length), [articles.length]);
@@ -105,63 +113,65 @@ export default function LectorPage() {
         {/* User actions */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           {/* Bell */}
-          <div style={{ position: 'relative' }} ref={notifRef}>
-            <button
-              className="btn btn-ghost btn-icon"
-              style={{ position: 'relative' }}
-              onClick={() => setShowNotifs(v => !v)}
-              aria-label={`Notificaciones${unread ? ` (${unread} sin leer)` : ''}`}
-            >
-              <Bell size={18} />
-              {unread > 0 && (
-                <span style={{
-                  position: 'absolute', top: 3, right: 3,
-                  background: '#ef4444', color: '#fff',
-                  borderRadius: '50%', width: 16, height: 16,
-                  fontSize: 10, fontWeight: 700,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                }}>{unread > 9 ? '9+' : unread}</span>
-              )}
-            </button>
-            {showNotifs && (
-              <div style={{
-                position: 'absolute', right: 0, top: 'calc(100% + 8px)',
-                width: 300, background: 'var(--bg-elevated)',
-                border: '1px solid var(--border-color)', borderRadius: 'var(--radius-lg)',
-                boxShadow: '0 8px 24px rgba(0,0,0,0.4)', zIndex: 200, overflow: 'hidden',
-              }}>
-                <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border-color)', fontWeight: 600, fontSize: 'var(--font-size-sm)' }}>
-                  Notificaciones {unread > 0 && <span style={{ color: '#ef4444' }}>({unread} nuevas)</span>}
-                </div>
-                <div style={{ maxHeight: 320, overflowY: 'auto' }}>
-                  {notifications.length === 0 ? (
-                    <div style={{ padding: '24px 16px', textAlign: 'center', color: 'var(--text-muted)', fontSize: 'var(--font-size-sm)' }}>
-                      Sin notificaciones
-                    </div>
-                  ) : notifications.map(n => (
-                    <div key={n.id} style={{
-                      padding: '12px 16px',
-                      background: n.read ? 'transparent' : 'rgba(99,102,241,0.08)',
-                      borderBottom: '1px solid var(--border-color)',
-                    }}>
-                      <div style={{ fontWeight: n.read ? 400 : 600, fontSize: 'var(--font-size-sm)', marginBottom: 2 }}>
-                        {!n.read && <span style={{ display: 'inline-block', width: 7, height: 7, borderRadius: '50%', background: '#6366f1', marginRight: 6, verticalAlign: 'middle' }} />}
-                        {n.title}
+          {user?.role !== 'publico' && (
+            <div style={{ position: 'relative' }} ref={notifRef}>
+              <button
+                className="btn btn-ghost btn-icon"
+                style={{ position: 'relative' }}
+                onClick={() => setShowNotifs(v => !v)}
+                aria-label={`Notificaciones${unread ? ` (${unread} sin leer)` : ''}`}
+              >
+                <Bell size={18} />
+                {unread > 0 && (
+                  <span style={{
+                    position: 'absolute', top: 3, right: 3,
+                    background: '#ef4444', color: '#fff',
+                    borderRadius: '50%', width: 16, height: 16,
+                    fontSize: 10, fontWeight: 700,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}>{unread > 9 ? '9+' : unread}</span>
+                )}
+              </button>
+              {showNotifs && (
+                <div style={{
+                  position: 'absolute', right: 0, top: 'calc(100% + 8px)',
+                  width: 300, background: 'var(--bg-elevated)',
+                  border: '1px solid var(--border-color)', borderRadius: 'var(--radius-lg)',
+                  boxShadow: '0 8px 24px rgba(0,0,0,0.4)', zIndex: 200, overflow: 'hidden',
+                }}>
+                  <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border-color)', fontWeight: 600, fontSize: 'var(--font-size-sm)' }}>
+                    Notificaciones {unread > 0 && <span style={{ color: '#ef4444' }}>({unread} nuevas)</span>}
+                  </div>
+                  <div style={{ maxHeight: 320, overflowY: 'auto' }}>
+                    {notifications.length === 0 ? (
+                      <div style={{ padding: '24px 16px', textAlign: 'center', color: 'var(--text-muted)', fontSize: 'var(--font-size-sm)' }}>
+                        Sin notificaciones
                       </div>
-                      <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--text-muted)' }}>{n.message}</div>
-                    </div>
-                  ))}
+                    ) : notifications.map(n => (
+                      <div key={n.id} style={{
+                        padding: '12px 16px',
+                        background: n.read ? 'transparent' : 'rgba(99,102,241,0.08)',
+                        borderBottom: '1px solid var(--border-color)',
+                      }}>
+                        <div style={{ fontWeight: n.read ? 400 : 600, fontSize: 'var(--font-size-sm)', marginBottom: 2 }}>
+                          {!n.read && <span style={{ display: 'inline-block', width: 7, height: 7, borderRadius: '50%', background: '#6366f1', marginRight: 6, verticalAlign: 'middle' }} />}
+                          {n.title}
+                        </div>
+                        <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--text-muted)' }}>{n.message}</div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
-          </div>
+              )}
+            </div>
+          )}
 
           {/* User info */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <div className="avatar">{initials}</div>
             <div style={{ lineHeight: 1.3 }}>
               <div style={{ fontSize: 'var(--font-size-sm)', fontWeight: 600 }}>{user?.full_name}</div>
-              <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--text-muted)' }}>lector</div>
+              <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--text-muted)' }}>{user?.role}</div>
             </div>
           </div>
 
