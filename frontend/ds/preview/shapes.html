@@ -1,0 +1,22 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">
+<link rel="stylesheet" href="../colors_and_type.css"><link rel="stylesheet" href="_card.css">
+<style>
+  .shapes { display:flex; align-items:center; gap:26px; flex-wrap:wrap; }
+  .sh { display:flex; flex-direction:column; align-items:center; gap:7px; }
+  .sh .nm { font-size:10px; color:var(--text-muted); }
+  .box { width:46px; height:46px; }
+  .tint { background:var(--brand-tint); border:1px solid #cfe4fb; }
+</style></head>
+<body>
+  <div class="cap" style="margin-bottom:16px;">Shapes &amp; containers · icon tiles, dividers, handles</div>
+  <div class="shapes">
+    <div class="sh"><div class="box tint" style="border-radius:8px; display:flex; align-items:center; justify-content:center; color:var(--brand);"><i data-lucide="bot"></i></div><span class="nm">icon tile</span></div>
+    <div class="sh"><div class="box" style="border-radius:50%; background:var(--blue-60);"></div><span class="nm">avatar</span></div>
+    <div class="sh"><div class="box" style="border-radius:999px; width:64px; height:28px; background:var(--green-05); border:1px solid #cfe9d6;"></div><span class="nm">pill / chip</span></div>
+    <div class="sh"><div class="box" style="border-radius:12px; background:#fff; border:1px solid var(--border-default); box-shadow:var(--shadow-2);"></div><span class="nm">card</span></div>
+    <div class="sh"><div style="width:9px; height:9px; border-radius:50%; background:#fff; border:2px solid var(--brand);"></div><span class="nm">flow handle</span></div>
+    <div class="sh"><div style="width:64px; height:1px; background:var(--border-default);"></div><span class="nm">divider</span></div>
+    <div class="sh"><svg width="46" height="46" viewBox="0 0 46 46"><path d="M4,23 H40 M40,23 L33,16 M40,23 L33,30" fill="none" stroke="var(--brand)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="nm">edge arrow</span></div>
+  </div>
+  <script src="https://unpkg.com/lucide@0.544.0/dist/umd/lucide.min.js"></script><script>lucide.createIcons();</script>
+</body></html>

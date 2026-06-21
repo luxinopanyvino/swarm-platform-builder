@@ -1,0 +1,23 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">
+<link rel="stylesheet" href="../colors_and_type.css"><link rel="stylesheet" href="_card.css">
+<style>
+  .stats { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; }
+  .stat { border:1px solid var(--border-default); border-radius:12px; padding:15px 16px; background:var(--bg-surface); box-shadow:var(--shadow-1); }
+  .stat .k { font-size:11px; font-weight:600; color:var(--text-secondary); display:flex; align-items:center; gap:6px; }
+  .stat .v { font-size:28px; font-weight:700; color:var(--text-heading); letter-spacing:-0.02em; margin-top:6px; font-variant-numeric:tabular-nums; }
+  .delta { display:inline-flex; align-items:center; gap:3px; font-size:11px; font-weight:600; margin-top:4px; }
+  .up { color:var(--viz-positive); } .down { color:var(--viz-negative); }
+  .spark { margin-top:8px; }
+  .dot { width:8px; height:8px; border-radius:2px; }
+</style></head>
+<body>
+  <div class="cap" style="margin-bottom:12px;">Stat tiles · KPI + delta + sparkline</div>
+  <div class="stats">
+    <div class="stat"><div class="k"><span class="dot" style="background:var(--viz-1)"></span>Publicados</div><div class="v">128</div><div class="delta up">▲ 12% vs. mes ant.</div>
+      <svg class="spark" width="100%" height="26" viewBox="0 0 120 26" preserveAspectRatio="none"><polyline fill="none" stroke="var(--viz-1)" stroke-width="2" points="0,20 20,17 40,18 60,11 80,13 100,6 120,4"/></svg></div>
+    <div class="stat"><div class="k"><span class="dot" style="background:var(--viz-3)"></span>Score medio</div><div class="v">86.2</div><div class="delta up">▲ 3.1 pts</div>
+      <svg class="spark" width="100%" height="26" viewBox="0 0 120 26" preserveAspectRatio="none"><polyline fill="none" stroke="var(--viz-3)" stroke-width="2" points="0,16 20,14 40,17 60,12 80,9 100,11 120,7"/></svg></div>
+    <div class="stat"><div class="k"><span class="dot" style="background:var(--viz-6)"></span>Rechazados</div><div class="v">9</div><div class="delta down">▼ 5% vs. mes ant.</div>
+      <svg class="spark" width="100%" height="26" viewBox="0 0 120 26" preserveAspectRatio="none"><polyline fill="none" stroke="var(--viz-6)" stroke-width="2" points="0,8 20,11 40,9 60,14 80,12 100,17 120,19"/></svg></div>
+  </div>
+</body></html>

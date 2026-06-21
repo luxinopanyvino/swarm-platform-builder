@@ -153,7 +153,7 @@ export default function ArticlesPage() {
                       aria-label="Eliminar artículo"
                       title="Eliminar artículo"
                     >
-                      <Trash2 size={13} style={{ color: '#ef4444' }} />
+                      <Trash2 size={13} style={{ color: 'var(--error)' }} />
                     </button>
                     <span className={`badge ${st.cls}`}>
                       {st.icon} {st.label}

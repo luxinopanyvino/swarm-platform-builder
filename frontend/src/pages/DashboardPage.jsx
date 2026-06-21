@@ -30,12 +30,12 @@ const USE_CASE_LABEL = {
 };
 
 const USE_CASE_COLOR = {
-  alejandria_magazine: 'var(--brand-primary)',
-  desarrollo:          '#10b981',
-  marketing:           '#f59e0b',
-  tiqueting:           '#06b6d4',
-  diseno:              '#ec4899',
-  custom:              '#8b5cf6',
+  alejandria_magazine: 'var(--brand)',
+  desarrollo:          '#2e844a',
+  marketing:           '#c47d04',
+  tiqueting:           '#0d9dda',
+  diseno:              '#6b4fe3',
+  custom:              '#8793a5',
 };
 
 const NAV_ITEMS = [
@@ -156,7 +156,7 @@ export default function DashboardPage() {
         })() : (
           <div className="sidebar-logo">
             <div className="sidebar-logo-icon">
-              <BookOpen size={16} color="white" />
+              <img src="/ds/assets/logomark.svg" alt="Alexandria" />
             </div>
             <span className="sidebar-logo-text">
               Alej<span>andrIA</span>
@@ -208,7 +208,7 @@ export default function DashboardPage() {
                 {unread > 0 && (
                   <span style={{
                     position: 'absolute', top: 3, right: 3,
-                    background: '#ef4444', color: '#fff',
+                    background: 'var(--error)', color: '#fff',
                     borderRadius: '50%', width: 16, height: 16,
                     fontSize: 10, fontWeight: 700,
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -225,7 +225,7 @@ export default function DashboardPage() {
                   overflow: 'hidden',
                 }}>
                   <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <span style={{ fontWeight: 600, fontSize: 'var(--font-size-sm)' }}>Notificaciones {unread > 0 && <span style={{ color: '#ef4444' }}>({unread} nuevas)</span>}</span>
+                    <span style={{ fontWeight: 600, fontSize: 'var(--font-size-sm)' }}>Notificaciones {unread > 0 && <span style={{ color: 'var(--error)' }}>({unread} nuevas)</span>}</span>
                     {unread > 0 && (
                       <button onClick={handleMarkAllRead} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 11, color: 'var(--text-muted)', padding: 0 }} aria-label="Marcar todas como leídas">
                         Marcar todas
@@ -248,7 +248,7 @@ export default function DashboardPage() {
                           transition: 'background 0.15s',
                         }}>
                         <div style={{ fontWeight: n.read ? 400 : 600, fontSize: 'var(--font-size-sm)', marginBottom: 2 }}>
-                          {!n.read && <span style={{ display: 'inline-block', width: 7, height: 7, borderRadius: '50%', background: '#6366f1', marginRight: 6, verticalAlign: 'middle' }} />}
+                          {!n.read && <span style={{ display: 'inline-block', width: 7, height: 7, borderRadius: '50%', background: 'var(--brand)', marginRight: 6, verticalAlign: 'middle' }} />}
                           {n.title}
                         </div>
                         <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--text-muted)' }}>{n.message}</div>

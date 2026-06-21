@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<!-- @dsCard group="Components" name="Content callouts" subtitle="Note / methodology / key finding" viewport="700x250" --><html lang="en"><head><meta charset="UTF-8">
+<link rel="stylesheet" href="../colors_and_type.css"><link rel="stylesheet" href="_card.css">
+<style>
+  .callout { display:flex; gap:12px; border-radius:10px; padding:13px 15px; border:1px solid; margin-bottom:12px; }
+  .callout svg { width:17px; height:17px; flex-shrink:0; margin-top:1px; }
+  .callout .t { font-size:13px; line-height:1.5; }
+  .callout .t b { display:block; font-size:11px; text-transform:uppercase; letter-spacing:0.06em; margin-bottom:3px; }
+  .note { background:var(--blue-05); border-color:#cfe4fb; color:var(--blue-80); }
+  .method { background:var(--violet-05); border-color:#ded3fb; color:var(--violet-70); }
+  .finding { background:var(--green-05); border-color:#cfe9d6; color:var(--green-70); }
+  .body-t { font-family:var(--font-serif); color:var(--ink-90); }
+</style></head>
+<body>
+  <div class="cap" style="margin-bottom:14px;">Content System · callouts</div>
+  <div class="callout note"><i data-lucide="info"></i><div class="t"><b>Note</b><span class="body-t">RAG context is scoped per author — sources never leak across workspaces.</span></div></div>
+  <div class="callout method"><i data-lucide="flask-conical"></i><div class="t"><b>Methodology</b><span class="body-t">Drafts were evaluated against a held-out citation set; approval threshold = 80.</span></div></div>
+  <div class="callout finding"><i data-lucide="lightbulb"></i><div class="t"><b>Key finding</b><span class="body-t">Grounded drafts cut unsupported claims by 4.3× versus the ungrounded baseline.</span></div></div>
+  <script src="https://unpkg.com/lucide@0.544.0/dist/umd/lucide.min.js"></script>
+  <script>lucide.createIcons();</script>
+</body></html>

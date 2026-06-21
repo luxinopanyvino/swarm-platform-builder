@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<!-- @dsCard group="Components" name="Form fields" subtitle="Inputs with focus & search" viewport="700x215" --><html lang="en"><head><meta charset="UTF-8">
+<link rel="stylesheet" href="../colors_and_type.css"><link rel="stylesheet" href="_card.css">
+<style>
+  .field { display:flex; flex-direction:column; gap:6px; margin-bottom:14px; }
+  .field label { font-size:12px; font-weight:600; color:var(--text-secondary); }
+  .inp { display:flex; align-items:center; gap:8px; background:#fff; border:1px solid var(--border-strong); border-radius:8px; padding:9px 12px; font-size:14px; color:var(--ink-90); }
+  .inp.focus { border-color:var(--blue-60); box-shadow:var(--focus-ring); }
+  .inp svg { width:15px; height:15px; color:var(--text-muted); }
+  .inp input { border:none; outline:none; flex:1; font-family:var(--font-sans); font-size:14px; color:var(--ink-90); background:none; }
+  .inp .ph { color:var(--text-muted); }
+  .cols { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+</style></head>
+<body>
+  <div class="cap" style="margin-bottom:14px;">Form fields</div>
+  <div class="cols">
+    <div class="field"><label>Article title</label>
+      <div class="inp"><span>Marine ecosystems &amp; climate</span></div></div>
+    <div class="field"><label>Search</label>
+      <div class="inp focus"><i data-lucide="search"></i><span class="ph">Search articles…</span></div></div>
+  </div>
+  <div class="field"><label>Abstract</label>
+    <div class="inp" style="align-items:flex-start; min-height:54px;"><span class="ph">Summarise the contribution in 150–250 words…</span></div></div>
+  <script src="https://unpkg.com/lucide@0.544.0/dist/umd/lucide.min.js"></script>
+  <script>lucide.createIcons();</script>
+</body></html>

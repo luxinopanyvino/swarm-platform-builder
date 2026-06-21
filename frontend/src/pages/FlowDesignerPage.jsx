@@ -330,10 +330,10 @@ export default function FlowDesignerPage() {
           <Controls />
           <MiniMap
             nodeColor={(n) => {
-              if (n.type === 'condition') return '#f59e0b';
-              return n.data?.color || AGENT_META[n.data?.agentId]?.color || '#6b6b8a';
+              if (n.type === 'condition') return '#c47d04';
+              return n.data?.color || AGENT_META[n.data?.agentId]?.color || '#8793a5';
             }}
-            maskColor="rgba(0,0,0,0.6)"
+            maskColor="rgba(244,246,249,0.6)"
           />
 
           {/* Toolbar */}

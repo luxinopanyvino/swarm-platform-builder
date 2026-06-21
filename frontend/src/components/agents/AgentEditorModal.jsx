@@ -196,7 +196,7 @@ function RagTab({ agentName, ragCollection, ragChunkSize, ragChunkOverlap, onCol
               onClick={() => handleDelete(doc.doc_id, doc.filename)}
               aria-label={`Eliminar ${doc.filename} del RAG`}
             >
-              <Trash2 size={13} style={{ color: '#ef4444' }} />
+              <Trash2 size={13} style={{ color: 'var(--error)' }} />
             </button>
           </li>
         ))}
@@ -517,7 +517,7 @@ function ToolsTab({ toolsEnabled, selectedTools, onToggleEnabled, onToolsChange 
                 display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8,
                 fontSize: 'var(--font-size-xs)', color: 'var(--text-muted)',
               }}>
-                <div style={{ padding: '8px 10px', background: 'var(--bg-overlay)', borderRadius: 'var(--radius-sm)', borderLeft: '3px solid #06b6d4' }}>
+                <div style={{ padding: '8px 10px', background: 'var(--bg-overlay)', borderRadius: 'var(--radius-sm)', borderLeft: '3px solid #0d9dda' }}>
                   <div style={{ fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 4 }}>Ollama local</div>
                   <div>Modelos como <code>llama3.2</code>, <code>mistral</code> o <code>qwen2.5</code> incluyen soporte nativo de tool calling mediante <em>function calling JSON</em>. Las herramientas se definen como esquemas y el modelo decide cuándo invocarlas en cada turno. Funciona sin conexión a internet — toda la inferencia es local.</div>
                 </div>
@@ -613,7 +613,7 @@ export function AgentEditorModal({ agent, isBuiltin, models, onClose, onSaved, o
               <button
                 className="btn btn-ghost btn-sm"
                 onClick={handleDelete}
-                style={{ color: '#ef4444' }}
+                style={{ color: 'var(--error)' }}
                 aria-label="Eliminar agente"
               >
                 <Trash2 size={13} /> Eliminar
@@ -758,7 +758,7 @@ export function AgentEditorModal({ agent, isBuiltin, models, onClose, onSaved, o
                     borderRadius: 'var(--radius-md)', padding: 'var(--space-4)',
                     fontSize: 'var(--font-size-xs)', color: 'var(--text-secondary)', lineHeight: 1.7,
                   }}>
-                    <strong style={{ color: '#06b6d4', display: 'block', marginBottom: 6 }}>Pipeline del Investigador</strong>
+                    <strong style={{ color: '#0d9dda', display: 'block', marginBottom: 6 }}>Pipeline del Investigador</strong>
                     El agente ejecuta las siguientes etapas en orden:
                     <ol style={{ margin: '8px 0 0 16px', display: 'flex', flexDirection: 'column', gap: 4 }}>
                       <li><strong>RAG local</strong> — búsqueda vectorial (cosine similarity) en Qdrant con las keywords del artículo como query. Controlado por <em>Top-K RAG</em> y <em>coleción</em> del tab RAG.</li>
@@ -959,7 +959,7 @@ export function AgentCreateModal({ builtInIds, onClose, onCreate }) {
               aria-describedby={nameError ? 'name-error' : undefined}
             />
             {nameError && (
-              <div id="name-error" role="alert" style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 4, color: '#ef4444', fontSize: 'var(--font-size-xs)' }}>
+              <div id="name-error" role="alert" style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 4, color: 'var(--error)', fontSize: 'var(--font-size-xs)' }}>
                 {nameError}
               </div>
             )}

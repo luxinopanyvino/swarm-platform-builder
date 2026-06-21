@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<!-- @dsCard group="Components" name="Article card" subtitle="Magazine / dashboard card" viewport="700x235" --><html lang="en"><head><meta charset="UTF-8">
+<link rel="stylesheet" href="../colors_and_type.css"><link rel="stylesheet" href="_card.css">
+<style>
+  body { background:var(--neutral-10); }
+  .acard { background:#fff; border:1px solid var(--border-default); border-radius:12px; padding:18px; box-shadow:var(--shadow-1); max-width:340px; transition:all var(--dur-base); }
+  .acard .top { display:flex; justify-content:space-between; gap:10px; align-items:flex-start; }
+  .acard h3 { font-family:var(--font-serif); font-size:17px; font-weight:700; color:var(--ink-100); line-height:1.3; letter-spacing:-0.01em; }
+  .badge { display:inline-flex; align-items:center; gap:5px; padding:3px 10px; border-radius:999px; font-size:10px; font-weight:600; background:var(--blue-05); color:var(--blue-70); white-space:nowrap; }
+  .meta { display:flex; align-items:center; gap:10px; font-size:12px; color:var(--text-muted); margin-top:12px; }
+  .meta svg { width:13px; height:13px; }
+  .excerpt { font-family:var(--font-serif); font-size:13.5px; color:var(--neutral-80); line-height:1.6; margin-top:10px; }
+  .fmt { margin-left:auto; background:var(--neutral-15); padding:1px 7px; border-radius:999px; font-size:10px; font-weight:600; }
+</style></head>
+<body>
+  <div class="acard">
+    <div class="top">
+      <h3>Retrieval-augmented drafting for marine climate science</h3>
+      <span class="badge"><i data-lucide="globe"></i>Publicado</span>
+    </div>
+    <div class="excerpt">A reproducible pipeline that grounds generated drafts in an author's indexed corpus, preserving citation traceability end to end.</div>
+    <div class="meta">
+      <i data-lucide="calendar"></i><span>28 May 2026</span>
+      <i data-lucide="clock"></i><span>8 min</span>
+      <span class="fmt">APA</span>
+    </div>
+  </div>
+  <script src="https://unpkg.com/lucide@0.544.0/dist/umd/lucide.min.js"></script>
+  <script>lucide.createIcons();</script>
+</body></html>

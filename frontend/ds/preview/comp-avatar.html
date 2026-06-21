@@ -1,0 +1,36 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">
+<link rel="stylesheet" href="../colors_and_type.css"><link rel="stylesheet" href="_card.css">
+<style>
+  .row2 { display:flex; align-items:center; gap:14px; margin-bottom:18px; flex-wrap:wrap; }
+  .av { border-radius:50%; display:flex; align-items:center; justify-content:center; color:#fff; font-weight:700; flex-shrink:0; }
+  .ring { box-shadow:0 0 0 2px #fff, 0 0 0 4px var(--brand); }
+  .status-dot { position:relative; }
+  .status-dot::after { content:''; position:absolute; right:0; bottom:0; width:11px; height:11px; border-radius:50%; background:var(--success); border:2px solid #fff; }
+  .uid { display:flex; align-items:center; gap:11px; }
+  .uid .nm { font-size:14px; font-weight:600; color:var(--ink-100); }
+  .uid .rl { font-size:12px; color:var(--text-muted); }
+  .uid .rl .role { color:var(--brand); font-weight:600; }
+  .stackav { display:flex; }
+  .stackav .av { border:2px solid #fff; margin-left:-10px; }
+  .stackav .av:first-child { margin-left:0; }
+  .more { background:var(--neutral-15); color:var(--text-secondary); }
+</style></head>
+<body>
+  <div class="cap" style="margin-bottom:12px;">Avatars &amp; User ID</div>
+  <div class="row2">
+    <span class="av" style="width:28px;height:28px;font-size:11px;background:var(--blue-60);">EV</span>
+    <span class="av" style="width:36px;height:36px;font-size:14px;background:var(--violet-60);">RM</span>
+    <span class="av status-dot" style="width:44px;height:44px;font-size:17px;background:var(--green-60);">JS</span>
+    <span class="av ring" style="width:44px;height:44px;font-size:17px;background:var(--amber-60);">AL</span>
+    <div class="stackav">
+      <span class="av" style="width:34px;height:34px;font-size:12px;background:var(--blue-60);">EV</span>
+      <span class="av" style="width:34px;height:34px;font-size:12px;background:var(--violet-60);">RM</span>
+      <span class="av" style="width:34px;height:34px;font-size:12px;background:var(--teal-60);">JS</span>
+      <span class="av more" style="width:34px;height:34px;font-size:12px;">+5</span>
+    </div>
+  </div>
+  <div class="uid">
+    <span class="av status-dot" style="width:40px;height:40px;font-size:15px;background:var(--blue-60);">EV</span>
+    <div><div class="nm">Elena Vázquez</div><div class="rl"><span class="role">Autora</span> · elena@lab.science</div></div>
+  </div>
+</body></html>

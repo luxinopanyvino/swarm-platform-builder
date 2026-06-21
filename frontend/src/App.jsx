@@ -60,7 +60,7 @@ function AppBootGate({ children }) {
 
   if (!hasHydrated) {
     return (
-      <div style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', background: 'var(--bg-base)' }}>
+      <div style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', background: 'var(--bg-canvas)' }}>
         <div className="spinner spinner-lg" />
       </div>
     );
@@ -99,15 +99,15 @@ export default function App() {
           position="top-right"
           toastOptions={{
             style: {
-              background: 'var(--bg-elevated)',
-              color: 'var(--text-primary)',
+              background: 'var(--bg-surface)',
+              color: 'var(--text-body)',
               border: '1px solid var(--border-default)',
               borderRadius: 'var(--radius-md)',
               fontSize: 'var(--font-size-sm)',
-              boxShadow: 'var(--shadow-lg)',
+              boxShadow: 'var(--shadow-3)',
             },
-            success: { iconTheme: { primary: 'var(--status-success)', secondary: 'var(--bg-elevated)' } },
-            error:   { iconTheme: { primary: 'var(--status-error)',   secondary: 'var(--bg-elevated)' } },
+            success: { iconTheme: { primary: 'var(--success)', secondary: 'var(--bg-surface)' } },
+            error:   { iconTheme: { primary: 'var(--error)',   secondary: 'var(--bg-surface)' } },
           }}
         />
         <Routes>

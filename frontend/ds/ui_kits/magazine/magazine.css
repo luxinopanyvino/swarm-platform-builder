@@ -1,0 +1,100 @@
+/* ============================================================
+   MAGAZINE UI KIT — public reading layer
+   The reader-facing publication. Editorial, serif-forward.
+   Consumes ../../colors_and_type.css (tokens + .prose).
+   ============================================================ */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: var(--font-sans); color: var(--text-body); background: var(--bg-surface); -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+button { font-family: inherit; cursor: pointer; }
+a { color: inherit; text-decoration: none; }
+img { display: block; max-width: 100%; }
+
+/* ---- Top nav ---- */
+.mnav { position: sticky; top: 0; z-index: 50; height: 64px; display: flex; align-items: center; justify-content: space-between; padding: 0 32px; background: rgba(255,255,255,0.82); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border-subtle); }
+.mnav .brand { display: flex; align-items: center; gap: 11px; }
+.mnav .brand .nm { font-family: var(--font-serif); font-size: 19px; font-weight: 700; color: var(--ink-100); letter-spacing: -0.01em; }
+.mnav .brand .sub { font-size: 9px; font-weight: 600; letter-spacing: 0.3em; color: var(--text-muted); margin-top: 2px; }
+.mnav .links { display: flex; align-items: center; gap: 26px; }
+.mnav .links a { font-size: 13.5px; font-weight: 500; color: var(--text-secondary); }
+.mnav .links a:hover, .mnav .links a.active { color: var(--ink-100); }
+.mnav .right { display: flex; align-items: center; gap: 14px; }
+.mnav .icon-btn { width: 36px; height: 36px; border-radius: 8px; border: none; background: none; color: var(--text-secondary); display: flex; align-items: center; justify-content: center; }
+.mnav .icon-btn:hover { background: var(--bg-hover); color: var(--ink-90); }
+.btn { display: inline-flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 600; border-radius: 8px; padding: 9px 16px; border: 1px solid transparent; transition: all var(--dur-base); }
+.btn-primary { background: var(--brand); color: #fff; }
+.btn-primary:hover { background: var(--brand-hover); }
+.btn-ghost { background: none; color: var(--text-secondary); }
+.btn-ghost:hover { color: var(--ink-100); }
+
+/* ---- Container ---- */
+.wrap { max-width: 1120px; margin: 0 auto; padding: 0 32px; }
+.eyebrow { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.09em; color: var(--brand); }
+
+/* ---- Hero / featured ---- */
+.hero { padding: 56px 0 40px; border-bottom: 1px solid var(--border-subtle); }
+.hero-grid { display: grid; grid-template-columns: 1.15fr 0.85fr; gap: 44px; align-items: center; }
+.hero-grid > * { min-width: 0; }
+.hero h1 { font-family: var(--font-serif); font-size: 44px; font-weight: 700; line-height: 1.1; letter-spacing: -0.025em; color: var(--ink-100); margin: 14px 0 18px; }
+.hero p { font-family: var(--font-serif); font-size: 18px; line-height: 1.6; color: var(--neutral-80); max-width: 52ch; }
+.hero .byline { display: flex; align-items: center; gap: 11px; margin-top: 22px; }
+.hero .cover { aspect-ratio: 4/3.2; border-radius: 16px; background: linear-gradient(135deg, var(--ink-90), var(--blue-80) 120%); position: relative; overflow: hidden; box-shadow: var(--shadow-3); }
+.hero .cover .scrim { position: absolute; inset: 0; background: radial-gradient(circle at 30% 25%, rgba(27,150,255,0.4), transparent 60%); }
+.hero .cover .cap { position: absolute; left: 20px; bottom: 18px; right: 20px; color: rgba(255,255,255,0.86); font-size: 12px; }
+
+/* ---- Section heading ---- */
+.sec-head { display: flex; align-items: baseline; justify-content: space-between; margin: 48px 0 22px; }
+.sec-head h2 { font-family: var(--font-serif); font-size: 24px; font-weight: 700; color: var(--ink-100); letter-spacing: -0.01em; }
+.sec-head a { font-size: 13px; font-weight: 600; color: var(--brand); }
+
+/* ---- Topic chips ---- */
+.topics { display: flex; gap: 9px; flex-wrap: wrap; margin-bottom: 8px; }
+.chip { padding: 6px 14px; border-radius: 999px; font-size: 12.5px; font-weight: 500; border: 1px solid var(--border-default); color: var(--text-secondary); background: #fff; }
+.chip.active { background: var(--ink-100); color: #fff; border-color: var(--ink-100); }
+.chip:hover:not(.active) { border-color: var(--neutral-40); color: var(--ink-90); }
+
+/* ---- Article grid ---- */
+.feed { display: grid; grid-template-columns: repeat(3, 1fr); gap: 28px 26px; }
+.post { display: flex; flex-direction: column; gap: 12px; cursor: pointer; }
+.post .thumb { aspect-ratio: 16/10; border-radius: 12px; position: relative; overflow: hidden; border: 1px solid var(--border-subtle); }
+.post .thumb .scrim { position: absolute; inset: 0; }
+.post:hover .thumb { box-shadow: var(--shadow-2); }
+.post .kicker { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; }
+.post h3 { font-family: var(--font-serif); font-size: 19px; font-weight: 700; line-height: 1.28; color: var(--ink-100); letter-spacing: -0.01em; }
+.post:hover h3 { color: var(--brand-hover); }
+.post .ex { font-family: var(--font-serif); font-size: 14px; line-height: 1.55; color: var(--neutral-80); }
+.post .meta { display: flex; align-items: center; gap: 9px; font-size: 12px; color: var(--text-muted); margin-top: auto; }
+
+.avatar { border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 700; flex-shrink: 0; }
+.byline-txt .nm { font-size: 13.5px; font-weight: 600; color: var(--ink-100); }
+.byline-txt .dt { font-size: 12px; color: var(--text-muted); }
+
+/* ---- Reading view ---- */
+.reader { padding: 44px 0 80px; }
+.reader-head { max-width: 740px; margin: 0 auto 30px; text-align: center; }
+.reader-head h1 { font-family: var(--font-serif); font-size: 44px; font-weight: 700; line-height: 1.12; letter-spacing: -0.025em; color: var(--ink-100); margin: 14px 0 18px; text-wrap: balance; }
+.reader-head .lede { font-family: var(--font-serif); font-size: 19px; line-height: 1.6; color: var(--neutral-80); }
+.reader-meta { display: flex; align-items: center; justify-content: center; gap: 16px; margin-top: 24px; padding-top: 22px; border-top: 1px solid var(--border-subtle); }
+.reader-meta .dot { width: 3px; height: 3px; border-radius: 50%; background: var(--neutral-40); }
+.reader-meta .m { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-secondary); }
+.reader-cover { max-width: 980px; margin: 0 auto 38px; aspect-ratio: 21/9; border-radius: 16px; position: relative; overflow: hidden; box-shadow: var(--shadow-2); }
+.reader-body { max-width: 720px; margin: 0 auto; }
+.reader-body .prose { max-width: none; font-size: 18px; }
+.toolbar-float { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); display: flex; align-items: center; gap: 6px; background: var(--ink-100); border-radius: 999px; padding: 7px 9px; box-shadow: var(--shadow-4); z-index: 60; }
+.toolbar-float button { width: 38px; height: 38px; border-radius: 50%; border: none; background: none; color: rgba(255,255,255,0.7); display: flex; align-items: center; justify-content: center; }
+.toolbar-float button:hover { background: rgba(255,255,255,0.12); color: #fff; }
+.toolbar-float .div { width: 1px; height: 20px; background: rgba(255,255,255,0.16); margin: 0 4px; }
+.toolbar-float .count { color: rgba(255,255,255,0.85); font-size: 12.5px; font-weight: 600; padding: 0 8px; display: flex; align-items: center; gap: 5px; }
+
+.tag-row { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin: 12px 0 0; }
+.tag { font-size: 11px; font-weight: 600; color: var(--text-secondary); background: var(--bg-inset); padding: 4px 11px; border-radius: 999px; }
+
+/* ---- Footer ---- */
+.mfoot { border-top: 1px solid var(--border-subtle); margin-top: 60px; padding: 40px 0; background: var(--bg-sunken); }
+.mfoot .cols { display: flex; justify-content: space-between; gap: 40px; flex-wrap: wrap; }
+.mfoot .nm { font-family: var(--font-serif); font-size: 17px; font-weight: 700; color: var(--ink-100); }
+.mfoot p { font-size: 13px; color: var(--text-secondary); margin-top: 8px; max-width: 38ch; line-height: 1.6; }
+.mfoot .col h4 { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: var(--text-muted); margin-bottom: 12px; }
+.mfoot .col a { display: block; font-size: 13px; color: var(--text-secondary); margin-bottom: 9px; }
+.mfoot .col a:hover { color: var(--ink-100); }
+
+@media (max-width: 860px) { .feed { grid-template-columns: 1fr 1fr; } .hero-grid { grid-template-columns: 1fr; } .hero .cover { display: none; } }

@@ -7,11 +7,11 @@ import { useArticleStore } from '../store/articleStore';
 import toast from 'react-hot-toast';
 
 const AGENT_META = {
-  investigador: { emoji: '🔍', label: 'Investigador', color: '#06b6d4' },
-  redactor:     { emoji: '✍️',  label: 'Redactor',    color: '#7c3aed' },
-  revisor:      { emoji: '👁️',  label: 'Revisor',     color: '#f59e0b' },
-  formateador:  { emoji: '📄',  label: 'Formateador', color: '#10b981' },
-  publicador:   { emoji: '🚀',  label: 'Publicador',  color: '#ef4444' },
+  investigador: { label: 'Investigador', color: '#0d9dda' },
+  redactor:     { label: 'Redactor',    color: '#6b4fe3' },
+  revisor:      { label: 'Revisor',     color: '#c47d04' },
+  formateador:  { label: 'Formateador', color: '#2e844a' },
+  publicador:   { label: 'Publicador',  color: '#cb4b3f' },
 };
 
 const STATUS_ICON = {

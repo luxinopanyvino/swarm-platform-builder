@@ -1,0 +1,20 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">
+<link rel="stylesheet" href="../colors_and_type.css"><link rel="stylesheet" href="_card.css">
+<style>
+  .cat { display:grid; grid-template-columns:repeat(8,1fr); border-radius:9px; overflow:hidden; border:1px solid var(--border-default); }
+  .cat div { height:46px; }
+  .ramp { display:grid; grid-template-columns:repeat(5,1fr); border-radius:9px; overflow:hidden; border:1px solid var(--border-default); margin-top:6px; }
+  .ramp div { height:30px; }
+  .two { display:grid; grid-template-columns:1fr 1fr; gap:18px; margin-top:14px; }
+</style></head>
+<body>
+  <div class="cap" style="margin-bottom:10px;">Categorical series · 8-up (colour-blind aware)</div>
+  <div class="cat">
+    <div style="background:var(--viz-1)"></div><div style="background:var(--viz-2)"></div><div style="background:var(--viz-3)"></div><div style="background:var(--viz-4)"></div>
+    <div style="background:var(--viz-5)"></div><div style="background:var(--viz-6)"></div><div style="background:var(--viz-7)"></div><div style="background:var(--viz-8)"></div>
+  </div>
+  <div class="two">
+    <div><span class="cap">Sequential</span><div class="ramp"><div style="background:var(--viz-seq-1)"></div><div style="background:var(--viz-seq-2)"></div><div style="background:var(--viz-seq-3)"></div><div style="background:var(--viz-seq-4)"></div><div style="background:var(--viz-seq-5)"></div></div></div>
+    <div><span class="cap">Diverging</span><div class="ramp" style="grid-template-columns:repeat(3,1fr);"><div style="background:var(--viz-div-neg)"></div><div style="background:var(--viz-div-mid)"></div><div style="background:var(--viz-div-pos)"></div></div></div>
+  </div>
+</body></html>

@@ -1,0 +1,18 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">
+<link rel="stylesheet" href="../colors_and_type.css"><link rel="stylesheet" href="_card.css">
+<style>
+  .ico { display:grid; grid-template-columns:repeat(12,1fr); gap:14px 10px; color:var(--ink-90); }
+  .ico .i { display:flex; flex-direction:column; align-items:center; gap:5px; }
+  .ico svg { width:20px; height:20px; }
+  .ico .nm { font-size:8.5px; color:var(--text-muted); font-family:var(--font-mono); }
+</style></head>
+<body>
+  <div class="cap" style="margin-bottom:14px;">Lucide · 1.5px stroke · the product icon set</div>
+  <div class="ico" id="g"></div>
+  <script src="https://unpkg.com/lucide@0.544.0/dist/umd/lucide.min.js"></script>
+  <script>
+    const names = ['book-open','git-branch','bot','zap','shield','play','save','trash-2','plus','search','filter','arrow-left','check-circle-2','x-circle','clock','alert-circle','user-plus','file-text','settings','sparkles','flask-conical','lightbulb','send','eye','pen-line','globe','bell','calendar','git-fork','sliders-horizontal','log-out','circle-help','chevron-down','download','share-2','more-horizontal'];
+    document.getElementById('g').innerHTML = names.map(n=>`<div class="i"><i data-lucide="${n}"></i><span class="nm">${n}</span></div>`).join('');
+    lucide.createIcons();
+  </script>
+</body></html>

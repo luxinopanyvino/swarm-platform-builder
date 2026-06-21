@@ -1,0 +1,17 @@
+/* Shared chrome for Design System preview cards.
+   Cards link ../colors_and_type.css then this. Keep cards minimal:
+   the asset name renders outside the card. */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { background: #ffffff; }
+body {
+  font-family: var(--font-sans);
+  color: var(--text-body);
+  padding: 22px 26px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+.row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.col { display: flex; flex-direction: column; }
+.lbl { font-size: 11px; color: var(--text-muted); letter-spacing: 0.04em; }
+.mono { font-family: var(--font-mono); }
+.cap { text-transform: uppercase; letter-spacing: 0.07em; font-size: 10px; font-weight: 600; color: var(--text-muted); }

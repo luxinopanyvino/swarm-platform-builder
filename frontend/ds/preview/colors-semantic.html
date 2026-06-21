@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<!-- @dsCard group="Colors" name="Semantic feedback" subtitle="Success / warning / error / info" viewport="700x215" --><html lang="en"><head><meta charset="UTF-8">
+<link rel="stylesheet" href="../colors_and_type.css"><link rel="stylesheet" href="_card.css">
+<style>
+  .grid { display:grid; grid-template-columns: repeat(4,1fr); gap:12px; }
+  .item { border:1px solid var(--border-default); border-radius:10px; overflow:hidden; }
+  .bar { height:46px; }
+  .meta { padding:8px 10px; }
+  .meta b { font-size:12px; color:var(--ink-100); }
+  .meta .mono { display:block; font-size:10px; color:var(--text-muted); margin-top:2px; }
+</style></head>
+<body>
+  <div class="cap" style="margin-bottom:12px;">Semantic feedback</div>
+  <div class="grid">
+    <div class="item"><div class="bar" style="background:#2e844a;"></div><div class="meta"><b>Success</b><span class="mono">#2E844A</span></div></div>
+    <div class="item"><div class="bar" style="background:#c47d04;"></div><div class="meta"><b>Warning</b><span class="mono">#C47D04</span></div></div>
+    <div class="item"><div class="bar" style="background:#ba0517;"></div><div class="meta"><b>Error</b><span class="mono">#BA0517</span></div></div>
+    <div class="item"><div class="bar" style="background:#0176d3;"></div><div class="meta"><b>Info</b><span class="mono">#0176D3</span></div></div>
+  </div>
+  <div class="row" style="margin-top:14px; gap:8px;">
+    <span style="background:var(--green-05); color:var(--green-70); border:1px solid #cfe9d6; padding:3px 10px; border-radius:999px; font-size:11px; font-weight:600;">Tinted surface</span>
+    <span style="background:var(--amber-05); color:var(--amber-70); border:1px solid #f2e0bf; padding:3px 10px; border-radius:999px; font-size:11px; font-weight:600;">paired with</span>
+    <span style="background:var(--red-05); color:var(--red-70); border:1px solid #f6d2ce; padding:3px 10px; border-radius:999px; font-size:11px; font-weight:600;">deep ink text</span>
+  </div>
+</body></html>
