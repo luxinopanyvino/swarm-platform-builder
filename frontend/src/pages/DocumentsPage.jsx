@@ -221,7 +221,7 @@ export default function DocumentsPage() {
                           onClick={() => handleDelete(col.name, doc.doc_id, doc.filename)}
                           aria-label={`Eliminar ${doc.filename}`}
                         >
-                          <Trash2 size={14} style={{ color: '#ef4444' }} />
+                          <Trash2 size={14} style={{ color: 'var(--error)' }} />
                         </button>
                       </div>
                     ))}

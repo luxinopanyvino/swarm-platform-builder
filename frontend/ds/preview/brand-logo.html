@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<!-- @dsCard group="Brand" name="Logo & wordmark" subtitle="Logomark, wordmark, on-brand" viewport="700x210" --><html lang="en"><head><meta charset="UTF-8">
+<link rel="stylesheet" href="../colors_and_type.css"><link rel="stylesheet" href="_card.css">
+<style>
+  .lockups { display:flex; flex-direction:column; gap:20px; }
+  .row2 { display:flex; align-items:center; gap:28px; }
+  .mark { display:flex; align-items:center; gap:13px; }
+  .tile { width:46px; height:46px; border-radius:11px; background:var(--blue-60); display:flex; align-items:center; justify-content:center; }
+  .tile.dark { background:var(--ink-100); }
+  .wm { display:flex; flex-direction:column; line-height:1; }
+  .wm .name { font-family:var(--font-serif); font-size:21px; font-weight:700; color:var(--ink-100); letter-spacing:-0.01em; }
+  .wm .sub { font-family:var(--font-sans); font-size:9.5px; font-weight:600; color:var(--text-muted); letter-spacing:0.32em; margin-top:4px; }
+  .onbrand { background:var(--blue-60); border-radius:11px; padding:14px 18px; }
+  .onbrand .name { color:#fff; } .onbrand .sub { color:rgba(255,255,255,0.7); }
+</style></head>
+<body>
+  <div class="cap" style="margin-bottom:16px;">Brand · logomark & wordmark</div>
+  <div class="lockups">
+    <div class="row2">
+      <div class="mark"><img src="../assets/logomark.svg" width="46" height="46" alt=""><div class="wm"><span class="name">Alexandria</span><span class="sub">MAGAZINE</span></div></div>
+      <div class="mark onbrand"><div class="wm"><span class="name">Alexandria</span><span class="sub">MAGAZINE</span></div></div>
+    </div>
+    <div class="row" style="gap:14px;">
+      <div class="tile"><img src="../assets/logomark.svg" width="30" height="30" alt=""></div>
+      <span class="lbl">Pediment monogram — the “A” as a classical façade, nodding to the Library of Alexandria. Min mark size 24px. Clear space = ½ tile height.</span>
+    </div>
+  </div>
+</body></html>

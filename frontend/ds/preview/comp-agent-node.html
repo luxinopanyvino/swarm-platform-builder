@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<!-- @dsCard group="Components" name="Agent flow node" subtitle="Flow Designer node + states" viewport="700x215" --><html lang="en"><head><meta charset="UTF-8">
+<link rel="stylesheet" href="../colors_and_type.css"><link rel="stylesheet" href="_card.css">
+<style>
+  body { background:var(--neutral-10); }
+  .wrap { display:flex; align-items:center; gap:30px; }
+  .node { background:#fff; border:1.5px solid var(--border-strong); border-radius:12px; padding:14px 16px; min-width:188px; box-shadow:var(--shadow-2); position:relative; }
+  .node.sel { border-color:var(--agent-write); box-shadow:0 0 0 3px rgba(107,79,227,0.18), var(--shadow-2); }
+  .nhead { display:flex; align-items:center; gap:9px; }
+  .nicon { width:30px; height:30px; border-radius:8px; display:flex; align-items:center; justify-content:center; }
+  .nicon svg { width:16px; height:16px; }
+  .nname { font-size:14px; font-weight:600; color:var(--ink-100); }
+  .ndesc { font-size:11.5px; color:var(--text-muted); margin-top:7px; line-height:1.45; }
+  .nbadge { display:inline-block; margin-top:9px; padding:2px 8px; border-radius:999px; font-size:9px; font-weight:600; letter-spacing:0.05em; text-transform:uppercase; }
+  .handle { width:9px; height:9px; border-radius:50%; background:#fff; position:absolute; top:50%; transform:translateY(-50%); }
+  .arrow { color:var(--border-strong); }
+</style></head>
+<body>
+  <div class="cap" style="margin-bottom:16px;">Flow Designer · agent node</div>
+  <div class="wrap">
+    <div class="node sel">
+      <span class="handle" style="left:-5px; border:2px solid var(--agent-write);"></span>
+      <div class="nhead"><div class="nicon" style="background:#f1eefe; color:var(--agent-write);"><i data-lucide="pen-line"></i></div><span class="nname">Redactor</span></div>
+      <div class="ndesc">Genera el borrador con contexto RAG</div>
+      <span class="nbadge" style="background:#f1eefe; color:var(--agent-write);">agent</span>
+      <span class="handle" style="right:-5px; border:2px solid var(--agent-write);"></span>
+    </div>
+    <i data-lucide="arrow-right" class="arrow"></i>
+    <div class="node">
+      <span class="handle" style="left:-5px; border:2px solid var(--agent-review);"></span>
+      <div class="nhead"><div class="nicon" style="background:#fdf3e3; color:var(--agent-review);"><i data-lucide="eye"></i></div><span class="nname">Revisor</span></div>
+      <div class="ndesc">Evalúa calidad · score 0–100</div>
+      <span class="nbadge" style="background:#fdf3e3; color:var(--agent-review);">agent</span>
+      <span class="handle" style="right:-5px; border:2px solid var(--agent-review);"></span>
+    </div>
+  </div>
+  <script src="https://unpkg.com/lucide@0.544.0/dist/umd/lucide.min.js"></script>
+  <script>lucide.createIcons();</script>
+</body></html>

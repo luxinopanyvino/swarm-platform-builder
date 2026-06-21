@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<!-- @dsCard group="Components" name="Status badges" subtitle="Editorial lifecycle + format tags" viewport="700x195" --><html lang="en"><head><meta charset="UTF-8">
+<link rel="stylesheet" href="../colors_and_type.css"><link rel="stylesheet" href="_card.css">
+<style>
+  .badge { display:inline-flex; align-items:center; gap:5px; padding:3px 11px; border-radius:999px; font-size:11px; font-weight:600; letter-spacing:0.04em; }
+  .badge svg { width:11px; height:11px; }
+  .b-draft { background:#eef1f6; color:#5c6b7e; }
+  .b-review { background:var(--amber-05); color:var(--amber-70); }
+  .b-approved { background:var(--green-05); color:var(--green-70); }
+  .b-published { background:var(--blue-05); color:var(--blue-70); }
+  .b-rejected { background:var(--red-05); color:var(--red-70); }
+  .fmt { background:#fff; border:1px solid var(--border-strong); color:var(--text-secondary); }
+</style></head>
+<body>
+  <div class="cap" style="margin-bottom:14px;">Status badges · editorial lifecycle</div>
+  <div class="row">
+    <span class="badge b-draft"><i data-lucide="circle-dashed"></i>Borrador</span>
+    <span class="badge b-review"><i data-lucide="clock"></i>En revisión</span>
+    <span class="badge b-approved"><i data-lucide="check"></i>Aprobado</span>
+    <span class="badge b-published"><i data-lucide="globe"></i>Publicado</span>
+    <span class="badge b-rejected"><i data-lucide="x"></i>Rechazado</span>
+  </div>
+  <div class="row" style="margin-top:16px;">
+    <span class="cap">Format tags</span>
+    <span class="badge fmt">APA</span>
+    <span class="badge fmt">IEEE</span>
+    <span class="badge fmt">Vancouver</span>
+  </div>
+  <script src="https://unpkg.com/lucide@0.544.0/dist/umd/lucide.min.js"></script>
+  <script>lucide.createIcons();</script>
+</body></html>

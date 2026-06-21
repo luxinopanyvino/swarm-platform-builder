@@ -1,0 +1,20 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">
+<link rel="stylesheet" href="../colors_and_type.css"><link rel="stylesheet" href="_card.css">
+<style>
+  .grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .pair { border:1px solid var(--border-default); border-radius:10px; overflow:hidden; }
+  .swatch { padding:12px 14px; font-size:14px; font-weight:600; }
+  .meta { padding:8px 14px; background:var(--bg-sunken); display:flex; align-items:center; justify-content:space-between; }
+  .ratio { font-family:var(--font-mono); font-size:12px; font-weight:600; color:var(--ink-100); }
+  .pass { display:inline-flex; align-items:center; gap:4px; font-size:10px; font-weight:700; color:var(--green-70); background:var(--green-05); padding:2px 8px; border-radius:999px; }
+</style></head>
+<body>
+  <div class="cap" style="margin-bottom:12px;">WCAG 2.1 · text contrast (AA / AAA)</div>
+  <div class="grid">
+    <div class="pair"><div class="swatch" style="background:#fff; color:var(--ink-90);">Body on surface</div><div class="meta"><span class="ratio">12.6 : 1</span><span class="pass">✓ AAA</span></div></div>
+    <div class="pair"><div class="swatch" style="background:#fff; color:var(--brand);">Link / brand</div><div class="meta"><span class="ratio">4.8 : 1</span><span class="pass">✓ AA</span></div></div>
+    <div class="pair"><div class="swatch" style="background:var(--brand); color:#fff;">On primary</div><div class="meta"><span class="ratio">4.6 : 1</span><span class="pass">✓ AA</span></div></div>
+    <div class="pair"><div class="swatch" style="background:var(--neutral-10); color:var(--text-secondary);">Secondary text</div><div class="meta"><span class="ratio">5.4 : 1</span><span class="pass">✓ AA</span></div></div>
+  </div>
+  <div class="lbl" style="margin-top:12px;">Targets: <b>4.5:1</b> normal text · <b>3:1</b> large text &amp; UI/graphics · focus ring always visible (3px, 3:1+).</div>
+</body></html>

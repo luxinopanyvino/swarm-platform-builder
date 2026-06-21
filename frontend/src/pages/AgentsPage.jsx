@@ -2,6 +2,7 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import {
   Bot, Pencil, Plus, ChevronDown, Trash2,
+  Search, PenLine, Eye, FileText, Send, Cpu,
 } from 'lucide-react';
 import { agentsApi } from '../api/agents';
 import { AgentCreateModal, AgentEditorModal } from '../components/agents/AgentEditorModal';
@@ -16,38 +17,38 @@ const BUILTIN_SLUGS = new Set(['investigador', 'redactor', 'revisor', 'formatead
 ]);
 
 const BUILTIN_META = {
-  // AlejandrIA Magazine
-  investigador:   { emoji: '🔍', color: '#06b6d4' },
-  redactor:       { emoji: '✍️',  color: '#7c3aed' },
-  revisor:        { emoji: '👁️',  color: '#f59e0b' },
-  formateador:    { emoji: '📄',  color: '#10b981' },
-  publicador:     { emoji: '🚀',  color: '#ef4444' },
-  orquestador:    { emoji: '🧠',  color: '#6366f1' },
+  // AlejandrIA Magazine — DS agent palette
+  investigador:    { icon: Search,   color: '#0d9dda' },
+  redactor:        { icon: PenLine,  color: '#6b4fe3' },
+  revisor:         { icon: Eye,      color: '#c47d04' },
+  formateador:     { icon: FileText, color: '#2e844a' },
+  publicador:      { icon: Send,     color: '#cb4b3f' },
+  orquestador:     { icon: Cpu,      color: '#0176d3' },
   // Desarrollo
-  arquitecto:     { emoji: '🏗️',  color: '#10b981' },
-  'backend-dev':  { emoji: '⚙️',  color: '#10b981' },
-  'frontend-dev': { emoji: '🖥️',  color: '#10b981' },
-  'qa-tester':    { emoji: '🧪',  color: '#10b981' },
-  devops:         { emoji: '🛠️',  color: '#10b981' },
-  'code-reviewer':{ emoji: '🔎',  color: '#10b981' },
+  arquitecto:      { color: '#2e844a' },
+  'backend-dev':   { color: '#2e844a' },
+  'frontend-dev':  { color: '#2e844a' },
+  'qa-tester':     { color: '#2e844a' },
+  devops:          { color: '#2e844a' },
+  'code-reviewer': { color: '#2e844a' },
   // Marketing
-  estratega:      { emoji: '📊',  color: '#f59e0b' },
-  copywriter:     { emoji: '✏️',  color: '#f59e0b' },
-  'social-media': { emoji: '📱',  color: '#f59e0b' },
-  'seo-specialist':{ emoji: '🔍', color: '#f59e0b' },
-  analista:       { emoji: '📈',  color: '#f59e0b' },
+  estratega:       { color: '#c47d04' },
+  copywriter:      { color: '#c47d04' },
+  'social-media':  { color: '#c47d04' },
+  'seo-specialist':{ color: '#c47d04' },
+  analista:        { color: '#c47d04' },
   // Tiqueting
-  clasificador:   { emoji: '🏷️',  color: '#06b6d4' },
-  'agente-soporte':{ emoji: '🎧', color: '#06b6d4' },
-  escalador:      { emoji: '⬆️',  color: '#06b6d4' },
-  resolutor:      { emoji: '🔧',  color: '#06b6d4' },
-  'qa-calidad':   { emoji: '⭐',  color: '#06b6d4' },
+  clasificador:    { color: '#0d9dda' },
+  'agente-soporte':{ color: '#0d9dda' },
+  escalador:       { color: '#0d9dda' },
+  resolutor:       { color: '#0d9dda' },
+  'qa-calidad':    { color: '#0d9dda' },
   // Diseño
-  'art-director': { emoji: '🎨',  color: '#ec4899' },
-  'ui-designer':  { emoji: '✦',   color: '#ec4899' },
-  'ux-researcher':{ emoji: '🔬',  color: '#ec4899' },
-  'revisor-visual':{ emoji: '👁️', color: '#ec4899' },
-  'motion-designer':{ emoji: '🎞️',color: '#ec4899' },
+  'art-director':  { color: '#6b4fe3' },
+  'ui-designer':   { color: '#6b4fe3' },
+  'ux-researcher': { color: '#6b4fe3' },
+  'revisor-visual':{ color: '#6b4fe3' },
+  'motion-designer':{ color: '#6b4fe3' },
 };
 
 // ---------------------------------------------------------------------------
@@ -130,17 +131,18 @@ function ModelSelector({ value, onChange, models }) {
 function AgentCard({ agent, isBuiltin, onEdit, onDelete }) {
   const meta = BUILTIN_META[agent.slug] || {};
   const color = meta.color || 'var(--text-muted)';
-  const emoji = meta.emoji || null;
+  const Icon = meta.icon || Bot;
 
   return (
     <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
         <div style={{
           width: 40, height: 40, borderRadius: 'var(--radius-md)', display: 'flex',
-          alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 20,
-          background: isBuiltin ? `${color}20` : 'var(--bg-overlay)',
+          alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+          background: isBuiltin ? `${color}18` : 'var(--bg-inset)',
+          color: isBuiltin ? color : 'var(--text-muted)',
         }}>
-          {emoji ? emoji : <Bot size={20} style={{ color: 'var(--text-muted)' }} />}
+          <Icon size={20} strokeWidth={1.5} />
         </div>
         <div>
           <div style={{ fontWeight: 600, fontSize: 'var(--font-size-base)' }}>
@@ -167,7 +169,7 @@ function AgentCard({ agent, isBuiltin, onEdit, onDelete }) {
       {!isBuiltin && (
         <button
           className="btn btn-ghost btn-sm"
-          style={{ alignSelf: 'flex-start', color: '#ef4444' }}
+          style={{ alignSelf: 'flex-start', color: 'var(--error)' }}
           onClick={() => onDelete(agent)}
           aria-label={`Eliminar agente ${agent.name || agent.slug}`}
         >

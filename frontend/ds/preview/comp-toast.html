@@ -1,0 +1,26 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">
+<link rel="stylesheet" href="../colors_and_type.css"><link rel="stylesheet" href="_card.css">
+<style>
+  body { background:var(--neutral-10); }
+  .stack { display:flex; flex-direction:column; gap:12px; }
+  .toast { display:flex; align-items:center; gap:11px; background:var(--ink-100); color:#fff; padding:12px 16px; border-radius:11px; box-shadow:var(--shadow-3); font-size:13px; font-weight:500; max-width:360px; }
+  .toast .ic { width:22px; height:22px; border-radius:6px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+  .toast svg { width:14px; height:14px; }
+  .notif { display:flex; gap:11px; background:#fff; border:1px solid var(--border-default); border-radius:11px; padding:13px 15px; box-shadow:var(--shadow-1); max-width:360px; }
+  .notif .av { width:34px; height:34px; border-radius:50%; flex-shrink:0; display:flex; align-items:center; justify-content:center; color:#fff; font-weight:700; font-size:13px; }
+  .notif .body { font-size:13px; color:var(--ink-90); line-height:1.45; }
+  .notif .time { font-size:11px; color:var(--text-muted); margin-top:3px; }
+  .udot { width:7px; height:7px; border-radius:50%; background:var(--brand); margin-top:6px; }
+</style></head>
+<body>
+  <div class="cap" style="margin-bottom:12px;">Toast &amp; notification</div>
+  <div class="stack">
+    <div class="toast"><span class="ic" style="background:rgba(62,207,142,.2);"><i data-lucide="check" style="color:#6ee7a8;"></i></span>Flujo guardado correctamente</div>
+    <div class="notif">
+      <span class="av" style="background:var(--violet-60);">RM</span>
+      <div style="flex:1;"><div class="body"><b>Rosa Méndez</b> asignó tu artículo a revisión.</div><div class="time">hace 4 min</div></div>
+      <span class="udot"></span>
+    </div>
+  </div>
+  <script src="https://unpkg.com/lucide@0.544.0/dist/umd/lucide.min.js"></script><script>lucide.createIcons();</script>
+</body></html>

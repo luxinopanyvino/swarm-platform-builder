@@ -1,0 +1,21 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">
+<link rel="stylesheet" href="../colors_and_type.css"><link rel="stylesheet" href="_card.css">
+<style>
+  .alert { display:flex; gap:11px; border-radius:10px; padding:12px 14px; border:1px solid; margin-bottom:10px; align-items:flex-start; }
+  .alert svg { width:17px; height:17px; flex-shrink:0; margin-top:1px; }
+  .alert .t { font-size:13px; line-height:1.5; flex:1; }
+  .alert .t b { font-weight:600; }
+  .a-info { background:var(--info-bg); border-color:#cfe4fb; color:var(--blue-80); }
+  .a-success { background:var(--success-bg); border-color:#cfe9d6; color:var(--green-70); }
+  .a-warning { background:var(--warning-bg); border-color:#f2e0bf; color:var(--amber-70); }
+  .a-error { background:var(--error-bg); border-color:#f6d2ce; color:var(--red-70); }
+  .x { color:currentColor; opacity:.5; }
+</style></head>
+<body>
+  <div class="cap" style="margin-bottom:12px;">Alerts · inline (4 intents)</div>
+  <div class="alert a-info"><i data-lucide="info"></i><div class="t"><b>Pipeline en cola.</b> El flujo se ejecutará cuando haya capacidad de inferencia.</div><i data-lucide="x" class="x"></i></div>
+  <div class="alert a-success"><i data-lucide="check-circle-2"></i><div class="t"><b>Artículo aprobado.</b> Listo para publicar en formato APA.</div><i data-lucide="x" class="x"></i></div>
+  <div class="alert a-warning"><i data-lucide="alert-triangle"></i><div class="t"><b>Score por debajo del umbral</b> (74 &lt; 80). Requiere revisión manual.</div><i data-lucide="x" class="x"></i></div>
+  <div class="alert a-error"><i data-lucide="alert-circle"></i><div class="t"><b>Falló la recuperación RAG.</b> No se pudo conectar a Qdrant.</div><i data-lucide="x" class="x"></i></div>
+  <script src="https://unpkg.com/lucide@0.544.0/dist/umd/lucide.min.js"></script><script>lucide.createIcons();</script>
+</body></html>

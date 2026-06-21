@@ -1,0 +1,317 @@
+{
+  "$schema": "https://tr.designtokens.org/format/",
+  "meta": {
+    "name": "AlexandrIA Magazine Design System",
+    "version": "1.0.0",
+    "description": "Design tokens for Alexandria Magazine — a scientific content-creation and publishing platform. Built on SLDS2 token structure with an editorial publishing layer.",
+    "source": "colors_and_type.css"
+  },
+
+  "color": {
+    "$description": "Color primitives and semantic tokens for Alexandria Magazine",
+
+    "primitive": {
+      "$description": "Raw palette stops. Do not reference directly in product UI — use semantic tokens.",
+
+      "blue": {
+        "$description": "Alexandria Blue (SLDS2 brand blue family)",
+        "05":  { "$value": "#eaf4ff", "$type": "color", "$description": "Lightest blue tint — selected/active state backgrounds" },
+        "10":  { "$value": "#d6eaff", "$type": "color", "$description": "Light blue tint" },
+        "20":  { "$value": "#aad5fb", "$type": "color", "$description": "Mid-light blue" },
+        "40":  { "$value": "#4ea0ee", "$type": "color", "$description": "Accent azure" },
+        "50":  { "$value": "#1b96ff", "$type": "color", "$description": "Azure accent" },
+        "60":  { "$value": "#0176d3", "$type": "color", "$description": "PRIMARY — Alexandria Blue, SLDS2 brand blue" },
+        "70":  { "$value": "#005fb2", "$type": "color", "$description": "Brand hover state" },
+        "80":  { "$value": "#014486", "$type": "color", "$description": "Brand active / deep state" },
+        "95":  { "$value": "#022a52", "$type": "color", "$description": "Deep navy" }
+      },
+
+      "ink": {
+        "$description": "Deep editorial navy — SLDS Deep Cove / Biscay heritage",
+        "100": { "$value": "#0b1b33", "$type": "color", "$description": "Headings, highest-contrast text" },
+        "90":  { "$value": "#16243d", "$type": "color", "$description": "Primary text in dark mode surfaces" },
+        "80":  { "$value": "#1f3a5f", "$type": "color", "$description": "Deep ink accent" }
+      },
+
+      "neutral": {
+        "$description": "SLDS cloud ramp — Link Water, Steam, Geyser",
+        "00": { "$value": "#ffffff", "$type": "color", "$description": "Pure white" },
+        "05": { "$value": "#f8fafc", "$type": "color", "$description": "Near-white surface" },
+        "10": { "$value": "#f4f6f9", "$type": "color", "$description": "Link Water — app canvas / surface" },
+        "15": { "$value": "#eef1f6", "$type": "color", "$description": "White Lilac — inset backgrounds" },
+        "20": { "$value": "#e0e5ee", "$type": "color", "$description": "Steam — default borders" },
+        "30": { "$value": "#d8dde6", "$type": "color", "$description": "Geyser — strong borders" },
+        "40": { "$value": "#c9cfdb", "$type": "color", "$description": "Mid neutral" },
+        "50": { "$value": "#aab2c2", "$type": "color", "$description": "Muted neutral" },
+        "60": { "$value": "#8793a5", "$type": "color", "$description": "Muted / placeholder text" },
+        "70": { "$value": "#5c6b7e", "$type": "color", "$description": "Secondary text" },
+        "80": { "$value": "#44546a", "$type": "color", "$description": "Strong secondary" },
+        "90": { "$value": "#2e3a4d", "$type": "color", "$description": "Body text (light theme)" }
+      },
+
+      "violet": {
+        "$description": "Intelligence accent — continuity with original brand, used sparingly for AI/generative moments",
+        "05": { "$value": "#f1eefe", "$type": "color", "$description": "Violet tint surface" },
+        "40": { "$value": "#9a82f0", "$type": "color", "$description": "Light violet" },
+        "60": { "$value": "#6b4fe3", "$type": "color", "$description": "AI/agent accent — Redactor primary" },
+        "70": { "$value": "#5436c9", "$type": "color", "$description": "Violet hover" }
+      },
+
+      "agent": {
+        "$description": "The 5 editorial agents, tuned for light UI. Full value for agent marks; 05 tint backs chips and icon tiles.",
+        "research": { "$value": "#0d9dda", "$type": "color", "$description": "Investigador agent — research and data gathering" },
+        "write":    { "$value": "#6b4fe3", "$type": "color", "$description": "Redactor agent — drafting and writing" },
+        "review":   { "$value": "#c47d04", "$type": "color", "$description": "Revisor agent — peer review and evaluation" },
+        "format":   { "$value": "#2e844a", "$type": "color", "$description": "Formateador agent — document formatting" },
+        "publish":  { "$value": "#cb4b3f", "$type": "color", "$description": "Publicador agent — publishing and distribution" }
+      },
+
+      "green": {
+        "05": { "$value": "#ebf7ee", "$type": "color", "$description": "Success tint surface" },
+        "60": { "$value": "#2e844a", "$type": "color", "$description": "Success / positive" },
+        "70": { "$value": "#1f6135", "$type": "color", "$description": "Success deep" }
+      },
+
+      "amber": {
+        "05": { "$value": "#fdf3e3", "$type": "color", "$description": "Warning tint surface" },
+        "60": { "$value": "#c47d04", "$type": "color", "$description": "Warning / caution" },
+        "70": { "$value": "#946004", "$type": "color", "$description": "Warning deep" }
+      },
+
+      "red": {
+        "05": { "$value": "#feeeec", "$type": "color", "$description": "Error tint surface" },
+        "60": { "$value": "#ba0517", "$type": "color", "$description": "Error / destructive" },
+        "70": { "$value": "#8e030f", "$type": "color", "$description": "Error deep" }
+      },
+
+      "teal": {
+        "05": { "$value": "#e6f7f6", "$type": "color", "$description": "Teal tint" },
+        "60": { "$value": "#06a59a", "$type": "color", "$description": "Teal accent" }
+      }
+    },
+
+    "semantic": {
+      "$description": "Semantic tokens — build product UI with these. Override in dark theme by pointing at lifted primitives.",
+
+      "brand": {
+        "default":  { "$value": "{color.primitive.blue.60}", "$type": "color", "$description": "Primary brand action color — Alexandria Blue" },
+        "hover":    { "$value": "{color.primitive.blue.70}", "$type": "color", "$description": "Brand button / link hover state" },
+        "active":   { "$value": "{color.primitive.blue.80}", "$type": "color", "$description": "Brand button / link active/pressed state" },
+        "tint":     { "$value": "{color.primitive.blue.05}", "$type": "color", "$description": "Brand tint background — selected rows, active nav items" },
+        "on":       { "$value": "#ffffff", "$type": "color", "$description": "Text/icon on brand-filled surfaces" }
+      },
+
+      "accent": {
+        "default": { "$value": "{color.primitive.violet.60}", "$type": "color", "$description": "Intelligence accent — Ask AI, generative actions, Redactor agent" },
+        "tint":    { "$value": "{color.primitive.violet.05}", "$type": "color", "$description": "Accent tint — AI action backgrounds" }
+      },
+
+      "background": {
+        "canvas":   { "$value": "{color.primitive.neutral.10}", "$type": "color", "$description": "App-level background — faint blue-grey canvas" },
+        "surface":  { "$value": "{color.primitive.neutral.00}", "$type": "color", "$description": "Cards, panels, modals — white" },
+        "raised":   { "$value": "{color.primitive.neutral.00}", "$type": "color", "$description": "Raised surface layer" },
+        "sunken":   { "$value": "{color.primitive.neutral.05}", "$type": "color", "$description": "Sunken / depressed sections" },
+        "inset":    { "$value": "{color.primitive.neutral.15}", "$type": "color", "$description": "Inset areas, code backgrounds" },
+        "hover":    { "$value": "{color.primitive.neutral.10}", "$type": "color", "$description": "Hover overlay on interactive surfaces" },
+        "active":   { "$value": "{color.primitive.blue.05}", "$type": "color", "$description": "Active/selected overlay" },
+        "shell":    { "$value": "#ffffff", "$type": "color", "$description": "Top bar and sidebar chrome" }
+      },
+
+      "text": {
+        "heading":   { "$value": "{color.primitive.ink.100}", "$type": "color", "$description": "Headings — ink navy, highest contrast" },
+        "primary":   { "$value": "{color.primitive.ink.90}", "$type": "color", "$description": "Primary body text" },
+        "body":      { "$value": "{color.primitive.neutral.90}", "$type": "color", "$description": "Default body text (14px UI)" },
+        "secondary": { "$value": "{color.primitive.neutral.70}", "$type": "color", "$description": "Labels, captions, metadata" },
+        "muted":     { "$value": "{color.primitive.neutral.60}", "$type": "color", "$description": "Placeholder, hints, disabled" },
+        "link":      { "$value": "{color.primitive.blue.60}", "$type": "color", "$description": "Interactive links" },
+        "on-brand":  { "$value": "#ffffff", "$type": "color", "$description": "Text on brand-filled backgrounds" },
+        "inverse":   { "$value": "#ffffff", "$type": "color", "$description": "Text on dark/inverse surfaces" }
+      },
+
+      "border": {
+        "subtle":  { "$value": "{color.primitive.neutral.15}", "$type": "color", "$description": "Hairline dividers, very subtle separators" },
+        "default": { "$value": "{color.primitive.neutral.20}", "$type": "color", "$description": "Standard 1px border — Steam" },
+        "strong":  { "$value": "{color.primitive.neutral.30}", "$type": "color", "$description": "Inputs, secondary buttons — Geyser" },
+        "brand":   { "$value": "{color.primitive.blue.60}", "$type": "color", "$description": "Brand-coloured border — active inputs, selection" },
+        "focus":   { "$value": "{color.primitive.blue.60}", "$type": "color", "$description": "Focus ring base color" }
+      },
+
+      "status": {
+        "success": {
+          "default": { "$value": "{color.primitive.green.60}", "$type": "color", "$description": "Success state — Aprobado, Publicado" },
+          "background": { "$value": "{color.primitive.green.05}", "$type": "color", "$description": "Success tint surface" }
+        },
+        "warning": {
+          "default": { "$value": "{color.primitive.amber.60}", "$type": "color", "$description": "Warning state — needs attention" },
+          "background": { "$value": "{color.primitive.amber.05}", "$type": "color", "$description": "Warning tint surface" }
+        },
+        "error": {
+          "default": { "$value": "{color.primitive.red.60}", "$type": "color", "$description": "Error / destructive state" },
+          "background": { "$value": "{color.primitive.red.05}", "$type": "color", "$description": "Error tint surface" }
+        },
+        "info": {
+          "default": { "$value": "{color.primitive.blue.60}", "$type": "color", "$description": "Informational state" },
+          "background": { "$value": "{color.primitive.blue.05}", "$type": "color", "$description": "Info tint surface" }
+        }
+      },
+
+      "editorial-status": {
+        "$description": "Article lifecycle states — draft → in_review → approved → published. Always pair with label and icon.",
+        "draft":     { "$value": "{color.primitive.neutral.60}", "$type": "color", "$description": "Borrador — grey, not yet submitted" },
+        "review":    { "$value": "{color.primitive.amber.60}", "$type": "color", "$description": "En revisión — amber, under peer review" },
+        "approved":  { "$value": "{color.primitive.green.60}", "$type": "color", "$description": "Aprobado — green, cleared for publication" },
+        "published": { "$value": "{color.primitive.blue.60}", "$type": "color", "$description": "Publicado — brand blue, live" },
+        "rejected":  { "$value": "{color.primitive.red.60}", "$type": "color", "$description": "Rechazado — red, requires revision" }
+      }
+    },
+
+    "dataviz": {
+      "$description": "Data visualisation palette — categorical series ordered for max adjacent contrast, colorblind-aware. Always pair with labels/legend.",
+      "categorical": {
+        "1": { "$value": "#0176d3", "$type": "color", "$description": "Series 1 — brand blue" },
+        "2": { "$value": "#06a59a", "$type": "color", "$description": "Series 2 — teal" },
+        "3": { "$value": "#6b4fe3", "$type": "color", "$description": "Series 3 — violet" },
+        "4": { "$value": "#c47d04", "$type": "color", "$description": "Series 4 — amber" },
+        "5": { "$value": "#2e844a", "$type": "color", "$description": "Series 5 — green" },
+        "6": { "$value": "#cb4b3f", "$type": "color", "$description": "Series 6 — coral" },
+        "7": { "$value": "#1b96ff", "$type": "color", "$description": "Series 7 — light azure" },
+        "8": { "$value": "#8793a5", "$type": "color", "$description": "Series 8 — neutral grey" }
+      },
+      "sequential": {
+        "$description": "Single-hue ramp — low to high intensity",
+        "1": { "$value": "#eaf4ff", "$type": "color" },
+        "2": { "$value": "#aad5fb", "$type": "color" },
+        "3": { "$value": "#4ea0ee", "$type": "color" },
+        "4": { "$value": "#0176d3", "$type": "color" },
+        "5": { "$value": "#014486", "$type": "color" }
+      },
+      "diverging": {
+        "negative": { "$value": "#ba0517", "$type": "color", "$description": "Negative diverging extreme" },
+        "neutral":  { "$value": "#e0e5ee", "$type": "color", "$description": "Neutral midpoint" },
+        "positive": { "$value": "#2e844a", "$type": "color", "$description": "Positive diverging extreme" }
+      }
+    }
+  },
+
+  "typography": {
+    "$description": "Type system for Alexandria Magazine — three typefaces, two registers",
+
+    "font-family": {
+      "serif": {
+        "$value": "'Source Serif 4', Georgia, 'Times New Roman', serif",
+        "$type": "fontFamily",
+        "$description": "Editorial display and long-form reading body — the Content System (.prose)"
+      },
+      "sans": {
+        "$value": "'Source Sans 3', system-ui, -apple-system, 'Segoe UI', sans-serif",
+        "$type": "fontFamily",
+        "$description": "All product UI, labels, controls, buttons — the Studio (.ax)"
+      },
+      "mono": {
+        "$value": "'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace",
+        "$type": "fontFamily",
+        "$description": "Code, payloads, tokens, metadata"
+      }
+    },
+
+    "font-size": {
+      "$description": "SLDS font-size aliases. Base unit: 16px. UI body = 14px (--text-base); reading body = 16px (--text-md).",
+      "2xs":  { "$value": "0.6875rem", "$type": "dimension", "$description": "11px — badge labels, table eyebrows" },
+      "xs":   { "$value": "0.75rem",   "$type": "dimension", "$description": "12px — captions, overlines" },
+      "sm":   { "$value": "0.8125rem", "$type": "dimension", "$description": "13px — small labels, secondary metadata" },
+      "base": { "$value": "0.875rem",  "$type": "dimension", "$description": "14px — UI body text (Studio)" },
+      "md":   { "$value": "1rem",      "$type": "dimension", "$description": "16px — reading body minimum (Magazine)" },
+      "lg":   { "$value": "1.125rem",  "$type": "dimension", "$description": "18px — UI subheadings, lead text" },
+      "xl":   { "$value": "1.25rem",   "$type": "dimension", "$description": "20px — section titles" },
+      "2xl":  { "$value": "1.5rem",    "$type": "dimension", "$description": "24px — page headings (UI)" },
+      "3xl":  { "$value": "1.75rem",   "$type": "dimension", "$description": "28px — empty state headings, article h2" },
+      "4xl":  { "$value": "2rem",      "$type": "dimension", "$description": "32px — hero titles (UI)" },
+      "5xl":  { "$value": "2.625rem",  "$type": "dimension", "$description": "42px — article h1 in .prose" },
+      "6xl":  { "$value": "3.5rem",    "$type": "dimension", "$description": "56px — editorial hero / magazine cover" }
+    },
+
+    "font-weight": {
+      "regular":  { "$value": 400, "$type": "fontWeight", "$description": "Default body weight" },
+      "medium":   { "$value": 500, "$type": "fontWeight", "$description": "Slightly emphasized" },
+      "semibold": { "$value": 600, "$type": "fontWeight", "$description": "UI headings, labels" },
+      "bold":     { "$value": 700, "$type": "fontWeight", "$description": "Article headings (.prose), strong emphasis" }
+    },
+
+    "line-height": {
+      "tight":   { "$value": 1.2,  "$type": "number", "$description": "Display headings, hero text" },
+      "snug":    { "$value": 1.35, "$type": "number", "$description": "UI headings, card titles" },
+      "normal":  { "$value": 1.5,  "$type": "number", "$description": "Standard UI body text" },
+      "relaxed": { "$value": 1.7,  "$type": "number", "$description": "Long-form reading body — 68ch measure" }
+    },
+
+    "letter-spacing": {
+      "tight":  { "$value": "-0.02em", "$type": "dimension", "$description": "Display / hero headings" },
+      "snug":   { "$value": "-0.01em", "$type": "dimension", "$description": "UI headings" },
+      "normal": { "$value": "0",       "$type": "dimension", "$description": "Default body" },
+      "wide":   { "$value": "0.04em",  "$type": "dimension", "$description": "Slightly spaced labels" },
+      "caps":   { "$value": "0.07em",  "$type": "dimension", "$description": "Uppercase eyebrows / badge labels" }
+    },
+
+    "measure": {
+      "default": { "$value": "68ch", "$type": "dimension", "$description": "Optimal reading line length — .prose column" },
+      "narrow":  { "$value": "58ch", "$type": "dimension", "$description": "Narrow reading column" }
+    }
+  },
+
+  "spacing": {
+    "$description": "4px base grid, SLDS rem aliases. Use these tokens for all margins, paddings, and gaps.",
+    "3xs": { "$value": "0.125rem", "$type": "dimension", "$description": "2px — hairline gaps, icon nudges" },
+    "2xs": { "$value": "0.25rem",  "$type": "dimension", "$description": "4px — tight inline spacing, small badge padding" },
+    "xs":  { "$value": "0.5rem",   "$type": "dimension", "$description": "8px — control gaps, icon-to-label" },
+    "sm":  { "$value": "0.75rem",  "$type": "dimension", "$description": "12px — compact padding, nav item padding" },
+    "md":  { "$value": "1rem",     "$type": "dimension", "$description": "16px — card padding (compact), section gap" },
+    "lg":  { "$value": "1.5rem",   "$type": "dimension", "$description": "24px — card padding (default), column gap" },
+    "xl":  { "$value": "2rem",     "$type": "dimension", "$description": "32px — section spacing" },
+    "2xl": { "$value": "3rem",     "$type": "dimension", "$description": "48px — major section dividers" },
+    "3xl": { "$value": "4rem",     "$type": "dimension", "$description": "64px — page-level top padding" },
+    "4xl": { "$value": "5rem",     "$type": "dimension", "$description": "80px — hero vertical rhythm" }
+  },
+
+  "border-radius": {
+    "$description": "SLDS2 radius scale — slightly rounder than SLDS1",
+    "sm":     { "$value": "0.25rem", "$type": "dimension", "$description": "4px — badges, small chips, inline code" },
+    "md":     { "$value": "0.5rem",  "$type": "dimension", "$description": "8px — inputs, buttons, controls" },
+    "lg":     { "$value": "0.75rem", "$type": "dimension", "$description": "12px — cards, panels, dropdowns" },
+    "xl":     { "$value": "1rem",    "$type": "dimension", "$description": "16px — modals, large sheet overlays" },
+    "pill":   { "$value": "999px",   "$type": "dimension", "$description": "Full pill — status badges, tag chips" },
+    "circle": { "$value": "50%",     "$type": "dimension", "$description": "Circular avatars, icon tiles" }
+  },
+
+  "shadow": {
+    "$description": "Soft, ink-tinted shadows. No neon glows — a departure from the dark legacy theme.",
+    "1":     { "$value": "0 1px 2px rgba(11,27,51,0.06), 0 1px 1px rgba(11,27,51,0.04)", "$type": "shadow", "$description": "Rest / card hairline lift — default card elevation" },
+    "2":     { "$value": "0 2px 8px rgba(11,27,51,0.08), 0 1px 2px rgba(11,27,51,0.05)", "$type": "shadow", "$description": "Hovered cards, dropdowns" },
+    "3":     { "$value": "0 8px 24px rgba(11,27,51,0.10), 0 2px 6px rgba(11,27,51,0.06)", "$type": "shadow", "$description": "Popovers, context menus, tooltips" },
+    "4":     { "$value": "0 16px 48px rgba(11,27,51,0.14)", "$type": "shadow", "$description": "Modals, drawers, sheet overlays" },
+    "brand": { "$value": "0 4px 16px rgba(1,118,211,0.20)", "$type": "shadow", "$description": "Blue glow — primary CTA button only" }
+  },
+
+  "focus": {
+    "ring":        { "$value": "0 0 0 3px rgba(1,118,211,0.25)",   "$type": "shadow", "$description": "Standard focus ring — 3px blue at 25% alpha" },
+    "ring-accent": { "$value": "0 0 0 3px rgba(107,79,227,0.25)", "$type": "shadow", "$description": "Accent focus ring — AI/generative controls" }
+  },
+
+  "motion": {
+    "$description": "Duration and easing tokens. Honour prefers-reduced-motion — pause all non-essential animation.",
+    "duration": {
+      "fast": { "$value": "120ms", "$type": "duration", "$description": "Micro-interactions, hover reveals, badge updates" },
+      "base": { "$value": "200ms", "$type": "duration", "$description": "Standard transitions — entrance fades, panel opens" },
+      "slow": { "$value": "320ms", "$type": "duration", "$description": "Page transitions, modal entrances" }
+    },
+    "easing": {
+      "standard": { "$value": "cubic-bezier(0.4, 0, 0.2, 1)", "$type": "cubicBezier", "$description": "Standard ease — most transitions" },
+      "out":      { "$value": "cubic-bezier(0, 0, 0.2, 1)",   "$type": "cubicBezier", "$description": "Decelerate out — entrance animations" }
+    }
+  },
+
+  "layout": {
+    "$description": "Fixed layout constants for the Studio app shell",
+    "sidebar-width": { "$value": "248px", "$type": "dimension", "$description": "Fixed left navigation sidebar width" },
+    "topbar-height": { "$value": "56px",  "$type": "dimension", "$description": "Fixed top application bar height" }
+  }
+}

@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Layers, Zap, Bot, GitBranch, Shield } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import toast from 'react-hot-toast';
 
@@ -43,7 +42,7 @@ export default function AuthPage() {
       <div className="auth-left">
         <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
           <div className="auth-brand-icon">
-            <Layers />
+            <img src="/ds/assets/logomark.svg" alt="Alexandria" />
           </div>
           <h1 style={{ fontSize: 'var(--font-size-2xl)', textAlign: 'center', letterSpacing: '-0.03em' }}>
             {projectName ? (

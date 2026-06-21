@@ -1,0 +1,21 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">
+<link rel="stylesheet" href="../colors_and_type.css"><link rel="stylesheet" href="_card.css">
+<style>
+  .panes { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+  .pane { border-radius:12px; border:1px solid var(--border-default); padding:16px; background:var(--bg-canvas); }
+  .pane h4 { font-size:14px; font-weight:600; color:var(--text-heading); }
+  .pane p { font-size:12px; color:var(--text-secondary); margin:3px 0 12px; }
+  .b { display:inline-flex; align-items:center; gap:6px; padding:7px 13px; border-radius:8px; font-size:12px; font-weight:600; }
+  .bp { background:var(--brand); color:var(--text-on-brand); }
+  .bg2 { background:var(--bg-surface); color:var(--text-primary); border:1px solid var(--border-strong); }
+  .badge { display:inline-block; padding:3px 10px; border-radius:999px; font-size:10px; font-weight:600; background:var(--brand-tint); color:var(--text-link); margin-left:6px; }
+  .tag { font-size:9px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--text-muted); }
+</style></head>
+<body>
+  <div class="cap" style="margin-bottom:12px;">Theming · light &amp; dark (semantic token swap)</div>
+  <div class="panes">
+    <div class="pane"><span class="tag">Light</span><h4 style="margin-top:6px;">Workspace<span class="badge">Publicado</span></h4><p>Same tokens, light surface.</p><span class="b bp">Aprobar</span> <span class="b bg2">Cancelar</span></div>
+    <div class="pane" data-theme="dark"><span class="tag">Dark</span><h4 style="margin-top:6px;">Workspace<span class="badge">Publicado</span></h4><p>Same tokens, dark surface.</p><span class="b bp">Aprobar</span> <span class="b bg2">Cancelar</span></div>
+  </div>
+  <div class="lbl" style="margin-top:12px;">Toggle with <span class="mono">&lt;html data-theme="dark"&gt;</span> or <span class="mono">.dark</span>. Only semantic vars change; scales are shared.</div>
+</body></html>

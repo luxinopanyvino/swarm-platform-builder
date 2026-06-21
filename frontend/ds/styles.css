@@ -1,0 +1,5 @@
+/* Alexandria Magazine Design System — unified entry point
+   Imports all token, type, and component styles.
+   Link this single file in every artifact.
+*/
+@import url('colors_and_type.css');
