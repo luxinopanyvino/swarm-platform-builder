@@ -342,6 +342,7 @@ async def update_claude_agent_definition(
     if is_json:
         for key in ("model", "temperature", "rag_enabled", "rag_collection",
                     "rag_chunk_size", "rag_chunk_overlap", "rag_doc_ids",
+                    "graph_rag_enabled", "semantic_search_enabled",
                     "tools_enabled", "tools", "prompt_template",
                     "scientific_format", "output_language", "target_word_count"):
             if key in params:
@@ -623,6 +624,10 @@ async def run_agent_pipeline(
             s["rag_collection"] = profile.rag_collection
         if "rag_doc_ids" not in s and profile.rag_doc_ids:
             s["rag_doc_ids"] = profile.rag_doc_ids
+        if "graph_rag_enabled" not in s and profile.graph_rag_enabled is not None:
+            s["graph_rag_enabled"] = profile.graph_rag_enabled
+        if "semantic_search_enabled" not in s and profile.semantic_search_enabled is not None:
+            s["semantic_search_enabled"] = profile.semantic_search_enabled
         if "tools_enabled" not in s and profile.tools_enabled:
             s["tools_enabled"] = profile.tools_enabled
         if "tools" not in s and profile.tools:
@@ -644,6 +649,7 @@ async def run_agent_pipeline(
         # Pass existing body so re-runs (e.g. only revisor+formateador) start with
         # the already-generated content instead of an empty draft.
         initial_draft_text=article.body or "",
+        article_outline=req.article_outline,
     )
     
     return {"status": "accepted", "message": "Agent execution pipeline started"}

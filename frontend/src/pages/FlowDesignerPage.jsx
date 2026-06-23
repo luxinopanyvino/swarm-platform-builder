@@ -43,6 +43,7 @@ export default function FlowDesignerPage() {
   const [runKeywords, setRunKeywords] = React.useState([]);
   const [runKeywordInput, setRunKeywordInput] = React.useState('');
   const [runDescription, setRunDescription] = React.useState('');
+  const [runOutline, setRunOutline] = React.useState('');
   const [models, setModels] = React.useState(['llama3.2:1b']);
   const [paletteAgents, setPaletteAgents] = React.useState([]);
   const [editAgent, setEditAgent] = React.useState(null);
@@ -261,6 +262,7 @@ export default function FlowDesignerPage() {
           agentSettings,
           keywords: runKeywords,
           contextDescription: runDescription,
+          articleOutline: runOutline,
         }
       });
     } catch { toast.error('Error al iniciar pipeline'); }
@@ -476,6 +478,25 @@ export default function FlowDesignerPage() {
                 />
                 <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--text-muted)', marginTop: 4 }}>
                   El <strong>Investigador</strong> la usa para afinar la búsqueda semántica. El <strong>Redactor</strong> la recibe como instrucción de enfoque en el prompt.
+                </div>
+              </div>
+
+              <div className="input-group">
+                <label htmlFor="run-outline" className="input-label">
+                  Estructura / Esquema del artículo
+                  <span style={{ fontWeight: 400, color: 'var(--text-muted)', marginLeft: 6 }}>— opcional</span>
+                </label>
+                <textarea
+                  id="run-outline"
+                  className="input"
+                  rows={3}
+                  placeholder="Ej:&#10;- Introducción: Contexto del cambio climático&#10;- Sección 1: Acidificación oceánica&#10;- Sección 2: Consecuencias ecológicas&#10;- Conclusiones generales"
+                  value={runOutline}
+                  onChange={e => setRunOutline(e.target.value)}
+                  style={{ resize: 'vertical', fontSize: 'var(--font-size-sm)' }}
+                />
+                <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--text-muted)', marginTop: 4 }}>
+                  Define las secciones, subsecciones o títulos creativos que el <strong>Redactor</strong> debe seguir obligatoriamente.
                 </div>
               </div>
 

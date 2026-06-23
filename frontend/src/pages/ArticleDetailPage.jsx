@@ -170,7 +170,7 @@ export default function ArticleDetailPage() {
     if (selectedAgents.length === 0) { toast.error('Selecciona al menos un agente'); return; }
     setShowPipelineModal(false);
     navigate(`/execution/${article.id}`, {
-      state: { flowSequence: selectedAgents, agentSettings: {}, keywords: [], contextDescription: '' },
+      state: { flowSequence: selectedAgents, agentSettings: {}, keywords: [], contextDescription: '', articleOutline: '' },
     });
   };
 

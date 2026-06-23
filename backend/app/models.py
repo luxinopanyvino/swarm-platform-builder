@@ -136,6 +136,8 @@ class AgentProfileModel(Base):
     model = Column(String(128), default="llama3.2:1b", nullable=False)
     temperature = Column(Float, default=0.7, nullable=False)
     rag_enabled = Column(Boolean, default=False, nullable=False)
+    graph_rag_enabled = Column(Boolean, default=False, nullable=False)
+    semantic_search_enabled = Column(Boolean, default=False, nullable=False)
     rag_collection = Column(String(255), default="rag_docs", nullable=False)
     rag_chunk_size = Column(Integer, default=500, nullable=False)
     rag_chunk_overlap = Column(Integer, default=50, nullable=False)
@@ -274,6 +276,8 @@ class AgentProfileResponse(BaseModel):
     model: str
     temperature: float
     rag_enabled: bool
+    graph_rag_enabled: bool
+    semantic_search_enabled: bool
     rag_collection: str
     rag_chunk_size: int
     rag_chunk_overlap: int
@@ -351,6 +355,7 @@ class AgentRunRequest(BaseModel):
     agent_settings: dict[str, dict] = Field(default={})
     keywords: list[str] = Field(default=[])
     context_description: str = Field(default="")
+    article_outline: str = Field(default="")
 
 
 class AgentRunDetailResponse(BaseModel):

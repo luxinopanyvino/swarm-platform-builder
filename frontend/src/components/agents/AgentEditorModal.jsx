@@ -429,6 +429,8 @@ export function AgentEditorModal({ agent, isBuiltin, models, onClose, onSaved, o
       temperature: agent.temperature ?? 0.7,
       prompt_template: agent.prompt_template || '',
       rag_enabled: agent.rag_enabled ?? false,
+      graph_rag_enabled: agent.graph_rag_enabled ?? false,
+      semantic_search_enabled: agent.semantic_search_enabled ?? false,
       rag_collection: agent.rag_collection || 'rag_docs',
       rag_chunk_size: agent.rag_chunk_size ?? 500,
       rag_chunk_overlap: agent.rag_chunk_overlap ?? 50,
@@ -669,6 +671,73 @@ export function AgentEditorModal({ agent, isBuiltin, models, onClose, onSaved, o
                       <div className={`toggle ${params.rag_enabled ? 'on' : ''}`} aria-hidden="true" />
                       <span className="toggle-label">RAG habilitado</span>
                     </div>
+
+                    {params.rag_enabled && (
+                      <div style={{ display: 'flex', gap: 'var(--space-4)', margin: 'var(--space-1) 0 var(--space-2)' }}>
+                        <div
+                          role="switch"
+                          aria-checked={params.graph_rag_enabled}
+                          tabIndex={0}
+                          onClick={() => setParams((current) => {
+                            const nextGraph = !current.graph_rag_enabled;
+                            return {
+                              ...current,
+                              graph_rag_enabled: nextGraph,
+                              semantic_search_enabled: nextGraph ? true : current.semantic_search_enabled
+                            };
+                          })}
+                          onKeyDown={(event) => {
+                            if (event.key === ' ') {
+                              setParams((current) => {
+                                const nextGraph = !current.graph_rag_enabled;
+                                return {
+                                  ...current,
+                                  graph_rag_enabled: nextGraph,
+                                  semantic_search_enabled: nextGraph ? true : current.semantic_search_enabled
+                                };
+                              });
+                            }
+                          }}
+                          className="toggle-wrapper"
+                          style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}
+                        >
+                          <div className={`toggle ${params.graph_rag_enabled ? 'on' : ''}`} aria-hidden="true" />
+                          <span className="toggle-label" style={{ fontSize: 'var(--font-size-xs)' }}>Graph RAG</span>
+                        </div>
+
+                        <div
+                          role="switch"
+                          aria-checked={params.semantic_search_enabled}
+                          tabIndex={0}
+                          onClick={() => setParams((current) => {
+                            const nextSemantic = !current.semantic_search_enabled;
+                            return {
+                              ...current,
+                              semantic_search_enabled: nextSemantic,
+                              graph_rag_enabled: nextSemantic ? current.graph_rag_enabled : false
+                            };
+                          })}
+                          onKeyDown={(event) => {
+                            if (event.key === ' ') {
+                              setParams((current) => {
+                                const nextSemantic = !current.semantic_search_enabled;
+                                return {
+                                  ...current,
+                                  semantic_search_enabled: nextSemantic,
+                                  graph_rag_enabled: nextSemantic ? current.graph_rag_enabled : false
+                                };
+                              });
+                            }
+                          }}
+                          className="toggle-wrapper"
+                          style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}
+                        >
+                          <div className={`toggle ${params.semantic_search_enabled ? 'on' : ''}`} aria-hidden="true" />
+                          <span className="toggle-label" style={{ fontSize: 'var(--font-size-xs)' }}>Búsqueda Semántica</span>
+                        </div>
+                      </div>
+                    )}
+
                     {params.rag_enabled && (
                       <>
                         <div className="input-group">

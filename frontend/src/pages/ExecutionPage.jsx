@@ -31,6 +31,7 @@ export default function ExecutionPage() {
   const agentSettings = location.state?.agentSettings || {};
   const runKeywords = location.state?.keywords || [];
   const contextDescription = location.state?.contextDescription || '';
+  const articleOutline = location.state?.articleOutline || '';
   const [steps, setSteps] = useState(
     flowSequence.map(id => ({ id, status: 'waiting', output: '' }))
   );
@@ -157,6 +158,7 @@ export default function ExecutionPage() {
         agent_settings: agentSettings,
         keywords: runKeywords,
         context_description: contextDescription,
+        article_outline: articleOutline,
       }).catch(() => {
         toast.error('Error al iniciar el pipeline');
       });

@@ -89,6 +89,7 @@ async def run_redactor(state: Dict[str, Any]) -> Dict[str, Any]:
     research_data = state.get("research_data") or "No se proporcionó contexto de investigación."
     feedback = state.get("feedback") or []
     context_description = (state.get("context_description") or "").strip()
+    article_outline = (state.get("article_outline") or "").strip()
     log = state.get("_log") or (lambda msg, level="info": None)
 
     # Resolve per-agent config: agent_settings overrides → settings default
@@ -145,12 +146,30 @@ async def run_redactor(state: Dict[str, Any]) -> Dict[str, Any]:
         logger.warning("Redactor RAG lookup failed: %s", exc)
         log(f"⚠️ RAG no disponible: {exc}", "warning")
 
-    # Build context section from user-provided description
+    # Build context section from user-provided description and outline
+    context_parts = []
     if context_description:
         if language == "es":
-            context_section = f"### Enfoque / Instrucciones adicionales del autor:\n{context_description}\n\n"
+            context_parts.append(f"### Enfoque / Instrucciones adicionales del autor:\n{context_description}")
         else:
-            context_section = f"### Focus / Additional author instructions:\n{context_description}\n\n"
+            context_parts.append(f"### Focus / Additional author instructions:\n{context_description}")
+
+    if article_outline:
+        if language == "es":
+            context_parts.append(
+                f"### ESTRUCTURA Y SECCIONES REQUERIDAS DEL ARTÍCULO:\n"
+                f"Usa ESTA estructura y nombres de sección creativos provistos por el autor en lugar de los estándar:\n"
+                f"{article_outline}"
+            )
+        else:
+            context_parts.append(
+                f"### REQUIRED ARTICLE STRUCTURE AND SECTIONS:\n"
+                f"Use THIS structure and creative section names provided by the author instead of the default ones:\n"
+                f"{article_outline}"
+            )
+
+    if context_parts:
+        context_section = "\n" + "\n\n".join(context_parts) + "\n\n"
     else:
         context_section = "\n"
     feedback_section = ""

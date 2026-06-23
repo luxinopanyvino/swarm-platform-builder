@@ -602,3 +602,104 @@ async def semantic_search_context(
     except Exception as error:
         logger.warning(f"Semantic RAG search failed for agent '{agent_name}': {error}")
         return await fetch_agent_context(qdrant_url, collection, agent_name, limit, api_key)
+
+
+async def graph_rag_search_context(
+    query: str,
+    qdrant_url: str,
+    collection: str,
+    agent_name: str,
+    ollama_base_url: str,
+    embedding_model: str,
+    limit: int = 5,
+    api_key: Optional[str] = None,
+    doc_ids: Optional[list] = None,
+) -> str:
+    """
+    Graph RAG: Retrieve seed chunks semantically, build a concept/entity graph
+    of co-occurrences using NetworkX, expand the search to adjacent nodes
+    (related entities), and compile the enhanced context.
+    """
+    # 1. Fetch initial semantic search chunks
+    base_context = await semantic_search_context(
+        query=query,
+        qdrant_url=qdrant_url,
+        collection=collection,
+        agent_name=agent_name,
+        ollama_base_url=ollama_base_url,
+        embedding_model=embedding_model,
+        limit=limit,
+        api_key=api_key,
+        doc_ids=doc_ids,
+    )
+    if not base_context:
+        return ""
+
+    chunks = [c.strip() for c in base_context.split("\n\n---\n\n") if c.strip()]
+    if not chunks:
+        return ""
+
+    # 2. Extract entities/keywords from chunks using basic heuristics
+    import re
+    import networkx as nx
+
+    def extract_entities(text: str) -> List[str]:
+        # Find capitalized words or phrases (proper nouns/technical terms)
+        candidates = re.findall(r'\b[A-Z][a-zA-Z0-9_\-]{2,}(?:\s+[A-Z][a-zA-Z0-9_\-]{2,})*\b', text)
+        return list(set([c for c in candidates if len(c) > 3]))
+
+    # Build Graph
+    G = nx.Graph()
+    
+    for chunk in chunks:
+        entities = extract_entities(chunk)
+        for ent in entities:
+            G.add_node(ent, label="Entity")
+            if "chunks" not in G.nodes[ent]:
+                G.nodes[ent]["chunks"] = []
+            if chunk not in G.nodes[ent]["chunks"]:
+                G.nodes[ent]["chunks"].append(chunk)
+
+        # Add edges between entities co-occurring in the same chunk
+        for i in range(len(entities)):
+            for j in range(i + 1, len(entities)):
+                ent1, ent2 = entities[i], entities[j]
+                if G.has_edge(ent1, ent2):
+                    G[ent1][ent2]["weight"] += 1
+                else:
+                    G.add_edge(ent1, ent2, weight=1)
+
+    # 3. Find target entities from query
+    query_entities = extract_entities(query)
+    if not query_entities:
+        query_entities = [w.strip(".,;:?!()[]").capitalize() for w in query.split() if len(w) > 4]
+
+    # Find neighbors/related nodes in the graph
+    related_entities = set()
+    for q_ent in query_entities:
+        if q_ent in G:
+            related_entities.add(q_ent)
+            neighbors = list(G.neighbors(q_ent))
+            related_entities.update(neighbors[:3])  # Top 3 neighbors
+
+    # 4. Gather chunks containing these entities
+    expanded_chunks = list(chunks)
+    expanded_set = set(chunks)
+    
+    for ent in related_entities:
+        for chunk in G.nodes[ent]["chunks"]:
+            if chunk not in expanded_set:
+                expanded_chunks.append(chunk)
+                expanded_set.add(chunk)
+                if len(expanded_chunks) >= limit + 3:
+                    break
+        if len(expanded_chunks) >= limit + 3:
+            break
+
+    # 5. Format the context with graph details
+    entity_list = list(G.nodes)[:15]
+    graph_summary = (
+        f"[Graph RAG Info: Construido grafo conceptual con {G.number_of_nodes()} entidades y "
+        f"{G.number_of_edges()} relaciones. Entidades clave: {', '.join(entity_list)}]\n\n"
+    )
+    return graph_summary + "\n\n---\n\n".join(expanded_chunks)

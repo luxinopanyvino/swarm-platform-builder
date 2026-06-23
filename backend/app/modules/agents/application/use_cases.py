@@ -300,6 +300,7 @@ class Orchestrator:
         agent_settings: Dict[str, Any] = None,
         context_description: str = "",
         initial_draft_text: str = "",
+        article_outline: str = "",
     ) -> Dict[str, Any]:
         """Execute the compiled LangGraph flow and return the final state."""
         compiled_graph = cls.compile_graph(flow_sequence)
@@ -323,6 +324,7 @@ class Orchestrator:
             loop_count=0,
             agent_settings=agent_settings or {},
             context_description=context_description,
+            article_outline=article_outline,
         )
 
         logger.info(f"Starting LangGraph run for article {article_id} with sequence {flow_sequence}")

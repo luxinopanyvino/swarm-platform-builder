@@ -59,6 +59,8 @@ def load_agent_profile(agent_name: str) -> Optional[Dict[str, Any]]:
             "temperature": frontmatter.get("temperature", 0.7),
             "prompt_template": frontmatter.get("prompt_template", "").strip(),
             "rag_enabled": frontmatter.get("rag_enabled", False),
+            "graph_rag_enabled": frontmatter.get("graph_rag_enabled", False),
+            "semantic_search_enabled": frontmatter.get("semantic_search_enabled", False),
             "rag_collection": frontmatter.get("rag_collection", "rag_docs"),
             "tools_enabled": frontmatter.get("tools_enabled", False),
             "tools": frontmatter.get("tools") or [],
@@ -118,15 +120,66 @@ async def run_generic_agent(agent_name: str, state: Dict[str, Any]) -> Dict[str,
         }
 
     # Fetch RAG context if enabled
+    agent_cfg = state.get("agent_settings", {}).get(agent_name, {})
+    rag_enabled = agent_cfg.get("rag_enabled") if agent_cfg.get("rag_enabled") is not None else profile.get("rag_enabled", False)
+    graph_rag_enabled = agent_cfg.get("graph_rag_enabled") if agent_cfg.get("graph_rag_enabled") is not None else profile.get("graph_rag_enabled", False)
+    semantic_search_enabled = agent_cfg.get("semantic_search_enabled") if agent_cfg.get("semantic_search_enabled") is not None else profile.get("semantic_search_enabled", False)
+    rag_collection = agent_cfg.get("rag_collection") or profile.get("rag_collection", settings.QDRANT_COLLECTION)
+    rag_doc_ids = agent_cfg.get("rag_doc_ids") or profile.get("rag_doc_ids") or None
+
     rag_context = ""
-    if profile["rag_enabled"]:
-        log(f"🔎 Buscando contexto RAG en colección '{profile['rag_collection']}'...")
-        rag_context = await fetch_agent_context(
-            qdrant_url=settings.QDRANT_URL,
-            collection=profile["rag_collection"],
-            agent_name=agent_name,
-            api_key=settings.QDRANT_API_KEY,
-        )
+    if rag_enabled:
+        if graph_rag_enabled:
+            log(f"🕸️ Buscando contexto mediante Graph RAG en colección '{rag_collection}'...")
+            from app.modules.agents.adapters.rag import graph_rag_search_context
+            title = state.get("title") or ""
+            keywords = state.get("keywords") or []
+            title_words = [w.strip(".,;:?!()[]") for w in title.split() if len(w) > 3] if title else []
+            kw_words = [k for k in keywords if k.lower() not in {w.lower() for w in title_words}]
+            combined_terms = title_words + kw_words
+            query_str = " ".join(combined_terms) if combined_terms else "scientific research"
+
+            rag_context = await graph_rag_search_context(
+                query=query_str,
+                qdrant_url=settings.QDRANT_URL,
+                collection=rag_collection,
+                agent_name=agent_name,
+                ollama_base_url=settings.OLLAMA_BASE_URL,
+                embedding_model=settings.OLLAMA_EMBED_MODEL,
+                limit=5,
+                api_key=settings.QDRANT_API_KEY,
+                doc_ids=rag_doc_ids,
+            )
+        elif semantic_search_enabled:
+            log(f"🔎 Buscando contexto mediante Búsqueda Semántica en colección '{rag_collection}'...")
+            from app.modules.agents.adapters.rag import semantic_search_context
+            title = state.get("title") or ""
+            keywords = state.get("keywords") or []
+            title_words = [w.strip(".,;:?!()[]") for w in title.split() if len(w) > 3] if title else []
+            kw_words = [k for k in keywords if k.lower() not in {w.lower() for w in title_words}]
+            combined_terms = title_words + kw_words
+            query_str = " ".join(combined_terms) if combined_terms else "scientific research"
+
+            rag_context = await semantic_search_context(
+                query=query_str,
+                qdrant_url=settings.QDRANT_URL,
+                collection=rag_collection,
+                agent_name=agent_name,
+                ollama_base_url=settings.OLLAMA_BASE_URL,
+                embedding_model=settings.OLLAMA_EMBED_MODEL,
+                limit=5,
+                api_key=settings.QDRANT_API_KEY,
+                doc_ids=rag_doc_ids,
+            )
+        else:
+            log(f"🔎 Buscando contexto RAG estándar en colección '{rag_collection}'...")
+            rag_context = await fetch_agent_context(
+                qdrant_url=settings.QDRANT_URL,
+                collection=rag_collection,
+                agent_name=agent_name,
+                api_key=settings.QDRANT_API_KEY,
+            )
+
         if rag_context:
             log(f"✅ RAG: {len(rag_context.split())} palabras de contexto encontradas.")
         else:

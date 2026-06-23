@@ -26,3 +26,4 @@ class AgentState(TypedDict):
     agent_settings: Dict[str, Dict[str, Any]]
     # Optional context/focus description provided by the user when launching the pipeline
     context_description: str
+    article_outline: str
