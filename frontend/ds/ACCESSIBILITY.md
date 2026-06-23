@@ -1,6 +1,6 @@
-# Accessibility — WCAG 2.1 AA (Alexandria Magazine)
+# Accessibility — WCAG 2.1 AA (AlejandrIA Magazine)
 
-Alexandria targets **WCAG 2.1 Level AA** across product UI and the published reading
+AlejandrIA targets **WCAG 2.1 Level AA** across product UI and the published reading
 layer, with AAA where it's cheap (body text contrast, reading measure). These rules are
 binding for anything built with this design system.
 

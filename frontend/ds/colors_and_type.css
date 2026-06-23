@@ -1,8 +1,8 @@
 /* ============================================================
-   ALEXANDRIA MAGAZINE — DESIGN TOKENS
+   ALEJANDRIA MAGAZINE — DESIGN TOKENS
    colors_and_type.css
    ------------------------------------------------------------
-   Foundations for the Alexandria Magazine design system.
+   Foundations for the AlejandrIA Magazine design system.
    Built on Salesforce Lightning Design System 2 token
    structure (https://github.com/salesforce-ux/design-system),
    reframed for a modern scientific content-creation & publishing
@@ -10,7 +10,7 @@
      · PRODUCT  — the Studio app UI (light SLDS-style surfaces)
      · CONTENT  — the editorial reading layer (serif long-form)
    Fonts are open-source and loaded from Google Fonts (see top
-   @import). They are Alexandria's chosen faces, not substitutes.
+   @import). They are AlejandrIA's chosen faces, not substitutes.
    ============================================================ */
 
 @import url('https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,500;8..60,600;8..60,700&family=Source+Sans+3:ital,wght@0,400;0,500;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500;600&display=swap');
@@ -18,10 +18,10 @@
 :root {
   /* ----------------------------------------------------------
      1 · PRIMITIVE COLOR PALETTE
-     SLDS "cloud" neutrals + Alexandria brand + agent palette
+     SLDS "cloud" neutrals + AlejandrIA brand + agent palette
      ---------------------------------------------------------- */
 
-  /* Brand — Alexandria Blue (SLDS2 brand blue family) */
+  /* Brand — AlejandrIA Blue (SLDS2 brand blue family) */
   --blue-05: #eaf4ff;
   --blue-10: #d6eaff;
   --blue-20: #aad5fb;
@@ -344,7 +344,7 @@
 /* ============================================================
    SEMANTIC ELEMENT STYLES
    Drop-in defaults so any document including this file inherits
-   the Alexandria voice. Use .ui-* for product, .prose for content.
+   the AlejandrIA voice. Use .ui-* for product, .prose for content.
    ============================================================ */
 
 .ax-root,

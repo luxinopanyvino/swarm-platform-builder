@@ -99,7 +99,7 @@ export default function LectorPage() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <BookOpen size={20} style={{ color: 'var(--brand-primary)' }} />
           <span style={{ fontWeight: 700, fontSize: '1.1rem', color: 'var(--text-primary)' }}>
-            Alex<span style={{ color: 'var(--brand-primary)' }}>andrIA</span> Magazine
+            Alej<span style={{ color: 'var(--brand-primary)' }}>andrIA</span> Magazine
           </span>
         </div>
 

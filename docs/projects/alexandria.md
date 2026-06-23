@@ -1,6 +1,6 @@
-# AlexandrIA Magazine
+# AlejandrIA Magazine
 
-AlexandrIA Magazine es el proyecto de referencia de la plataforma. Implementa un flujo editorial completo para la producción de artículos de revista científica mediante un swarm de cinco agentes especializados.
+AlejandrIA Magazine es el proyecto de referencia de la plataforma. Implementa un flujo editorial completo para la producción de artículos de revista científica mediante un swarm de cinco agentes especializados.
 
 ## Agentes del swarm
 
@@ -24,6 +24,6 @@ AlexandrIA Magazine es el proyecto de referencia de la plataforma. Implementa un
 ## Primeros pasos
 
 1. Inicia sesión con tu cuenta `redactor` o `admin`.
-2. Accede al proyecto **AlexandrIA Magazine** en el selector de proyectos.
+2. Accede al proyecto **AlejandrIA Magazine** en el selector de proyectos.
 3. Crea un artículo en **Artículos → Nuevo artículo**.
-4. Sigue el [flujo de redacción](/projects/alexandria-flow).
+4. Sigue el [flujo de redacción](/projects/alejandria-flow).

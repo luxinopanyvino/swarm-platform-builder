@@ -55,7 +55,7 @@ function Sidebar({ active, onNav, user }) {
     <aside className="sidebar">
       <div className="side-logo">
         <img src="../../assets/logomark.svg" width="34" height="34" alt="" />
-        <div className="wm"><span className="name">Alexandria</span><span className="sub">MAGAZINE</span></div>
+        <div className="wm"><span className="name">AlejandrIA</span><span className="sub">MAGAZINE</span></div>
       </div>
       <nav className="side-nav">
         {items.map((it, i) => it.sec

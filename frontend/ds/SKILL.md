@@ -1,12 +1,12 @@
 ---
 name: alexandria-design
-description: Use this skill to generate well-branded interfaces and assets for Alexandria Magazine, either for production or throwaway prototypes/mocks/etc. Contains essential design guidelines, colors, type, fonts, assets, light & dark themes, dataviz, WCAG 2.1 rules, and UI kit components for prototyping a scientific content-creation & publishing product.
+description: Use this skill to generate well-branded interfaces and assets for AlejandrIA Magazine, either for production or throwaway prototypes/mocks/etc. Contains essential design guidelines, colors, type, fonts, assets, light & dark themes, dataviz, WCAG 2.1 rules, and UI kit components for prototyping a scientific content-creation & publishing product.
 user-invocable: true
 ---
 
-# Alexandria Magazine — design skill
+# AlejandrIA Magazine — design skill
 
-Alexandria Magazine is an agentic platform for writing, reviewing, and publishing
+AlejandrIA Magazine is an agentic platform for writing, reviewing, and publishing
 technical & scientific articles. This skill lets you design on-brand for it: a modern,
 light, SLDS-blue product surface (**Studio**) plus an editorial serif reading layer
 (**Magazine**), with a Content System for long-form scientific content.

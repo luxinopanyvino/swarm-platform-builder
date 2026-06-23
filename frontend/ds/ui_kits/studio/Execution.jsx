@@ -71,7 +71,7 @@ function Execution({ title, onOpenArticle }) {
               : 'Generando resumen…'}</p>
             {done && <>
               <h2>1 · Introduction</h2>
-              <p>Researchers lack an integrated environment that combines AI-assisted writing over private sources, structured scientific formatting, and a controlled review-and-publish workflow. Alexandria addresses this with a multi-agent graph compiled at runtime from a visual flow.</p>
+              <p>Researchers lack an integrated environment that combines AI-assisted writing over private sources, structured scientific formatting, and a controlled review-and-publish workflow. AlejandrIA addresses this with a multi-agent graph compiled at runtime from a visual flow.</p>
               <blockquote><p>The orchestrator never publishes autonomously — a human reviewer must approve every article.</p></blockquote>
               <p>The remainder of this article describes the retrieval design, the review agent\u2019s scoring, and an evaluation against an ungrounded baseline.</p>
             </>}

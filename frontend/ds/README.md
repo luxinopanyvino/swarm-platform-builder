@@ -1,8 +1,8 @@
-# Alexandria Magazine — Design System
+# AlejandrIA Magazine — Design System
 
 > *Where rigorous science meets calm, modern publishing.*
 
-**Alexandria Magazine** (AlexandrIA Magazine) is an agentic editorial platform for
+**AlejandrIA Magazine** (AlejandrIA Magazine) is an agentic editorial platform for
 researchers and editors: a personal workspace where authors design multi-agent AI
 flows (the **Flow Designer**) to research, draft, review, format, and publish
 technical and scientific articles, with a controlled `draft → in_review → approved →
@@ -25,7 +25,7 @@ recorded so you can explore further and improve fidelity.
 
 | Source | Location | What it gave us |
 |---|---|---|
-| **Alexandria codebase** | `alejandria-magazine/` (local mount) | Product domain, page structure, the existing `index.css` token set, agent metadata, editorial workflow |
+| **AlejandrIA codebase** | `alejandria-magazine/` (local mount) | Product domain, page structure, the existing `index.css` token set, agent metadata, editorial workflow |
 | ↳ key files | `frontend/src/index.css`, `pages/*.jsx`, `components/flow/AgentNode.jsx`, `DESIGN.md`, `README.md` | Foundations & component behaviour |
 | **Salesforce Lightning Design System** | https://github.com/salesforce-ux/design-system | Token *structure* + values: `design-tokens/aliases/{colors,spacing,font-size,border-radius,font-family}.yml`. Explore this repo to deepen any SLDS-aligned work. |
 | **SLDS reference** | https://www.lightningdesignsystem.com | Live component patterns & SLDS2 guidance |
@@ -39,7 +39,7 @@ recorded so you can explore further and improve fidelity.
 
 ---
 
-## Content fundamentals — how Alexandria writes
+## Content fundamentals — how AlejandrIA writes
 
 The product and its content are **bilingual, Spanish-first**. Product chrome (nav,
 buttons, toasts, empty states) is written in **Spanish**; scientific content itself is
@@ -91,7 +91,7 @@ ink-navy type, one confident blue for action, restraint everywhere else. The rea
 layer is generous and typographic — serif body at a comfortable measure, lots of air.
 
 **Color** (see `colors_and_type.css`, `preview/colors-*`)
-- **Primary — Alexandria Blue `#0176D3`** (SLDS2 brand blue). Hover `#005FB2`, active
+- **Primary — AlejandrIA Blue `#0176D3`** (SLDS2 brand blue). Hover `#005FB2`, active
   `#014486`. Used for primary actions, links, selection, focus rings. Tint `#EAF4FF`
   backs selected/active states.
 - **Neutrals — SLDS "cloud" ramp.** Canvas `#F4F6F9` (Link Water), surfaces `#FFFFFF`,

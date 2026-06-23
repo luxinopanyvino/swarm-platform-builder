@@ -1,6 +1,6 @@
-# Zeroheight Package — AlexandrIA Magazine Design System
+# Zeroheight Package — AlejandrIA Magazine Design System
 
-Paquete de contenido para poblar el styleguide de Zeroheight del Design System de Alexandria Magazine.
+Paquete de contenido para poblar el styleguide de Zeroheight del Design System de AlejandrIA Magazine.
 
 **Styleguide:** https://sanmartineme.zeroheight.com/styleguide/s/143429/
 

@@ -61,7 +61,7 @@ function Nav({
     alt: ""
   }), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
     className: "nm"
-  }, "Alexandria"), /*#__PURE__*/React.createElement("div", {
+  }, "AlejandrIA"), /*#__PURE__*/React.createElement("div", {
     className: "sub"
   }, "MAGAZINE"))), /*#__PURE__*/React.createElement("div", {
     className: "links"
@@ -205,7 +205,7 @@ function Home({
     alt: ""
   }), /*#__PURE__*/React.createElement("span", {
     className: "nm"
-  }, "Alexandria Magazine")), /*#__PURE__*/React.createElement("p", null, "Ciencia y tecnolog\xEDa redactada con rigor, revisada por personas, publicada con IA.")), /*#__PURE__*/React.createElement("div", {
+  }, "AlejandrIA Magazine")), /*#__PURE__*/React.createElement("p", null, "Ciencia y tecnolog\xEDa redactada con rigor, revisada por personas, publicada con IA.")), /*#__PURE__*/React.createElement("div", {
     className: "col"
   }, /*#__PURE__*/React.createElement("h4", null, "Secciones"), /*#__PURE__*/React.createElement("a", null, "Inteligencia artificial"), /*#__PURE__*/React.createElement("a", null, "Sistemas"), /*#__PURE__*/React.createElement("a", null, "Metodolog\xEDa"), /*#__PURE__*/React.createElement("a", null, "\xC9tica")), /*#__PURE__*/React.createElement("div", {
     className: "col"
@@ -294,7 +294,7 @@ function Reader({
     className: "prose"
   }, /*#__PURE__*/React.createElement("p", {
     className: "has-dropcap"
-  }, /*#__PURE__*/React.createElement("strong", null, "Researchers"), " lack an integrated environment that combines AI-assisted writing over private sources, structured scientific formatting, and a controlled review-and-publish workflow. Alexandria addresses this with a multi-agent graph compiled at runtime from a visual flow."), /*#__PURE__*/React.createElement("h2", null, "Grounding generation in evidence"), /*#__PURE__*/React.createElement("p", null, "Before composition, the redactor agent retrieves context from the author\\u2019s indexed corpus. Retrieval-augmented generation keeps each claim traceable to ", /*#__PURE__*/React.createElement("a", {
+  }, /*#__PURE__*/React.createElement("strong", null, "Researchers"), " lack an integrated environment that combines AI-assisted writing over private sources, structured scientific formatting, and a controlled review-and-publish workflow. AlejandrIA addresses this with a multi-agent graph compiled at runtime from a visual flow."), /*#__PURE__*/React.createElement("h2", null, "Grounding generation in evidence"), /*#__PURE__*/React.createElement("p", null, "Before composition, the redactor agent retrieves context from the author\\u2019s indexed corpus. Retrieval-augmented generation keeps each claim traceable to ", /*#__PURE__*/React.createElement("a", {
     href: "#"
   }, "cited evidence"), " rather than model priors \u2014 the difference between a draft you can submit and one you must rewrite."), /*#__PURE__*/React.createElement("blockquote", null, /*#__PURE__*/React.createElement("p", null, "The orchestrator never publishes autonomously \u2014 a human reviewer approves every article.")), /*#__PURE__*/React.createElement("h3", null, "The review agent"), /*#__PURE__*/React.createElement("p", null, "A dedicated ", /*#__PURE__*/React.createElement("code", null, "revisor"), " evaluates quality and surfaces methodological or citation bias, emitting a calibrated approval score on a 0\u2013100 scale. Articles below the configured threshold route back for revision automatically."), /*#__PURE__*/React.createElement("figure", null, /*#__PURE__*/React.createElement("div", {
     style: {
@@ -907,7 +907,7 @@ function Auth({
     alt: ""
   }), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
     className: "name"
-  }, "Alexandria"), /*#__PURE__*/React.createElement("div", {
+  }, "AlejandrIA"), /*#__PURE__*/React.createElement("div", {
     className: "sub"
   }, "MAGAZINE"))), /*#__PURE__*/React.createElement("h1", {
     className: "auth-head"
@@ -946,7 +946,7 @@ function Auth({
       color: 'var(--text-muted)',
       marginTop: 4
     }
-  }, tab === 'login' ? 'Accede a tu espacio de trabajo' : 'Únete a Alexandria Magazine')), /*#__PURE__*/React.createElement("div", {
+  }, tab === 'login' ? 'Accede a tu espacio de trabajo' : 'Únete a AlejandrIA Magazine')), /*#__PURE__*/React.createElement("div", {
     className: "tabs",
     style: {
       alignSelf: 'flex-start'
@@ -1159,7 +1159,7 @@ function Execution({
       fontSize: 13,
       color: 'var(--text-secondary)'
     }
-  }, "Borrador generado \xB7 ", RUN_SEQ.length, " agentes \xB7 formato APA"), /*#__PURE__*/React.createElement("h2", null, "Abstract"), /*#__PURE__*/React.createElement("p", null, done ? 'We present a reproducible editorial pipeline in which generated drafts are grounded in an author\u2019s own indexed corpus. By retrieving evidence before composition, the system preserves citation traceability and reduces unsupported claims.' : 'Generando resumen…'), done && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("h2", null, "1 \xB7 Introduction"), /*#__PURE__*/React.createElement("p", null, "Researchers lack an integrated environment that combines AI-assisted writing over private sources, structured scientific formatting, and a controlled review-and-publish workflow. Alexandria addresses this with a multi-agent graph compiled at runtime from a visual flow."), /*#__PURE__*/React.createElement("blockquote", null, /*#__PURE__*/React.createElement("p", null, "The orchestrator never publishes autonomously \u2014 a human reviewer must approve every article.")), /*#__PURE__*/React.createElement("p", null, "The remainder of this article describes the retrieval design, the review agent\\u2019s scoring, and an evaluation against an ungrounded baseline."))))));
+  }, "Borrador generado \xB7 ", RUN_SEQ.length, " agentes \xB7 formato APA"), /*#__PURE__*/React.createElement("h2", null, "Abstract"), /*#__PURE__*/React.createElement("p", null, done ? 'We present a reproducible editorial pipeline in which generated drafts are grounded in an author\u2019s own indexed corpus. By retrieving evidence before composition, the system preserves citation traceability and reduces unsupported claims.' : 'Generando resumen…'), done && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("h2", null, "1 \xB7 Introduction"), /*#__PURE__*/React.createElement("p", null, "Researchers lack an integrated environment that combines AI-assisted writing over private sources, structured scientific formatting, and a controlled review-and-publish workflow. AlejandrIA addresses this with a multi-agent graph compiled at runtime from a visual flow."), /*#__PURE__*/React.createElement("blockquote", null, /*#__PURE__*/React.createElement("p", null, "The orchestrator never publishes autonomously \u2014 a human reviewer must approve every article.")), /*#__PURE__*/React.createElement("p", null, "The remainder of this article describes the retrieval design, the review agent\\u2019s scoring, and an evaluation against an ungrounded baseline."))))));
 }
 window.Execution = Execution;
 })(); } catch (e) { __ds_ns.__errors.push({ path: "ui_kits/studio/Execution.jsx", error: String((e && e.message) || e) }); }
@@ -1907,7 +1907,7 @@ function Sidebar({
     className: "wm"
   }, /*#__PURE__*/React.createElement("span", {
     className: "name"
-  }, "Alexandria"), /*#__PURE__*/React.createElement("span", {
+  }, "AlejandrIA"), /*#__PURE__*/React.createElement("span", {
     className: "sub"
   }, "MAGAZINE"))), /*#__PURE__*/React.createElement("nav", {
     className: "side-nav"

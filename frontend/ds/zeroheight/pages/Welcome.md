@@ -1,8 +1,8 @@
-# Welcome to AlexandrIA Magazine Design System
+# Welcome to AlejandrIA Magazine Design System
 
 > *Donde la ciencia rigurosa se encuentra con la publicación moderna y calmada.*
 
-**AlexandrIA Magazine Design System** es la fuente única de verdad visual y de contenido para Alexandria Magazine — una plataforma editorial agentica donde investigadores y editores diseñan flujos de trabajo IA para crear, revisar, formatear y publicar artículos técnicos y científicos.
+**AlejandrIA Magazine Design System** es la fuente única de verdad visual y de contenido para AlejandrIA Magazine — una plataforma editorial agentica donde investigadores y editores diseñan flujos de trabajo IA para crear, revisar, formatear y publicar artículos técnicos y científicos.
 
 Este sistema define cómo se ve, se lee y se comporta todo lo que construimos: desde los botones del Studio hasta los artículos publicados en Magazine.
 
@@ -36,7 +36,7 @@ Entienden los principios de diseño que guían las decisiones — Precisión y c
 
 ## Las dos superficies
 
-Alexandria Magazine tiene dos modos visuales distintos pero coherentes:
+AlejandrIA Magazine tiene dos modos visuales distintos pero coherentes:
 
 **Studio** — El espacio de trabajo del investigador. Superficies blancas sobre canvas gris-azulado tenue, tipografía sans compacta, un azul de acción confiado. Dense de información, funcional, sin distracciones decorativas.
 

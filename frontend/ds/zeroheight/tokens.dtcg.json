@@ -1,26 +1,26 @@
 {
   "$schema": "https://tr.designtokens.org/format/",
   "meta": {
-    "name": "AlexandrIA Magazine Design System",
+    "name": "AlejandrIA Magazine Design System",
     "version": "1.0.0",
-    "description": "Design tokens for Alexandria Magazine — a scientific content-creation and publishing platform. Built on SLDS2 token structure with an editorial publishing layer.",
+    "description": "Design tokens for AlejandrIA Magazine — a scientific content-creation and publishing platform. Built on SLDS2 token structure with an editorial publishing layer.",
     "source": "colors_and_type.css"
   },
 
   "color": {
-    "$description": "Color primitives and semantic tokens for Alexandria Magazine",
+    "$description": "Color primitives and semantic tokens for AlejandrIA Magazine",
 
     "primitive": {
       "$description": "Raw palette stops. Do not reference directly in product UI — use semantic tokens.",
 
       "blue": {
-        "$description": "Alexandria Blue (SLDS2 brand blue family)",
+        "$description": "AlejandrIA Blue (SLDS2 brand blue family)",
         "05":  { "$value": "#eaf4ff", "$type": "color", "$description": "Lightest blue tint — selected/active state backgrounds" },
         "10":  { "$value": "#d6eaff", "$type": "color", "$description": "Light blue tint" },
         "20":  { "$value": "#aad5fb", "$type": "color", "$description": "Mid-light blue" },
         "40":  { "$value": "#4ea0ee", "$type": "color", "$description": "Accent azure" },
         "50":  { "$value": "#1b96ff", "$type": "color", "$description": "Azure accent" },
-        "60":  { "$value": "#0176d3", "$type": "color", "$description": "PRIMARY — Alexandria Blue, SLDS2 brand blue" },
+        "60":  { "$value": "#0176d3", "$type": "color", "$description": "PRIMARY — AlejandrIA Blue, SLDS2 brand blue" },
         "70":  { "$value": "#005fb2", "$type": "color", "$description": "Brand hover state" },
         "80":  { "$value": "#014486", "$type": "color", "$description": "Brand active / deep state" },
         "95":  { "$value": "#022a52", "$type": "color", "$description": "Deep navy" }
@@ -94,7 +94,7 @@
       "$description": "Semantic tokens — build product UI with these. Override in dark theme by pointing at lifted primitives.",
 
       "brand": {
-        "default":  { "$value": "{color.primitive.blue.60}", "$type": "color", "$description": "Primary brand action color — Alexandria Blue" },
+        "default":  { "$value": "{color.primitive.blue.60}", "$type": "color", "$description": "Primary brand action color — AlejandrIA Blue" },
         "hover":    { "$value": "{color.primitive.blue.70}", "$type": "color", "$description": "Brand button / link hover state" },
         "active":   { "$value": "{color.primitive.blue.80}", "$type": "color", "$description": "Brand button / link active/pressed state" },
         "tint":     { "$value": "{color.primitive.blue.05}", "$type": "color", "$description": "Brand tint background — selected rows, active nav items" },
@@ -194,7 +194,7 @@
   },
 
   "typography": {
-    "$description": "Type system for Alexandria Magazine — three typefaces, two registers",
+    "$description": "Type system for AlejandrIA Magazine — three typefaces, two registers",
 
     "font-family": {
       "serif": {

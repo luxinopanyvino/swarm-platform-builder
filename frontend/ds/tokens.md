@@ -1,4 +1,4 @@
-# Tokens & Design Patterns — Alexandria Magazine
+# Tokens & Design Patterns — AlejandrIA Magazine
 
 The single source of truth is **`colors_and_type.css`**. Everything below documents how
 those CSS custom properties are organised and how to use them. The structure mirrors

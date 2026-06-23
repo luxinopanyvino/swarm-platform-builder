@@ -6,7 +6,7 @@ from typing import Dict, Any, Optional
 import yaml
 
 from app.modules.agents.adapters.rag import fetch_agent_context
-from app.shared.llm import call_llm, call_llm_with_tools, get_default_model
+from app.shared.llm import call_llm, get_default_model
 
 logger = logging.getLogger(__name__)
 
@@ -140,49 +140,14 @@ async def run_generic_agent(agent_name: str, state: Dict[str, Any]) -> Dict[str,
     output_text = ""
     log(f"🤖 Modelo: {model}")
 
-    # ── Tool calling path ────────────────────────────────────────────────────
-    tools_enabled = profile.get("tools_enabled", False)
-    tool_names: list = profile.get("tools") or []
-
-    if tools_enabled and tool_names:
-        from app.modules.agents.adapters.tools import get_tool_schemas, execute_tool
-        tool_schemas = get_tool_schemas(tool_names)
-        log(f"🔧 Tool calling habilitado: {', '.join(tool_names)}")
-
-        async def _logged_tool_executor(name: str, args: dict) -> str:
-            arg_summary = ", ".join(f"{k}={str(v)[:60]!r}" for k, v in args.items())
-            log(f"  🔧 Herramienta: {name}({arg_summary})")
-            result = await execute_tool(name, args)
-            preview = result[:120].replace("\n", " ")
-            log(f"  ↳ {preview}{'…' if len(result) > 120 else ''}")
-            return result
-
-        try:
-            output_text = await call_llm_with_tools(
-                system_prompt=(
-                    f"Eres un agente especializado llamado {agent_name}. "
-                    "Usa las herramientas disponibles cuando sea necesario para completar tu tarea."
-                ),
-                user_prompt=prompt,
-                tool_schemas=tool_schemas,
-                tool_executor=_logged_tool_executor,
-                model=model,
-                timeout=300.0,
-            )
-            log(f"✅ Resultado generado con tool calling ({len(output_text.split())} palabras).")
-        except Exception as e:
-            logger.error(f"Tool-calling LLM failed for agent '{agent_name}': {e}")
-            log(f"⚠️ Error en tool calling: {e}", "error")
-            output_text = f"[{agent_name}] Error: {str(e)}"
-    else:
-        # ── Standard (no tools) path ─────────────────────────────────────────
-        log("⏳ Generando respuesta...")
-        try:
-            output_text = await call_llm(prompt, model=model, timeout=300.0)
-            log(f"✅ Respuesta generada ({len(output_text.split())} palabras).")
-        except Exception as e:
-            logger.error(f"LLM call failed for agent '{agent_name}': {e}")
-            log(f"⚠️ Error al llamar al LLM: {e}", "error")
-            output_text = f"[{agent_name}] Error: {str(e)}"
+    # ── Standard (no tools) path ─────────────────────────────────────────
+    log("⏳ Generando respuesta...")
+    try:
+        output_text = await call_llm(prompt, model=model, timeout=300.0)
+        log(f"✅ Respuesta generada ({len(output_text.split())} palabras).")
+    except Exception as e:
+        logger.error(f"LLM call failed for agent '{agent_name}': {e}")
+        log(f"⚠️ Error al llamar al LLM: {e}", "error")
+        output_text = f"[{agent_name}] Error: {str(e)}"
 
     return {"agent_output": output_text}

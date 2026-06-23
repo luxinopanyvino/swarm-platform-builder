@@ -15,7 +15,7 @@ function Nav({ onHome }) {
     <nav className="mnav">
       <div className="brand" onClick={onHome} style={{ cursor: 'pointer' }}>
         <img src="../../assets/logomark.svg" width="36" height="36" alt="" />
-        <div><div className="nm">Alexandria</div><div className="sub">MAGAZINE</div></div>
+        <div><div className="nm">AlejandrIA</div><div className="sub">MAGAZINE</div></div>
       </div>
       <div className="links">
         <a className="active" onClick={onHome}>Inicio</a>
@@ -79,7 +79,7 @@ function Home({ onOpen }) {
 
       <footer className="mfoot"><div className="wrap cols">
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}><img src="../../assets/logomark.svg" width="30" height="30" alt="" /><span className="nm">Alexandria Magazine</span></div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}><img src="../../assets/logomark.svg" width="30" height="30" alt="" /><span className="nm">AlejandrIA Magazine</span></div>
           <p>Ciencia y tecnología redactada con rigor, revisada por personas, publicada con IA.</p>
         </div>
         <div className="col"><h4>Secciones</h4><a>Inteligencia artificial</a><a>Sistemas</a><a>Metodología</a><a>Ética</a></div>
@@ -112,7 +112,7 @@ function Reader({ post, onHome }) {
 
         <div className="reader-body">
           <div className="prose">
-            <p className="has-dropcap"><strong>Researchers</strong> lack an integrated environment that combines AI-assisted writing over private sources, structured scientific formatting, and a controlled review-and-publish workflow. Alexandria addresses this with a multi-agent graph compiled at runtime from a visual flow.</p>
+            <p className="has-dropcap"><strong>Researchers</strong> lack an integrated environment that combines AI-assisted writing over private sources, structured scientific formatting, and a controlled review-and-publish workflow. AlejandrIA addresses this with a multi-agent graph compiled at runtime from a visual flow.</p>
             <h2>Grounding generation in evidence</h2>
             <p>Before composition, the redactor agent retrieves context from the author\u2019s indexed corpus. Retrieval-augmented generation keeps each claim traceable to <a href="#">cited evidence</a> rather than model priors — the difference between a draft you can submit and one you must rewrite.</p>
             <blockquote><p>The orchestrator never publishes autonomously — a human reviewer approves every article.</p></blockquote>
