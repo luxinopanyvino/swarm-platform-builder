@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
-import { CheckCircle, XCircle, Clock, Loader, ArrowRight, ArrowLeft, FileText, UserPlus, Square } from 'lucide-react';
+import { CheckCircle, XCircle, Clock, Loader, ArrowRight, ArrowLeft, FileText, UserPlus, Square, Upload, Play, AlertTriangle } from 'lucide-react';
 import { agentsApi } from '../api/agents';
 import { useArticleStore } from '../store/articleStore';
 import toast from 'react-hot-toast';
@@ -45,6 +45,10 @@ export default function ExecutionPage() {
   const [hasPublicador] = useState(flowSequence.includes('publicador'));
   const [reviewerEmail, setReviewerEmail] = useState('');
   const [assigning, setAssigning] = useState(false);
+  // Human-in-the-loop coherence gate
+  const [pendingDecision, setPendingDecision] = useState(null);
+  const [decisionBusy, setDecisionBusy] = useState(false);
+  const sourceInputRef = useRef(null);
   const logsEndRef = useRef(null);
   const evtSourceRef = useRef(null);
   const hasFailedSteps = steps.some((step) => step.status === 'failed');
@@ -108,6 +112,13 @@ export default function ExecutionPage() {
           markStepStatus(data.agent, 'failed');
           addLog(`✗ ${data.agent}: ${data.error}`, 'error');
           setPreview((current) => current || `Error: ${data.error}`);
+        } else if (data.type === 'await_decision') {
+          setPendingDecision(data);
+          addLog('⏸️ El pipeline espera tu decisión (coherencia)', 'warn');
+        } else if (data.type === 'decision_resolved') {
+          setPendingDecision(null);
+          setDecisionBusy(false);
+          addLog(`▶️ Decisión: ${data.decision === 'add_source' ? 'nueva fuente añadida' : 'continuar'}`, 'info');
         } else if (data.type === 'log') {
           addLog(data.message, data.level || '');
         } else if (data.type === 'done') {
@@ -194,6 +205,36 @@ export default function ExecutionPage() {
     setRunCount(c => c + 1);
   };
 
+  const handleContinueDecision = async () => {
+    setDecisionBusy(true);
+    try {
+      await agentsApi.submitDecision(articleId, 'continue');
+      setPendingDecision(null);
+    } catch {
+      toast.error('No se pudo enviar la decisión');
+      setDecisionBusy(false);
+    }
+  };
+
+  const handleUploadSourceClick = () => sourceInputRef.current?.click();
+
+  const onSourceFileSelected = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';  // allow re-selecting the same file later
+    if (!file) return;
+    setDecisionBusy(true);
+    try {
+      // Upload to the investigador bucket so the re-run finds it as a source
+      await agentsApi.uploadRagDocument('investigador', file);
+      toast.success(`Fuente añadida: ${file.name}`);
+      await agentsApi.submitDecision(articleId, 'add_source');
+      setPendingDecision(null);
+    } catch (err) {
+      toast.error(err?.response?.data?.detail || 'No se pudo subir la fuente');
+      setDecisionBusy(false);
+    }
+  };
+
   const handleAssignReviewer = async () => {
     if (!reviewerEmail.trim()) { toast.error('Escribe el email del revisor'); return; }
     setAssigning(true);
@@ -248,6 +289,48 @@ export default function ExecutionPage() {
             ID: {articleId?.slice(0, 8)}…
           </div>
         </div>
+
+        {/* Human-in-the-loop decision panel */}
+        {pendingDecision && !done && (
+          <div style={{
+            margin: '0 0 var(--space-3)', padding: 'var(--space-4)',
+            background: 'var(--status-warning-bg)', border: '1px solid var(--status-warning)',
+            borderRadius: 'var(--radius-md)',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+              <AlertTriangle size={16} style={{ color: 'var(--status-warning)' }} />
+              <span style={{ fontWeight: 600, fontSize: 'var(--font-size-sm)', color: 'var(--status-warning)' }}>
+                Coherencia insuficiente
+              </span>
+            </div>
+            <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--text-secondary)', marginBottom: 8 }}>
+              {pendingDecision.message || 'El revisor considera que la redacción no es suficientemente coherente.'}
+              {typeof pendingDecision.approval_score === 'number' && (
+                <span> (puntuación: {pendingDecision.approval_score}/100)</span>
+              )}
+            </div>
+            {Array.isArray(pendingDecision.feedback) && pendingDecision.feedback.length > 0 && (
+              <ul style={{ margin: '0 0 10px 16px', padding: 0, fontSize: 'var(--font-size-xs)', color: 'var(--text-muted)' }}>
+                {pendingDecision.feedback.slice(0, 4).map((f, i) => <li key={i}>{f}</li>)}
+              </ul>
+            )}
+            <input
+              ref={sourceInputRef}
+              type="file"
+              accept=".txt,.md,.pdf"
+              style={{ display: 'none' }}
+              onChange={onSourceFileSelected}
+            />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <button className="btn btn-primary btn-sm w-full" onClick={handleUploadSourceClick} disabled={decisionBusy}>
+                <Upload size={13} /> {decisionBusy ? 'Procesando…' : 'Subir otra fuente y reintentar'}
+              </button>
+              <button className="btn btn-ghost btn-sm w-full" onClick={handleContinueDecision} disabled={decisionBusy}>
+                <Play size={13} /> Continuar con el borrador actual
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Steps */}
         <div className="execution-steps">

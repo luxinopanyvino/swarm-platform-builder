@@ -51,6 +51,13 @@ async def init_db():
         "ALTER TABLE notifications ADD COLUMN article_id CHAR(32) REFERENCES articles(id) ON DELETE CASCADE",
         "ALTER TABLE articles ADD COLUMN project_id CHAR(32) REFERENCES projects(id) ON DELETE CASCADE",
         "ALTER TABLE saved_flows ADD COLUMN project_id CHAR(32) REFERENCES projects(id) ON DELETE CASCADE",
+        "ALTER TABLE articles ADD COLUMN authors JSON",
+        "ALTER TABLE articles ADD COLUMN abstract TEXT",
+        "ALTER TABLE articles ADD COLUMN paper_html TEXT",
+        # Postgres native enum: register the citation formats added to ScientificFormat.
+        # (No-op on SQLite, where the enum is stored as VARCHAR — caught below.)
+        "ALTER TYPE scientificformat ADD VALUE IF NOT EXISTS 'chicago'",
+        "ALTER TYPE scientificformat ADD VALUE IF NOT EXISTS 'nature'",
         "ALTER TABLE users ADD COLUMN assigned_project_id CHAR(32) REFERENCES projects(id) ON DELETE SET NULL",
         """CREATE TABLE IF NOT EXISTS user_project_access (
             id CHAR(32) PRIMARY KEY,

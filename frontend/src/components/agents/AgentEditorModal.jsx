@@ -443,20 +443,27 @@ export function AgentEditorModal({ agent, isBuiltin, models, onClose, onSaved, o
     };
   });
   const [saving, setSaving] = useState(false);
-  const isFormateador = agent.slug === 'formateador';
-  const isRedactor = agent.slug === 'redactor';
-  const isInvestigador = agent.slug === 'investigador';
+  // Some callers (e.g. the Flow Designer palette) pass the slug as `id` and omit
+  // `slug`; fall back to `id` so agent-specific controls render consistently.
+  const agentSlug = agent.slug || agent.id;
+  const isFormateador = agentSlug === 'formateador';
+  const isRedactor = agentSlug === 'redactor';
+  const isInvestigador = agentSlug === 'investigador';
 
   // Builtin agents with hardcoded adapters: RAG toggle has no effect on them.
   // investigador uses semantic RAG internally; redactor/revisor/formateador/publicador do not query RAG directly.
   const BUILTIN_OWN_ADAPTER = new Set(['investigador', 'redactor', 'revisor', 'formateador', 'publicador']);
-  const showRagToggle = !BUILTIN_OWN_ADAPTER.has(agent.slug);
+  const showRagToggle = !BUILTIN_OWN_ADAPTER.has(agentSlug);
+
+  // The API addresses profiles by their DB UUID. Some callers (Flow Designer
+  // palette) pass the slug as `id` and carry the real UUID in `profileId`.
+  const profileId = agent.profileId || agent.id;
 
   /** Persist the current tab contents for the selected agent. */
   const handleSave = async () => {
     setSaving(true);
     try {
-      await agentsApi.updateClaudeDef(agent.id, tab === 'markdown' ? mdContent : JSON.stringify(params));
+      await agentsApi.updateClaudeDef(profileId, tab === 'markdown' ? mdContent : JSON.stringify(params));
       toast.success('Agente guardado');
       await onSaved();
     } catch {
@@ -473,7 +480,7 @@ export function AgentEditorModal({ agent, isBuiltin, models, onClose, onSaved, o
     }
 
     try {
-      await agentsApi.deleteClaudeDef(agent.id);
+      await agentsApi.deleteClaudeDef(profileId);
       toast.success('Agente eliminado');
       onDeleted(agent.id);
     } catch (error) {

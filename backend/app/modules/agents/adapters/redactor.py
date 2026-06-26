@@ -3,7 +3,7 @@ import logging
 from typing import Dict, Any
 
 from app.core.config import settings
-from app.modules.agents.adapters.rag import semantic_search_context
+from app.modules.agents.adapters.rag import semantic_search_context, LIBRARY_AGENT
 from app.shared.llm import call_llm, call_llm_stream, get_default_model
 
 logger = logging.getLogger(__name__)
@@ -120,7 +120,7 @@ async def run_redactor(state: Dict[str, Any]) -> Dict[str, Any]:
                 query=rag_query,
                 qdrant_url=settings.QDRANT_URL,
                 collection=rag_collection,
-                agent_name="investigador",   # queries investigador's indexed data
+                agent_name=["investigador", LIBRARY_AGENT],   # investigador data + shared library
                 ollama_base_url=settings.OLLAMA_BASE_URL,
                 embedding_model=settings.OLLAMA_EMBED_MODEL,
                 limit=10,

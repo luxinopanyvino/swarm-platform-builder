@@ -49,6 +49,30 @@ def _load_local_document(path: Path) -> Optional[Dict[str, Any]]:
         return None
 
 
+# Shared bucket where library-wide documents are stored (not scoped to one agent).
+LIBRARY_AGENT = "__library__"
+
+
+def _agent_name_clause(agent_name) -> Dict[str, Any]:
+    """Build a Qdrant filter clause matching one or several agent buckets.
+
+    ``agent_name`` may be a single string or a list of strings. Multiple names
+    are matched with ``any`` so an agent can read both its own documents and the
+    shared library.
+    """
+    names = [agent_name] if isinstance(agent_name, str) else list(agent_name)
+    names = [n for n in names if n]
+    if len(names) == 1:
+        return {"key": "agent_name", "match": {"value": names[0]}}
+    return {"key": "agent_name", "match": {"any": names}}
+
+
+def _agent_name_matches(value: Optional[str], agent_name) -> bool:
+    """Local-store equivalent of ``_agent_name_clause`` membership test."""
+    names = [agent_name] if isinstance(agent_name, str) else list(agent_name)
+    return value in [n for n in names if n]
+
+
 async def is_qdrant_available(qdrant_url: str, api_key: Optional[str] = None) -> bool:
     """Return whether the configured Qdrant instance is reachable."""
     headers = {"api-key": api_key} if api_key else {}
@@ -239,13 +263,21 @@ async def upsert_chunks(
     embedding_model: str,
     vector_size: int,
     api_key: Optional[str] = None,
+    doc_title: str = "",
+    doc_authors: str = "",
 ) -> int:
-    """Embed and upsert chunks into Qdrant. Returns count of inserted points."""
+    """Embed and upsert chunks into Qdrant. Returns count of inserted points.
+
+    ``doc_title``/``doc_authors`` are stored on every chunk so retrieval can build
+    real bibliographic citations.
+    """
     if not await is_qdrant_available(qdrant_url, api_key):
         payload = {
             "doc_id": doc_id,
             "agent_name": agent_name,
             "filename": filename,
+            "doc_title": doc_title,
+            "doc_authors": doc_authors,
             "chunks": [
                 {
                     "chunk_index": index,
@@ -292,6 +324,8 @@ async def upsert_chunks(
                 "doc_id": doc_id,
                 "agent_name": agent_name,
                 "filename": filename,
+                "doc_title": doc_title,
+                "doc_authors": doc_authors,
                 "chunk_index": i,
                 "text": chunk,
             },
@@ -487,6 +521,119 @@ async def list_library_documents(
     return results
 
 
+async def fetch_doc_head(
+    qdrant_url: str,
+    collection: str,
+    doc_id: str,
+    api_key: Optional[str] = None,
+    max_chunks: int = 3,
+) -> str:
+    """Return the opening text of a document (its first chunks, ordered by
+    chunk_index) so the title/author block can be parsed reliably."""
+    if not await is_qdrant_available(qdrant_url, api_key):
+        for path in _local_collection_dir(collection).glob("*.json"):
+            data = _load_local_document(path)
+            if data and data.get("doc_id") == doc_id:
+                chunks = sorted(data.get("chunks", []), key=lambda c: c.get("chunk_index", 0))
+                return "\n".join(c.get("text", "") for c in chunks[:max_chunks])
+        return ""
+
+    headers = {"api-key": api_key} if api_key else {}
+    try:
+        async with httpx.AsyncClient(base_url=qdrant_url, timeout=10.0, headers=headers) as client:
+            check = await client.get(f"/collections/{collection}")
+            if check.status_code != 200:
+                return ""
+            payload = {
+                "filter": {"must": [{"key": "doc_id", "match": {"value": doc_id}}]},
+                "limit": 50,
+                "with_payload": True,
+                "with_vector": False,
+            }
+            resp = await client.post(f"/collections/{collection}/points/scroll", json=payload)
+            if resp.status_code != 200:
+                return ""
+            points = resp.json().get("result", {}).get("points", [])
+            points.sort(key=lambda p: p.get("payload", {}).get("chunk_index", 0))
+            return "\n".join(p.get("payload", {}).get("text", "") for p in points[:max_chunks])
+    except Exception as error:
+        logger.warning(f"fetch_doc_head failed for doc '{doc_id}': {error}")
+        return ""
+
+
+async def backfill_doc_metadata(
+    qdrant_url: str,
+    collection: str,
+    api_key: Optional[str] = None,
+) -> List[Dict[str, Any]]:
+    """Re-derive doc_title/doc_authors from stored chunk text for documents in a
+    collection that lack them, and update their Qdrant payloads.
+
+    Only the text heuristic is available here (the original file bytes are gone),
+    so embedded PDF metadata can't be recovered — re-upload for that. Returns a
+    summary list of the documents that were updated.
+    """
+    from app.modules.agents.adapters.doc_metadata import extract_doc_metadata
+
+    if not await is_qdrant_available(qdrant_url, api_key):
+        return []
+
+    headers = {"api-key": api_key} if api_key else {}
+    docs: Dict[str, Dict[str, Any]] = {}
+    updated: List[Dict[str, Any]] = []
+    try:
+        async with httpx.AsyncClient(base_url=qdrant_url, timeout=30.0, headers=headers) as client:
+            check = await client.get(f"/collections/{collection}")
+            if check.status_code != 200:
+                return []
+
+            offset = None
+            while True:
+                body: Dict[str, Any] = {"limit": 250, "with_payload": True, "with_vector": False}
+                if offset is not None:
+                    body["offset"] = offset
+                resp = await client.post(f"/collections/{collection}/points/scroll", json=body)
+                if resp.status_code != 200:
+                    break
+                result = resp.json().get("result", {})
+                points = result.get("points", [])
+                for p in points:
+                    pl = p.get("payload", {})
+                    did = pl.get("doc_id")
+                    if not did:
+                        continue
+                    entry = docs.setdefault(did, {
+                        "filename": pl.get("filename", ""),
+                        "chunks": [],
+                        "doc_title": pl.get("doc_title", ""),
+                        "doc_authors": pl.get("doc_authors", ""),
+                    })
+                    entry["chunks"].append((pl.get("chunk_index", 0), pl.get("text", "")))
+                offset = result.get("next_page_offset")
+                if not offset or not points:
+                    break
+
+            for did, entry in docs.items():
+                if entry["doc_title"] and entry["doc_authors"]:
+                    continue  # already has metadata
+                entry["chunks"].sort(key=lambda c: c[0])
+                joined = "\n".join(t for _, t in entry["chunks"][:4])
+                meta = extract_doc_metadata(entry["filename"], b"", joined)
+                title = entry["doc_title"] or meta.get("title", "")
+                authors = entry["doc_authors"] or meta.get("authors", "")
+                if not title and not authors:
+                    continue
+                set_body = {
+                    "payload": {"doc_title": title, "doc_authors": authors},
+                    "filter": {"must": [{"key": "doc_id", "match": {"value": did}}]},
+                }
+                await client.post(f"/collections/{collection}/points/payload?wait=true", json=set_body)
+                updated.append({"doc_id": did, "filename": entry["filename"], "title": title, "authors": authors})
+    except Exception as error:
+        logger.warning(f"backfill_doc_metadata failed for '{collection}': {error}")
+    return updated
+
+
 async def fetch_agent_context(
     qdrant_url: str,
     collection: str,
@@ -501,7 +648,7 @@ async def fetch_agent_context(
         texts: List[str] = []
         for path in sorted(_local_collection_dir(collection).glob("*.json")):
             data = _load_local_document(path)
-            if not data or data.get("agent_name") != agent_name:
+            if not data or not _agent_name_matches(data.get("agent_name"), agent_name):
                 continue
             for chunk in data.get("chunks", []):
                 text = chunk.get("text", "")
@@ -519,9 +666,7 @@ async def fetch_agent_context(
                 return ""
 
             payload = {
-                "filter": {
-                    "must": [{"key": "agent_name", "match": {"value": agent_name}}]
-                },
+                "filter": {"must": [_agent_name_clause(agent_name)]},
                 "limit": limit,
                 "with_payload": True,
                 "with_vector": False,
@@ -538,11 +683,144 @@ async def fetch_agent_context(
         return ""
 
 
+async def _fetch_agent_results(
+    qdrant_url: str,
+    collection: str,
+    agent_name,
+    limit: int,
+    api_key: Optional[str] = None,
+) -> List[Dict[str, Any]]:
+    """Non-semantic fallback that returns chunk payloads (with filename/doc_id)."""
+    if not await is_qdrant_available(qdrant_url, api_key):
+        out: List[Dict[str, Any]] = []
+        for path in sorted(_local_collection_dir(collection).glob("*.json")):
+            data = _load_local_document(path)
+            if not data or not _agent_name_matches(data.get("agent_name"), agent_name):
+                continue
+            for chunk in data.get("chunks", []):
+                text = chunk.get("text", "")
+                if text:
+                    out.append({
+                        "text": text,
+                        "filename": data.get("filename", ""),
+                        "doc_id": data.get("doc_id", path.stem),
+                        "agent_name": data.get("agent_name", ""),
+                        "doc_title": data.get("doc_title", ""),
+                        "doc_authors": data.get("doc_authors", ""),
+                    })
+                if len(out) >= limit:
+                    return out
+        return out
+
+    headers = {"api-key": api_key} if api_key else {}
+    try:
+        async with httpx.AsyncClient(base_url=qdrant_url, timeout=5.0, headers=headers) as client:
+            check = await client.get(f"/collections/{collection}")
+            if check.status_code != 200:
+                return []
+            payload = {
+                "filter": {"must": [_agent_name_clause(agent_name)]},
+                "limit": limit,
+                "with_payload": True,
+                "with_vector": False,
+            }
+            resp = await client.post(f"/collections/{collection}/points/scroll", json=payload)
+            if resp.status_code != 200:
+                return []
+            out = []
+            for p in resp.json().get("result", {}).get("points", []):
+                pl = p.get("payload", {})
+                if pl.get("text"):
+                    out.append({
+                        "text": pl.get("text", ""),
+                        "filename": pl.get("filename", ""),
+                        "doc_id": pl.get("doc_id", ""),
+                        "agent_name": pl.get("agent_name", ""),
+                        "doc_title": pl.get("doc_title", ""),
+                        "doc_authors": pl.get("doc_authors", ""),
+                    })
+            return out
+    except Exception as error:
+        logger.warning(f"_fetch_agent_results failed for agent '{agent_name}': {error}")
+        return []
+
+
+async def semantic_search_results(
+    query: str,
+    qdrant_url: str,
+    collection: str,
+    agent_name,
+    ollama_base_url: str,
+    embedding_model: str,
+    limit: int = 5,
+    score_threshold: float = 0.0,
+    api_key: Optional[str] = None,
+    doc_ids: Optional[list] = None,
+) -> List[Dict[str, Any]]:
+    """Semantic search returning per-chunk payloads ({text, filename, doc_id,
+    agent_name}) so callers can build real citations. Filters by agent bucket(s),
+    or by doc_ids only when the user selected specific documents."""
+    if not await is_qdrant_available(qdrant_url, api_key):
+        return await _fetch_agent_results(qdrant_url, collection, agent_name, limit, api_key)
+
+    query_vector = await get_embedding(query, ollama_base_url, embedding_model)
+    if query_vector is None:
+        logger.warning("semantic_search_results: embedding failed, falling back to scroll")
+        return await _fetch_agent_results(qdrant_url, collection, agent_name, limit, api_key)
+
+    headers = {"api-key": api_key} if api_key else {}
+    try:
+        async with httpx.AsyncClient(base_url=qdrant_url, timeout=10.0, headers=headers) as client:
+            check = await client.get(f"/collections/{collection}")
+            if check.status_code != 200:
+                return []
+
+            # Explicit doc_ids take precedence and bypass the agent-bucket filter.
+            if doc_ids:
+                must = [{"key": "doc_id", "match": {"any": list(doc_ids)}}]
+            else:
+                must = [_agent_name_clause(agent_name)]
+
+            payload: Dict[str, Any] = {
+                "vector": query_vector,
+                "filter": {"must": must},
+                "limit": limit,
+                "with_payload": True,
+                "with_vector": False,
+            }
+            if score_threshold > 0.0:
+                payload["score_threshold"] = score_threshold
+
+            resp = await client.post(f"/collections/{collection}/points/search", json=payload)
+            if resp.status_code != 200:
+                logger.warning(f"Qdrant search returned {resp.status_code}: {resp.text[:200]}")
+                return await _fetch_agent_results(qdrant_url, collection, agent_name, limit, api_key)
+
+            out: List[Dict[str, Any]] = []
+            for r in resp.json().get("result", []):
+                pl = r.get("payload", {})
+                if pl.get("text"):
+                    out.append({
+                        "text": pl.get("text", ""),
+                        "filename": pl.get("filename", ""),
+                        "doc_id": pl.get("doc_id", ""),
+                        "agent_name": pl.get("agent_name", ""),
+                        "doc_title": pl.get("doc_title", ""),
+                        "doc_authors": pl.get("doc_authors", ""),
+                        "score": r.get("score"),
+                    })
+            logger.info(f"semantic_search_results: {len(out)} chunks for query '{query[:60]}'")
+            return out
+    except Exception as error:
+        logger.warning(f"Semantic RAG search failed for agent '{agent_name}': {error}")
+        return await _fetch_agent_results(qdrant_url, collection, agent_name, limit, api_key)
+
+
 async def semantic_search_context(
     query: str,
     qdrant_url: str,
     collection: str,
-    agent_name: str,
+    agent_name,
     ollama_base_url: str,
     embedding_model: str,
     limit: int = 5,
@@ -550,58 +828,21 @@ async def semantic_search_context(
     api_key: Optional[str] = None,
     doc_ids: Optional[list] = None,
 ) -> str:
-    """Semantic search: embed the query and retrieve the most relevant chunks from
-    Qdrant filtered by agent_name (and optionally by doc_ids). Falls back to
-    fetch_agent_context when Qdrant is unavailable or embedding fails."""
-    if not await is_qdrant_available(qdrant_url, api_key):
-        return await fetch_agent_context(qdrant_url, collection, agent_name, limit, api_key)
-
-    # Embed the query
-    query_vector = await get_embedding(query, ollama_base_url, embedding_model)
-    if query_vector is None:
-        logger.warning("semantic_search_context: embedding failed, falling back to scroll")
-        return await fetch_agent_context(qdrant_url, collection, agent_name, limit, api_key)
-
-    headers = {"api-key": api_key} if api_key else {}
-    try:
-        async with httpx.AsyncClient(base_url=qdrant_url, timeout=10.0, headers=headers) as client:
-            check = await client.get(f"/collections/{collection}")
-            if check.status_code != 200:
-                return ""
-
-            payload: Dict[str, Any] = {
-                "vector": query_vector,
-                "filter": {
-                    "must": [{"key": "agent_name", "match": {"value": agent_name}}]
-                },
-                "limit": limit,
-                "with_payload": True,
-                "with_vector": False,
-            }
-            # Narrow search to specific documents when the user selected individual files
-            if doc_ids:
-                payload["filter"]["must"].append(
-                    {"key": "doc_id", "match": {"any": doc_ids}}
-                )
-            if score_threshold > 0.0:
-                payload["score_threshold"] = score_threshold
-
-            resp = await client.post(f"/collections/{collection}/points/search", json=payload)
-            if resp.status_code != 200:
-                logger.warning(f"Qdrant search returned {resp.status_code}: {resp.text[:200]}")
-                return await fetch_agent_context(qdrant_url, collection, agent_name, limit, api_key)
-
-            results = resp.json().get("result", [])
-            chunks = [
-                r.get("payload", {}).get("text", "")
-                for r in results
-                if r.get("payload", {}).get("text")
-            ]
-            logger.info(f"semantic_search_context: {len(chunks)} chunks returned for query '{query[:60]}'")
-            return "\n\n---\n\n".join(chunks)
-    except Exception as error:
-        logger.warning(f"Semantic RAG search failed for agent '{agent_name}': {error}")
-        return await fetch_agent_context(qdrant_url, collection, agent_name, limit, api_key)
+    """Semantic search returning the joined chunk texts (thin wrapper over
+    semantic_search_results for callers that only need the context block)."""
+    results = await semantic_search_results(
+        query=query,
+        qdrant_url=qdrant_url,
+        collection=collection,
+        agent_name=agent_name,
+        ollama_base_url=ollama_base_url,
+        embedding_model=embedding_model,
+        limit=limit,
+        score_threshold=score_threshold,
+        api_key=api_key,
+        doc_ids=doc_ids,
+    )
+    return "\n\n---\n\n".join(r["text"] for r in results if r.get("text"))
 
 
 async def graph_rag_search_context(

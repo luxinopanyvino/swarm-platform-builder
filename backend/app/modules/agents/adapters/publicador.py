@@ -6,6 +6,7 @@ from sqlalchemy import select
 
 from app.shared.database import AsyncSessionLocal
 from app.models import ArticleModel, ArticleStatus
+from app.modules.agents.adapters.paper_layout import build_paper_html
 
 logger = logging.getLogger(__name__)
 
@@ -48,6 +49,25 @@ async def run_publicador(state: Dict[str, Any]) -> Dict[str, Any]:
                 fmt = state.get("scientific_format")
                 if fmt and fmt != "none":
                     article.scientific_format = fmt
+
+                # Build the printable paper-layout HTML deterministically.
+                paper_format = (
+                    fmt
+                    or (article.scientific_format.value if article.scientific_format else None)
+                    or "apa"
+                )
+                try:
+                    article.paper_html = build_paper_html(
+                        title=article.title or "",
+                        authors=article.authors or [],
+                        abstract=article.abstract or "",
+                        body_markdown=final_text,
+                        scientific_format=paper_format,
+                    )
+                    log(f"🧾 Maquetación tipo paper generada (formato {paper_format.upper()}).")
+                except Exception as layout_exc:
+                    logger.warning(f"Paper layout generation failed: {layout_exc}")
+
                 session.add(article)
                 await session.commit()
                 logger.info(f"Article {article_id} successfully marked as PUBLISHED in DB")

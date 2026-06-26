@@ -11,6 +11,10 @@ export const agentsApi = {
   cancel: (articleId) =>
     api.delete(`/api/v1/agents/${articleId}/run`).then(r => r.data),
 
+  // Resolve a paused human-in-the-loop decision ("add_source" | "continue")
+  submitDecision: (articleId, decision) =>
+    api.post(`/api/v1/agents/${articleId}/decision`, { decision }).then(r => r.data),
+
   // Get run history
   getRuns: (articleId) =>
     api.get(`/api/v1/agents/${articleId}/runs`).then(r => r.data),
@@ -66,6 +70,12 @@ export const agentsApi = {
   // Global RAG library (not agent-scoped)
   getLibraryDocs: () =>
     api.get('/api/v1/agents/rag/library').then(r => r.data),
+
+  // Re-derive title/authors for documents ingested before metadata extraction
+  backfillMetadata: (collection) =>
+    api.post('/api/v1/agents/rag/backfill-metadata', null, {
+      params: collection ? { collection } : {},
+    }).then(r => r.data),
 
   uploadLibraryDocument: (file, collection, chunkSize, chunkOverlap) => {
     const form = new FormData();

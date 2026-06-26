@@ -47,10 +47,12 @@ class ProjectUseCaseType(str, Enum):
 
 
 class ScientificFormat(str, Enum):
-    """Supported scientific formats."""
+    """Supported scientific formats (must stay in sync with the formateador adapter)."""
     APA = "apa"
     IEEE = "ieee"
     VANCOUVER = "vancouver"
+    CHICAGO = "chicago"
+    NATURE = "nature"
     NONE = "none"
 
 
@@ -82,6 +84,12 @@ class ArticleModel(Base):
     body = Column(Text, default="", nullable=False)
     status = Column(SA_Enum(ArticleStatus), default=ArticleStatus.DRAFT, nullable=False, index=True)
     scientific_format = Column(SA_Enum(ScientificFormat), default=ScientificFormat.NONE)
+    # Paper-layout metadata (title block + abstract). authors is a list of
+    # {"name": str, "affiliation": str, "email": str} dicts.
+    authors = Column(JSON, default=list, nullable=False)
+    abstract = Column(Text, default="", nullable=False)
+    # Self-contained printable HTML produced by the Publicador (paper layout).
+    paper_html = Column(Text, default="", nullable=False)
     author_id = Column(SA_UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     reviewer_id = Column(SA_UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"))
     cover_url = Column(String(1024))
@@ -207,11 +215,20 @@ class CreateArticleDTO(BaseModel):
     project_id: UUID | None = None
 
 
+class AuthorDTO(BaseModel):
+    """A single author entry for the paper title block."""
+    name: str = Field(..., min_length=1, max_length=255)
+    affiliation: str = Field(default="", max_length=512)
+    email: str = Field(default="", max_length=255)
+
+
 class UpdateArticleDTO(BaseModel):
     """Update article request."""
     title: str | None = None
     body: str | None = None
     scientific_format: ScientificFormat | None = None
+    authors: list[AuthorDTO] | None = None
+    abstract: str | None = None
 
 
 class ArticleResponse(BaseModel):
@@ -224,6 +241,8 @@ class ArticleResponse(BaseModel):
     body: str
     status: ArticleStatus
     scientific_format: ScientificFormat
+    authors: list = []
+    abstract: str | None = None
     author_id: UUID
     author_name: str | None = None
     reviewer_id: UUID | None
@@ -232,6 +251,12 @@ class ArticleResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
     published_at: datetime | None
+
+    @field_validator('authors', mode='before')
+    @classmethod
+    def _coerce_authors(cls, v):
+        """Legacy rows store NULL for authors; coerce to an empty list."""
+        return v if isinstance(v, list) else []
 
 
 class ArticleListResponse(BaseModel):
