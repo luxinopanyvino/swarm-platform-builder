@@ -1,0 +1,2 @@
+# Mantener saltos de línea LF en scripts shell para que funcionen en cualquier OS.
+*.sh text eol=lf
