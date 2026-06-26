@@ -21,6 +21,8 @@ El proyecto de referencia incluido es **AlejandrIA Magazine**: un pipeline de ci
 8. [Referencia de API](#referencia-de-api)
 9. [Configuración](#configuración)
 10. [Estructura de carpetas](#estructura-de-carpetas)
+11. [Desarrollo asistido por agentes (Claude Code)](#desarrollo-asistido-por-agentes-claude-code)
+12. [Spec-Driven Development (SDD)](#spec-driven-development-sdd)
 
 ---
 
@@ -655,6 +657,98 @@ python -m pytest tests/ -v
 ```
 
 Los tests cubren el ciclo completo de autenticación (registro → login → token) y el flujo de agentes con LangGraph.
+
+---
+
+## Desarrollo asistido por agentes (Claude Code)
+
+Además de los agentes *de producto* (el pipeline editorial), el repositorio
+incluye **agentes de desarrollo** en `.claude/` para trabajar el backlog de
+hardening de forma asistida.
+
+### Lógica del agente `task-runner`
+
+[`.claude/agents/task-runner.md`](.claude/agents/task-runner.md) define un
+subagente que resuelve **una tarea del backlog de extremo a extremo** a partir de
+su número de issue de GitHub:
+
+1. **Lee la tarea** con `gh issue view <N>` y extrae *Problema*, *Definition of
+   Done* y *Dependencias* ("⛔ Bloqueada por: #X").
+2. **Verifica dependencias**: si alguna está abierta, se detiene y avisa (no
+   implementa tareas bloqueadas).
+3. **Carga contexto**: localiza la spec/ADR referenciados y los archivos
+   implicados.
+4. **Implementa** en una rama `sec/…`/`feat/…` (nunca en `develop`).
+5. **Verifica** (`pytest`, `npm run build`) como parte del DoD.
+6. **Reporta** el cumplimiento de cada punto del DoD. No hace `git push` ni cierra
+   issues salvo que se le pida.
+
+El backlog y los issues se generan con los scripts de
+[`scripts/`](scripts/) (ver [SDD](#spec-driven-development-sdd)).
+
+### Usar agentes desde la terminal
+
+```bash
+# Resolver una tarea por su número de issue
+bash scripts/run-task.sh 119
+
+# Resolver varias (1..N)
+bash scripts/run-task.sh 119 120 121
+```
+
+El wrapper invoca `claude -p "/resolve-task <#issue> …"`. También puedes usarlo
+dentro de una sesión interactiva de Claude Code:
+
+```text
+/resolve-task 119
+```
+
+El comando [`/resolve-task`](.claude/commands/resolve-task.md) lee cada issue y
+delega en el subagente `task-runner`. Requisitos: la CLI `claude` instalada y
+`gh` autenticado (con scope `repo`; y `project` si además gestionas el tablero).
+
+---
+
+## Spec-Driven Development (SDD)
+
+El proyecto trabaja con **Spec-Driven Development**: la especificación va *antes*
+que el código. Decisión y proceso en
+[ADR-0002](docs/adr/0002-adopt-spec-driven-development.md).
+
+### Flujo
+
+```
+Idea ─▶ Spec (docs/specs) ─▶ ADR si hay decisión arquitectónica
+     ─▶ Épica + Tareas (GitHub Project) ─▶ Rama feat/… ─▶ PR contra develop
+     ─▶ CI verde + revisión ─▶ Verificación de criterios de aceptación ─▶ Merge
+```
+
+### Documentación
+
+| Documento | Contenido |
+|-----------|-----------|
+| [docs/specs/](docs/specs/) | Especificaciones + plantilla y ciclo de vida (Draft→Ready→Done). |
+| [docs/adr/](docs/adr/) | Architecture Decision Records. |
+| [docs/governance/GOVERNANCE.md](docs/governance/GOVERNANCE.md) | Roles, **Definition of Ready/Done**, política de revisión. |
+| [CONTRIBUTING.md](CONTRIBUTING.md) | Flujo de contribución (SDD) y estándares. |
+| [SECURITY.md](SECURITY.md) | Política y modelo de amenazas. |
+| [docs/backlog/](docs/backlog/) | Épicas y tareas de hardening. |
+
+### Backlog y GitHub Project
+
+Las épicas y tareas se vuelcan al **GitHub Project** del repositorio (jerárquico:
+campo `Epic`, sub-issues épica→tareas, DoD y dependencias):
+
+```bash
+# Crear el Project con todo el backlog (requiere gh con scope project)
+python scripts/seed_github_project.py
+
+# Eliminar el Project y sus issues (destructivo)
+python scripts/delete_github_project.py --yes
+```
+
+Luego, en la UI del proyecto: **View ▸ Group by ▸ Epic**. Para implementar una
+tarea, usa el agente: `bash scripts/run-task.sh <#issue>`.
 
 ---
 
