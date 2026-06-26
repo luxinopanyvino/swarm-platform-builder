@@ -1,6 +1,7 @@
 """Agents router: run and monitor agent orchestrations, manage agent prompts."""
 import asyncio
 import json
+import logging
 import re
 import uuid
 import yaml
@@ -21,6 +22,7 @@ import httpx
 
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, UploadFile, File, Form
 from fastapi.responses import StreamingResponse
+from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -32,13 +34,19 @@ from app.models import (
 from app.database import get_session
 from app.routers.auth import get_current_user
 from app.core.security import verify_token
-from app.modules.agents.application.use_cases import Orchestrator, active_streams, active_tasks, publish_event
+from app.modules.agents.application.use_cases import (
+    Orchestrator, active_streams, active_tasks, publish_event,
+    submit_user_decision,
+)
 from app.modules.agents.adapters.rag import (
     extract_text, chunk_text, ensure_collection, upsert_chunks,
-    list_documents, delete_document, get_rag_backend,
+    list_documents, delete_document, get_rag_backend, backfill_doc_metadata,
 )
+from app.modules.agents.adapters.doc_metadata import extract_doc_metadata
 
 router = APIRouter(prefix="/api/v1/agents", tags=["agents"])
+
+logger = logging.getLogger(__name__)
 
 
 def get_claude_agents_dir() -> Path:
@@ -255,6 +263,7 @@ async def upload_to_rag_library(
     c_overlap = max(0, min(int(chunk_overlap or 50), 499))
 
     doc_id = str(uuid.uuid4())
+    metadata = extract_doc_metadata(file.filename, raw, text)
     chunks = chunk_text(text, chunk_size=c_size, overlap=c_overlap)
 
     await ensure_collection(settings.QDRANT_URL, col, settings.RAG_VECTOR_SIZE, settings.QDRANT_API_KEY)
@@ -269,6 +278,8 @@ async def upload_to_rag_library(
         embedding_model=settings.OLLAMA_EMBED_MODEL,
         vector_size=settings.RAG_VECTOR_SIZE,
         api_key=settings.QDRANT_API_KEY,
+        doc_title=metadata.get("title", ""),
+        doc_authors=metadata.get("authors", ""),
     )
 
     if count <= 0:
@@ -280,7 +291,22 @@ async def upload_to_rag_library(
         "filename": file.filename,
         "collection": col,
         "chunks": count,
+        "title": metadata.get("title", ""),
+        "authors": metadata.get("authors", ""),
     }
+
+
+@router.post("/rag/backfill-metadata")
+async def backfill_rag_metadata(
+    collection: str | None = None,
+    token_data=Depends(get_current_user),
+):
+    """Re-derive title/authors for existing documents that were ingested before
+    metadata extraction existed (text heuristic only; re-upload for PDF metadata)."""
+    from app.core.config import settings
+    col = (collection or settings.QDRANT_COLLECTION).strip() or settings.QDRANT_COLLECTION
+    updated = await backfill_doc_metadata(settings.QDRANT_URL, col, settings.QDRANT_API_KEY)
+    return {"collection": col, "updated": len(updated), "documents": updated}
 
 
 @router.delete("/rag/library/{collection}/{doc_id}")
@@ -487,6 +513,7 @@ async def upload_rag_document(
         raise HTTPException(status_code=422, detail="Could not extract text from file")
 
     doc_id = str(uuid.uuid4())
+    metadata = extract_doc_metadata(file.filename, raw, text)
 
     rag_settings = resolve_agent_rag_settings(agent_name, settings, {
         "rag_collection": rag_collection,
@@ -509,11 +536,17 @@ async def upload_rag_document(
         embedding_model=settings.OLLAMA_EMBED_MODEL,
         vector_size=settings.RAG_VECTOR_SIZE,
         api_key=settings.QDRANT_API_KEY,
+        doc_title=metadata.get("title", ""),
+        doc_authors=metadata.get("authors", ""),
     )
 
     if count <= 0:
         raise HTTPException(status_code=502, detail="No se pudo indexar el documento en Qdrant")
 
+    logger.info(
+        "Ingested '%s' — title=%r authors=%r",
+        file.filename, metadata.get("title", ""), metadata.get("authors", ""),
+    )
     return {
         "status": "indexed",
         "doc_id": doc_id,
@@ -522,6 +555,8 @@ async def upload_rag_document(
         "collection": collection,
         "chunk_size": rag_settings["chunk_size"],
         "chunk_overlap": rag_settings["chunk_overlap"],
+        "title": metadata.get("title", ""),
+        "authors": metadata.get("authors", ""),
     }
 
 
@@ -677,6 +712,38 @@ async def cancel_pipeline_run(
 
     task.cancel()
     return {"status": "cancelled", "article_id": str(article_id)}
+
+
+class PipelineDecisionDTO(BaseModel):
+    # "add_source" → re-run research with a newly uploaded document
+    # "continue"   → proceed with the current draft
+    decision: str
+
+
+@router.post("/{article_id}/decision", status_code=200)
+async def submit_pipeline_decision(
+    article_id: UUID,
+    req: PipelineDecisionDTO,
+    token_data=Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+):
+    """Resolve a pending human-in-the-loop decision for a paused pipeline."""
+    stmt = select(ArticleModel).where(ArticleModel.id == article_id)
+    res = await session.execute(stmt)
+    article = res.scalars().first()
+    if not article:
+        raise HTTPException(status_code=404, detail="Article not found")
+    if str(article.author_id) != token_data["user_id"] and token_data.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    decision = (req.decision or "").strip().lower()
+    if decision not in ("add_source", "continue"):
+        raise HTTPException(status_code=422, detail="decision must be 'add_source' or 'continue'")
+
+    if not submit_user_decision(article_id, decision):
+        raise HTTPException(status_code=409, detail="No pending decision for this article")
+
+    return {"status": "ok", "decision": decision}
 
 
 

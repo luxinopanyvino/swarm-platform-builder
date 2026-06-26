@@ -17,6 +17,7 @@ import ExecutionPage     from './pages/ExecutionPage';
 import UsersPage         from './pages/UsersPage';
 import MagazinePage      from './pages/MagazinePage';
 import LectorPage        from './pages/LectorPage';
+import PaperViewPage     from './pages/PaperViewPage';
 
 function RouteTitleHandler() {
   const location = useLocation();
@@ -128,6 +129,11 @@ export default function App() {
           {/* Execution (full screen, no dashboard shell) */}
           <Route path="/execution/:articleId" element={
             <ProtectedRoute><ExecutionPage /></ProtectedRoute>
+          } />
+
+          {/* Paper-layout printable view (full screen) */}
+          <Route path="/articles/:id/paper" element={
+            <ProtectedRoute><PaperViewPage /></ProtectedRoute>
           } />
 
           {/* Dashboard */}

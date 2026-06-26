@@ -16,7 +16,24 @@ export default function DocumentsPage() {
   const [dragging, setDragging] = useState(false);
   const [uploadCollection, setUploadCollection] = useState('rag_docs');
   const [showUpload, setShowUpload] = useState(false);
+  const [backfilling, setBackfilling] = useState(false);
   const inputRef = useRef(null);
+
+  const handleBackfill = async () => {
+    setBackfilling(true);
+    try {
+      const res = await agentsApi.backfillMetadata();
+      toast.success(
+        res.updated > 0
+          ? `Metadatos reprocesados en ${res.updated} documento(s)`
+          : 'No había documentos sin metadatos'
+      );
+    } catch {
+      toast.error('No se pudieron reprocesar los metadatos');
+    } finally {
+      setBackfilling(false);
+    }
+  };
 
   const loadLibrary = useCallback(async () => {
     setLoading(true);
@@ -86,6 +103,14 @@ export default function DocumentsPage() {
         <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
           <button className="btn btn-ghost btn-sm" onClick={loadLibrary} aria-label="Recargar">
             <RefreshCw size={14} />
+          </button>
+          <button
+            className="btn btn-ghost btn-sm"
+            onClick={handleBackfill}
+            disabled={backfilling}
+            title="Re-extraer título y autores de documentos ya cargados"
+          >
+            <RefreshCw size={14} /> {backfilling ? 'Reprocesando…' : 'Reprocesar metadatos'}
           </button>
           <button className="btn btn-primary btn-sm" onClick={() => setShowUpload((v) => !v)}>
             <Upload size={14} /> Subir documento

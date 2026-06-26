@@ -27,6 +27,43 @@ active_streams: Dict[uuid.UUID, list] = {}
 # Global registry for active pipeline tasks: article_id -> asyncio.Task
 active_tasks: Dict[uuid.UUID, asyncio.Task] = {}
 
+# Pending human-in-the-loop decisions: article_id -> Future resolved by the user
+pending_decisions: Dict[uuid.UUID, "asyncio.Future[str]"] = {}
+
+# Default decision when the user does not respond in time (avoid hanging forever)
+_DECISION_TIMEOUT = 900.0  # 15 minutes
+
+
+async def request_user_decision(article_id: uuid.UUID, payload: Dict[str, Any]) -> str:
+    """Pause the pipeline and ask the user for a decision.
+
+    Emits an ``await_decision`` SSE event and blocks until the user responds via
+    ``submit_user_decision`` or the timeout elapses (defaulting to "continue").
+    """
+    loop = asyncio.get_event_loop()
+    future: "asyncio.Future[str]" = loop.create_future()
+    pending_decisions[article_id] = future
+
+    publish_event(article_id, {"type": "await_decision", **payload})
+    try:
+        return await asyncio.wait_for(future, timeout=_DECISION_TIMEOUT)
+    except asyncio.TimeoutError:
+        logger.info("User decision timed out for article %s — defaulting to 'continue'", article_id)
+        publish_event(article_id, {"type": "decision_resolved", "decision": "continue", "timed_out": True})
+        return "continue"
+    finally:
+        pending_decisions.pop(article_id, None)
+
+
+def submit_user_decision(article_id: uuid.UUID, decision: str) -> bool:
+    """Resolve a pending decision for an article. Returns True if one was waiting."""
+    future = pending_decisions.get(article_id)
+    if future is not None and not future.done():
+        future.set_result(decision)
+        publish_event(article_id, {"type": "decision_resolved", "decision": decision})
+        return True
+    return False
+
 # In-memory log buffer: article_id -> list of formatted log lines
 _log_buffers: Dict[uuid.UUID, List[str]] = {}
 
@@ -166,14 +203,20 @@ def make_node_wrapper(agent_name: str, run_fn):
             """Emit a word-by-word token SSE event for visual typing."""
             publish_event(article_id, {"type": "token", "agent": agent_name, "token": token})
 
+        async def request_decision_fn(payload: Dict[str, Any]) -> str:
+            """Pause this node and await a user decision (human-in-the-loop)."""
+            return await request_user_decision(article_id, payload)
+
         publish_event(article_id, {"type": "agent_start", "agent": agent_name})
 
         run_id = await log_run_start(agent_name, article_id, author_id, input_data)
 
-        # Inject log_fn and emit_token_fn into state so adapters can emit SSE events
+        # Inject log_fn, emit_token_fn and request_decision_fn into state so
+        # adapters can emit SSE events and pause for user input.
         enriched_state = dict(state)
         enriched_state["_log"] = log_fn
         enriched_state["_emit_token"] = emit_token_fn
+        enriched_state["_request_decision"] = request_decision_fn
 
         try:
             res = await run_fn(enriched_state)
@@ -202,16 +245,45 @@ def make_node_wrapper(agent_name: str, run_fn):
 MAX_REVIEW_LOOPS = 3
 
 
+def _next_after_revisor(flow: List[str]) -> str:
+    """Return the node that follows 'revisor' in the flow, or END."""
+    try:
+        revisor_idx = flow.index("revisor")
+        if revisor_idx + 1 < len(flow):
+            return flow[revisor_idx + 1]
+    except ValueError:
+        pass
+    return "__end__"
+
+
 def route_after_revisor(state: AgentState) -> str:
     """
     Conditional edge after the revisor node.
-    - score < 80 AND loop_count < MAX_REVIEW_LOOPS  →  back to redactor
-    - otherwise                                      →  next node in flow (or END)
+
+    - user chose "add_source"  →  re-run from investigador (or redactor) with the
+      newly uploaded document so it feeds research and citations.
+    - user chose "continue"    →  advance to the next node regardless of score.
+    - no explicit decision (headless / coherent draft):
+        - score < 80 AND loop_count < MAX  →  automatic redraft loop to redactor
+        - otherwise                        →  next node in flow (or END)
     """
+    flow = state.get("flow_sequence", [])
+    user_decision = state.get("user_decision")
+
+    if user_decision == "add_source":
+        for candidate in ("investigador", "redactor"):
+            if candidate in flow:
+                logger.info("User added a source — re-running from '%s'.", candidate)
+                return candidate
+        return _next_after_revisor(flow)
+
+    if user_decision == "continue":
+        logger.info("User chose to continue with the current draft.")
+        return _next_after_revisor(flow)
+
+    # No human decision recorded — fall back to automatic score-based looping.
     approval_score = state.get("approval_score", 100)
     loop_count = state.get("loop_count", 0)
-    flow = state.get("flow_sequence", [])
-
     if approval_score < 80 and loop_count < MAX_REVIEW_LOOPS:
         logger.info(
             f"Revisor scored {approval_score} (loop {loop_count}/{MAX_REVIEW_LOOPS}). "
@@ -219,18 +291,9 @@ def route_after_revisor(state: AgentState) -> str:
         )
         return "redactor"
 
-    # Score accepted or max loops reached — advance to the node after "revisor"
-    try:
-        revisor_idx = flow.index("revisor")
-        if revisor_idx + 1 < len(flow):
-            next_node = flow[revisor_idx + 1]
-            logger.info(f"Revisor scored {approval_score}. Advancing to '{next_node}'.")
-            return next_node
-    except ValueError:
-        pass
-
-    logger.info(f"Revisor scored {approval_score}. End of flow. Routing to END.")
-    return "__end__"
+    next_node = _next_after_revisor(flow)
+    logger.info(f"Revisor scored {approval_score}. Advancing to '{next_node}'.")
+    return next_node
 
 
 class Orchestrator:

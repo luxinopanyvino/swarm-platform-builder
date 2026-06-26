@@ -27,3 +27,7 @@ class AgentState(TypedDict):
     # Optional context/focus description provided by the user when launching the pipeline
     context_description: str
     article_outline: str
+    # Human-in-the-loop coherence gate (revisor):
+    coherent: bool                  # whether the revisor judged the draft coherent
+    user_decision: Optional[str]    # "add_source" | "continue" | None (per revisor pass)
+    source_retries: int             # how many times the user added a source and retried

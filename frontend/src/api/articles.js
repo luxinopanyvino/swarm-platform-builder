@@ -17,4 +17,8 @@ export const articlesApi = {
   // Run the formateador agent on the current article body and save the result
   formatBody: (id) =>
     api.post(`/api/v1/articles/${id}/format-body`).then(r => r.data),
+
+  // Fetch the printable paper-layout HTML (string) for the article
+  getPaper: (id) =>
+    api.get(`/api/v1/articles/${id}/paper`, { responseType: 'text' }).then(r => r.data),
 };

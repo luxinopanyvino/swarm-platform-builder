@@ -32,14 +32,19 @@ async def run_revisor(state: Dict[str, Any]) -> Dict[str, Any]:
         f"Exact technology stack: Python, FastAPI, LangGraph (v2), Qdrant and a local inference engine (like Ollama/vLLM).\n\n"
         f"You are acting as a peer reviewer for a scientific journal. Evaluate the following draft.\n\n"
         f"Draft Content:\n{draft_text}\n\n"
-        f"Evaluate the draft for scientific rigor, clarity, structure, and academic style.\n"
+        f"Evaluate the draft for scientific rigor, clarity, structure, academic style, and especially "
+        f"COHERENCE (does it stay on-topic, are the arguments internally consistent, do the sections "
+        f"connect logically and is it grounded rather than vague/hallucinated?).\n"
         f"You must return your evaluation in JSON format. Do not write markdown blocks before the JSON.\n"
         f"The JSON MUST match this schema:\n"
-        f'{{\n  "approval_score": <int between 0 and 100>,\n  "feedback": [<list of string review comments>]\n}}\n\n'
+        f'{{\n  "approval_score": <int between 0 and 100>,\n'
+        f'  "coherent": <true or false>,\n'
+        f'  "feedback": [<list of string review comments>]\n}}\n\n'
         f"JSON output:"
     )
 
     approval_score = 85
+    coherent = True
     feedback = []
 
     try:
@@ -49,6 +54,8 @@ async def run_revisor(state: Dict[str, Any]) -> Dict[str, Any]:
             try:
                 data = json.loads(json_match.group(0))
                 approval_score = int(data.get("approval_score", 85))
+                if "coherent" in data:
+                    coherent = bool(data.get("coherent"))
                 feedback = data.get("feedback", [])
                 if not isinstance(feedback, list):
                     feedback = [str(feedback)]
@@ -69,17 +76,49 @@ async def run_revisor(state: Dict[str, Any]) -> Dict[str, Any]:
             approval_score = 90
             feedback = ["Draft significantly improved. The methodology is now clear."]
 
+    # The draft "fails coherence" when the reviewer says so or the score is low.
+    coherent = coherent and approval_score >= 80
     new_loop_count = loop_count + 1 if approval_score < 80 else loop_count
 
-    if approval_score >= 80:
+    if coherent:
         log(f"✅ Borrador aprobado — puntuación: {approval_score}/100")
     else:
-        log(f"❌ Borrador rechazado — puntuación: {approval_score}/100. Enviando de vuelta al redactor.", "warning")
+        log(f"❌ Coherencia insuficiente — puntuación: {approval_score}/100.", "warning")
         for fb in feedback:
             log(f"  → {fb}")
 
-    return {
+    result: Dict[str, Any] = {
         "approval_score": approval_score,
         "feedback": feedback,
         "loop_count": new_loop_count,
+        "coherent": coherent,
+        # Always reset the per-pass decision so a stale value can't re-trigger routing.
+        "user_decision": None,
     }
+
+    # ── Human-in-the-loop: on incoherence, ask the user whether to add a source
+    # or continue. Only when a live decision channel is available (SSE listener).
+    request_decision = state.get("_request_decision")
+    source_retries = state.get("source_retries") or 0
+    MAX_SOURCE_RETRIES = 3
+
+    if not coherent and request_decision is not None:
+        if source_retries >= MAX_SOURCE_RETRIES:
+            log("ℹ️ Límite de reintentos con nuevas fuentes alcanzado — continuando con el borrador actual.", "warning")
+            result["user_decision"] = "continue"
+        else:
+            log("⏸️ Esperando decisión del usuario: subir otra fuente o continuar...", "warning")
+            decision = await request_decision({
+                "reason": "coherence_failed",
+                "approval_score": approval_score,
+                "feedback": feedback[:5],
+                "message": "El revisor considera que la redacción no es suficientemente coherente.",
+            })
+            result["user_decision"] = decision
+            if decision == "add_source":
+                result["source_retries"] = source_retries + 1
+                log("📥 El usuario añadió una nueva fuente — reejecutando la investigación.")
+            else:
+                log("▶️ El usuario decidió continuar con el borrador actual.")
+
+    return result

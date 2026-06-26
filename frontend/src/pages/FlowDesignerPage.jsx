@@ -5,7 +5,7 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Pencil, Plus, Save, Play, Trash2, GitBranch } from 'lucide-react';
+import { Pencil, Plus, Save, Play, Trash2, GitBranch, Upload } from 'lucide-react';
 import { nodeTypes, AGENT_META } from '../components/flow/AgentNode';
 import { AgentCreateModal, AgentEditorModal } from '../components/agents/AgentEditorModal';
 import { useFlowStore } from '../store/flowStore';
@@ -44,6 +44,13 @@ export default function FlowDesignerPage() {
   const [runKeywordInput, setRunKeywordInput] = React.useState('');
   const [runDescription, setRunDescription] = React.useState('');
   const [runOutline, setRunOutline] = React.useState('');
+  const [showAdvanced, setShowAdvanced] = React.useState(false);
+  // RAG source selection for the run
+  const [runDocs, setRunDocs] = React.useState([]);
+  const [selectedDocIds, setSelectedDocIds] = React.useState([]);
+  const [loadingDocs, setLoadingDocs] = React.useState(false);
+  const [uploadingDoc, setUploadingDoc] = React.useState(false);
+  const runFileRef = useRef(null);
   const [models, setModels] = React.useState(['llama3.2:1b']);
   const [paletteAgents, setPaletteAgents] = React.useState([]);
   const [editAgent, setEditAgent] = React.useState(null);
@@ -55,6 +62,9 @@ export default function FlowDesignerPage() {
     const meta = AGENT_META[agent.slug] || AGENT_META[agent.id] || {};
     return {
       id: agent.slug || agent.id,
+      slug: agent.slug || agent.id,
+      // Real DB UUID — needed for save/delete API calls (the slug is the node id).
+      profileId: agent.id,
       content: agent.content,
       model: agent.model,
       temperature: agent.temperature,
@@ -224,6 +234,45 @@ export default function FlowDesignerPage() {
     }
   };
 
+  // Flatten the /rag/library response ({collections:[{name,documents:[...]}]}) into a doc list
+  const flattenLibrary = (data) =>
+    (data?.collections || []).flatMap(c => (c.documents || []).map(d => ({ ...d, collection: c.name })));
+
+  // Load available RAG documents when the run modal opens
+  useEffect(() => {
+    if (!showRunModal) return;
+    setLoadingDocs(true);
+    agentsApi.getLibraryDocs()
+      .then(data => setRunDocs(flattenLibrary(data)))
+      .catch(() => setRunDocs([]))
+      .finally(() => setLoadingDocs(false));
+  }, [showRunModal]);
+
+  const handleRunUpload = () => runFileRef.current?.click();
+
+  const onRunFileSelected = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    setUploadingDoc(true);
+    try {
+      // Upload to the investigador bucket so it's available as a source
+      const res = await agentsApi.uploadRagDocument('investigador', file);
+      toast.success(
+        res?.title
+          ? `Añadido: "${res.title}"${res.authors ? ` — ${res.authors}` : ''}`
+          : `Documento añadido: ${file.name}`
+      );
+      const data = await agentsApi.getLibraryDocs();
+      setRunDocs(flattenLibrary(data));
+      if (res?.doc_id) setSelectedDocIds(ids => [...new Set([...ids, res.doc_id])]);
+    } catch (err) {
+      toast.error(err?.response?.data?.detail || 'No se pudo subir el documento');
+    } finally {
+      setUploadingDoc(false);
+    }
+  };
+
   const handleRun = async () => {
     const titleValue = runTitle.trim();
     if (!titleValue && !existingArticleId) { toast.error('Escribe un título para el artículo'); return; }
@@ -254,6 +303,17 @@ export default function FlowDesignerPage() {
           };
         }
       });
+      // Inject selected RAG documents as the Investigador's sources
+      if (selectedDocIds.length > 0) {
+        const selected = runDocs.filter(d => selectedDocIds.includes(d.doc_id));
+        const collection = selected[0]?.collection;
+        agentSettings.investigador = {
+          ...(agentSettings.investigador || {}),
+          rag_doc_ids: selectedDocIds,
+          ...(collection ? { rag_collection: collection } : {}),
+        };
+      }
+
       navigate(`/execution/${articleId}`, {
         state: {
           flowNodes: nodes,
@@ -414,6 +474,34 @@ export default function FlowDesignerPage() {
               </div>
 
               <div className="input-group">
+                <label htmlFor="run-description" className="input-label">
+                  Descripción / enfoque
+                  <span style={{ fontWeight: 400, color: 'var(--text-muted)', marginLeft: 6 }}>— opcional</span>
+                </label>
+                <textarea
+                  id="run-description"
+                  className="input"
+                  rows={3}
+                  placeholder="Ej: Enfocado en arrecifes de coral del Caribe, con énfasis en acidificación oceánica y pérdida de biodiversidad post-2010."
+                  value={runDescription}
+                  onChange={e => setRunDescription(e.target.value)}
+                  style={{ resize: 'vertical', fontSize: 'var(--font-size-sm)' }}
+                />
+                <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--text-muted)', marginTop: 4 }}>
+                  El <strong>Investigador</strong> la usa para afinar la búsqueda semántica. El <strong>Redactor</strong> la recibe como instrucción de enfoque en el prompt.
+                </div>
+              </div>
+
+              <button
+                type="button"
+                className="btn btn-ghost btn-sm"
+                onClick={() => setShowAdvanced(v => !v)}
+                style={{ alignSelf: 'flex-start', color: 'var(--text-muted)' }}
+              >
+                {showAdvanced ? '▾' : '▸'} Opciones avanzadas (palabras clave, estructura)
+              </button>
+              {showAdvanced && (<>
+              <div className="input-group">
                 <label htmlFor="kw-input" className="input-label">
                   Palabras clave
                   <span style={{ fontWeight: 400, color: 'var(--text-muted)', marginLeft: 6 }}>— orientan la búsqueda del Investigador</span>
@@ -463,25 +551,6 @@ export default function FlowDesignerPage() {
               </div>
 
               <div className="input-group">
-                <label htmlFor="run-description" className="input-label">
-                  Descripción / enfoque
-                  <span style={{ fontWeight: 400, color: 'var(--text-muted)', marginLeft: 6 }}>— opcional</span>
-                </label>
-                <textarea
-                  id="run-description"
-                  className="input"
-                  rows={3}
-                  placeholder="Ej: Enfocado en arrecifes de coral del Caribe, con énfasis en acidificación oceánica y pérdida de biodiversidad post-2010."
-                  value={runDescription}
-                  onChange={e => setRunDescription(e.target.value)}
-                  style={{ resize: 'vertical', fontSize: 'var(--font-size-sm)' }}
-                />
-                <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--text-muted)', marginTop: 4 }}>
-                  El <strong>Investigador</strong> la usa para afinar la búsqueda semántica. El <strong>Redactor</strong> la recibe como instrucción de enfoque en el prompt.
-                </div>
-              </div>
-
-              <div className="input-group">
                 <label htmlFor="run-outline" className="input-label">
                   Estructura / Esquema del artículo
                   <span style={{ fontWeight: 400, color: 'var(--text-muted)', marginLeft: 6 }}>— opcional</span>
@@ -497,6 +566,40 @@ export default function FlowDesignerPage() {
                 />
                 <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--text-muted)', marginTop: 4 }}>
                   Define las secciones, subsecciones o títulos creativos que el <strong>Redactor</strong> debe seguir obligatoriamente.
+                </div>
+              </div>
+              </>)}
+
+              <div className="input-group">
+                <label className="input-label">
+                  Fuentes de información (RAG)
+                  <span style={{ fontWeight: 400, color: 'var(--text-muted)', marginLeft: 6 }}>— opcional</span>
+                </label>
+                <input ref={runFileRef} type="file" accept=".txt,.md,.pdf" style={{ display: 'none' }} onChange={onRunFileSelected} />
+                <button className="btn btn-ghost btn-sm" onClick={handleRunUpload} disabled={uploadingDoc} style={{ marginBottom: 8 }}>
+                  <Upload size={13} /> {uploadingDoc ? 'Subiendo…' : 'Subir documento'}
+                </button>
+                <div style={{ maxHeight: 140, overflowY: 'auto', border: '1px solid var(--border-default)', borderRadius: 'var(--radius-sm)', padding: 6 }}>
+                  {loadingDocs ? (
+                    <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--text-muted)', padding: 6 }}>Cargando documentos…</div>
+                  ) : runDocs.length === 0 ? (
+                    <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--text-muted)', padding: 6 }}>
+                      No hay documentos. Sube uno o continúa sin fuentes.
+                    </div>
+                  ) : runDocs.map(d => (
+                    <label key={d.doc_id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 6px', cursor: 'pointer', fontSize: 'var(--font-size-xs)' }}>
+                      <input
+                        type="checkbox"
+                        checked={selectedDocIds.includes(d.doc_id)}
+                        onChange={e => setSelectedDocIds(ids => e.target.checked ? [...ids, d.doc_id] : ids.filter(x => x !== d.doc_id))}
+                      />
+                      <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.filename || d.doc_id}</span>
+                      <span style={{ color: 'var(--text-muted)' }}>{d.collection}</span>
+                    </label>
+                  ))}
+                </div>
+                <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--text-muted)', marginTop: 4 }}>
+                  Selecciona los documentos que el <strong>Investigador</strong> usará como fuentes. Si no seleccionas ninguno, buscará en toda la colección.
                 </div>
               </div>
 
