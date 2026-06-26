@@ -226,61 +226,83 @@ AlejandrIA Magazine es el proyecto de referencia de la plataforma. Implementa un
 
 ```mermaid
 flowchart TD
-    START([Inicio]) --> INV
+    START([Inicio]) --> INPUT["📝 Primera ejecución (modal)\nTítulo · Descripción (opcional)\nElegir documentos del RAG o subir uno nuevo"]
+    INPUT --> INV
 
     subgraph INV_BLOCK["Etapa 1 — Investigación"]
         INV["🔍 Investigador"]
-        RAG_LOCAL["RAG local\n(colección: rag_docs)"]
-        EUROPMC["EuropePMC API"]
-        SCRAPER["Web scraping\narXiv · Wikipedia · Semantic Scholar"]
+        RAG["RAG (Qdrant)\nbucket del agente + biblioteca compartida\nextrae título/autores de cada documento"]
         SYNTH["Síntesis LLM\nmistral:7b con fuentes\nllama3.2:1b sin fuentes"]
-        INV --> RAG_LOCAL & EUROPMC & SCRAPER --> SYNTH
+        INV --> RAG --> SYNTH
     end
 
     INV --> RED["✍️ Redactor\nllama3.2:3b · Markdown · num_ctx 4096"]
-
-    RED --> REV["🧐 Revisor\nllama3.2:3b · score 0-100 · num_ctx 4096"]
+    RED --> REV["🧐 Revisor\nllama3.2:3b · score 0-100 · coherencia"]
 
     REV -- "score < 80\n(máx. 3 iteraciones)" --> RED
-    REV -- "score ≥ 80\no loops = 3" --> FMT["📐 Formateador\nAPA · IEEE · Vancouver · Chicago · Nature"]
+    REV -- "no coherente" --> HITL{"⏸️ HITL — decisión del usuario\n¿Subir otra fuente o continuar?"}
+    HITL -- "Subir documento" --> INV
+    HITL -- "Continuar" --> FMT
+    REV -- "aprobado y coherente" --> FMT["📐 Formateador\nAPA · IEEE · Vancouver · Chicago · Nature\ncitas + referencias deterministas"]
 
-    FMT --> PUB["📢 Publicador\nGuarda en DB · maquetación paper\nestado PUBLISHED"]
+    FMT --> PUB["📢 Publicador\nGuarda en DB · maquetación tipo paper (paper_html)\nestado PUBLISHED"]
     PUB --> END([Publicado])
 ```
+
+> **Primera ejecución**: al lanzar el flujo, el usuario indica en el modal el
+> **título**, una **descripción/enfoque** opcional y las **fuentes**: puede
+> elegir documentos ya cargados en el RAG o subir uno nuevo. Esas fuentes son las
+> que usa el Investigador (no hay scraping web).
 
 #### Paso a paso
 
 | Paso | Agente | Modelo por defecto | Qué hace |
 |---|---|---|---|
-| 1 | **Investigador** | `mistral:7b` (con fuentes) · `llama3.2:1b` (sin fuentes) | Busca en RAG (Qdrant) en su bucket **y en la biblioteca compartida** (`__library__`); los `rag_doc_ids` seleccionados tienen precedencia. Extrae **título y autores** de cada documento (metadatos PDF + heurística de primera página) para construir citas reales. También consulta EuropePMC y hace scraping web (arXiv / Wikipedia / Semantic Scholar) con re-ranking semántico (`nomic-embed-text`). Sintetiza con LLM (`timeout 600s`, `num_ctx 8192`). |
+| 1 | **Investigador** | `mistral:7b` (con fuentes) · `llama3.2:1b` (sin fuentes) | Busca contexto en **RAG (Qdrant)**: en su bucket **y en la biblioteca compartida** (`__library__`), con re-ranking semántico (`nomic-embed-text`); los `rag_doc_ids` elegidos en el modal tienen precedencia. Extrae **título y autores** de cada documento (metadatos PDF + heurística de primera página) para construir citas reales. Sintetiza el contexto con LLM (`timeout 600s`, `num_ctx 8192`). **No realiza scraping web ni consulta APIs externas**; sus fuentes son las del RAG. |
 | 2 | **Redactor** | `llama3.2:3b` | Recibe el contexto de investigación y genera un borrador académico estructurado en Markdown (Abstract, Introducción, Metodología, Resultados y Discusión). Incorpora el feedback del Revisor en iteraciones sucesivas. `num_ctx 4096`, `keep_alive 0`. |
-| 3 | **Revisor** | `llama3.2:3b` | Evalúa el borrador con score 0-100 y lista de comentarios. Si `score < 80` y `loop_count < 3`, reenvía al Redactor. `num_ctx 4096`, `keep_alive 0`. |
+| 3 | **Revisor** | `llama3.2:3b` | Evalúa el borrador (score 0-100 + **coherencia**) y lista comentarios. Si `score < 80` y `loop_count < 3`, reenvía al Redactor. Si determina que la redacción **no es coherente**, dispara un **HITL** que pregunta al usuario: *subir otra fuente* (reejecuta la investigación con el nuevo documento) o *continuar* con el borrador actual. `num_ctx 4096`, `keep_alive 0`. |
 | 4 | **Formateador** | `llama3.2:1b` | Reformatea únicamente las citas y la sección de Referencias según el estilo solicitado: **APA**, **IEEE**, **Vancouver**, **Chicago** o **Nature**. Si el resultado es más corto que el 50 % del original, descarta y devuelve el texto original. `num_ctx 4096`, `keep_alive 0`. |
 | 5 | **Publicador** | — (no usa LLM) | Escribe `formatted_text` (o `draft_text` si el formateador no se ejecutó) en la base de datos, cambia el estado a `PUBLISHED` y registra `published_at`. Además genera la **maquetación tipo paper** (HTML imprimible, una plantilla por formato de cita) y la guarda en `paper_html`, accesible en `GET /api/v1/articles/{id}/paper`. |
 
 > **Gestión de memoria**: cada agente usa `keep_alive=0` para descargar el modelo de la RAM/VRAM al terminar, evitando conflictos de KV-cache entre agentes. `num_ctx` está fijado por agente para controlar el uso de RAM sin sacrificar calidad.
 
-#### Bucle de revisión automática
+#### Revisión, bucle automático y decisión humana (HITL)
 
 ```
-Redactor ──► Revisor
-    ▲            │ score < 80 y loops < 3
-    └────────────┘
-                 │ score ≥ 80 o loops = 3
-                 ▼
-           Formateador
+Redactor ──► Revisor ──(score ≥ 80 y coherente)──► Formateador
+    ▲           │
+    │ score<80  │ no coherente
+    │ y loops<3 ▼
+    └──────  ⏸️ HITL — pregunta al usuario
+                 ├─ Subir documento ─► vuelve al Investigador (nueva fuente)
+                 └─ Continuar ───────► Formateador
 ```
 
-El contador `loop_count` se incrementa solo cuando el Revisor rechaza. Al alcanzar 3 rechazos consecutivos, el flujo avanza igualmente para no bloquear el pipeline.
+- **Bucle automático**: el contador `loop_count` se incrementa solo cuando el
+  Revisor rechaza por `score < 80`; reenvía al Redactor hasta 3 veces y luego
+  avanza igualmente para no bloquear el pipeline.
+- **HITL (human-in-the-loop)**: si el Revisor considera que la redacción **no es
+  coherente** y hay un cliente escuchando (SSE), **pausa** y pregunta al usuario:
+  - **Subir documento** → vuelve al **Investigador** para rehacer la investigación
+    con la nueva fuente (hasta 3 reintentos; luego continúa automáticamente).
+  - **Continuar** → sigue con el borrador actual hacia el Formateador.
+
+  En modo headless (sin oyente) la decisión por defecto es **continuar**. El
+  usuario responde vía `POST /api/v1/agents/{article_id}/decision`.
 
 #### Ejecutar el pipeline
 
-**Desde la UI:**
+**Desde la UI (primera ejecución):**
 
-1. Crea un artículo (**Artículos → Nuevo artículo**) con título y palabras clave.
-2. En el detalle del artículo, haz clic en **Reejecutar pipeline**.
-3. Selecciona los agentes y el orden (todos preseleccionados por defecto).
-4. Haz clic en **Lanzar**. Los eventos aparecen en tiempo real en el panel de ejecución.
+1. En el **Flow Designer**, pulsa **Ejecutar pipeline**.
+2. Indica el **título**, una **descripción / enfoque** (opcional) y las **fuentes
+   de información (RAG)**: elige documentos ya cargados o **sube uno nuevo**. En
+   *Opciones avanzadas* puedes añadir palabras clave y una estructura.
+3. Pulsa **Ejecutar pipeline**. Los eventos aparecen en tiempo real en el panel de
+   ejecución; si el Revisor lanza un **HITL**, responde ahí (subir fuente / continuar).
+
+> Para reejecutar sobre un artículo existente, ve a su detalle → **Reejecutar
+> pipeline** y selecciona los agentes y el orden.
 
 **Desde la API:**
 
@@ -308,7 +330,16 @@ El artículo queda en estado `DRAFT` con el contenido parcial generado hasta el 
 GET /api/v1/agents/{article_id}/stream
 ```
 
-Eventos emitidos: `agent_start`, `log`, `agent_end`, `agent_error`, `done`, `done_error`, `cancelled`.
+Eventos emitidos: `agent_start`, `token`, `log`, `agent_end`, `agent_error`, `await_decision` (HITL), `done`, `done_error`, `cancelled`.
+
+Cuando el Revisor lanza un HITL emite `await_decision` y **pausa**; el usuario
+responde con:
+
+```bash
+curl -X POST http://localhost:8000/api/v1/agents/{article_id}/decision \
+  -H "Authorization: Bearer <token>" -H "Content-Type: application/json" \
+  -d '{"decision": "add_source"}'   # o "continue"
+```
 
 #### Flujos parciales soportados
 
