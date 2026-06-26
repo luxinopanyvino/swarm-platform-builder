@@ -1,21 +1,19 @@
 #!/usr/bin/env python3
 """
 Genera el GitHub Project "Hardening & Platform Backlog" de forma ATÓMICA y
-JERÁRQUICA:
+JERÁRQUICA, con descripción detallada por épica, Definition of Done por tarea y
+dependencias entre tareas.
 
-  1. Crea labels (epic, task, area/*, sev/*).
-  2. Crea el Project v2 y lo enlaza al repositorio.
-  3. Crea un campo single-select "Epic" (E1..E6).
-  4. Crea las 6 épicas y sus 28 tareas como issues, las añade al proyecto y les
-     asigna el campo "Epic".
-  5. Establece relaciones **sub-issue** (épica → sus tareas), de modo que el
-     tablero/issue muestre la jerarquía de forma nativa.
-
-Tras ejecutarlo: en la UI del proyecto activa  View ▸ Group by ▸ Epic  (y, si
-quieres, muestra sub-issues en la tabla).
+  1. Labels (epic, task, area/*, sev/*).
+  2. Project v2 + enlace al repositorio.
+  3. Campo single-select "Epic" (E1..E6).
+  4. 6 épicas (descripción detallada) + 28 tareas (Problema + DoD), añadidas al
+     proyecto y etiquetadas con su Epic.
+  5. Relaciones sub-issue (épica → tareas) para jerarquía nativa.
+  6. Segunda pasada: inyecta "Depende de: #N" con los números reales de issue.
 
 Requisitos: gh CLI autenticado con scope `project` (o GH_TOKEN con ese scope).
-Uso:        python scripts/seed_github_project.py
+Uso:        python scripts/seed_github_project.py [--force]
 """
 import json
 import re
@@ -40,23 +38,89 @@ LABELS = [
     ("sev/low", "fef2c0", "Severidad baja"),
 ]
 
-# code, título, area, body
+# code, título corto, area, descripción detallada (markdown)
 EPICS = [
-    ("E1", "Seguridad: Identidad y Acceso", "area/security",
-     "Reducir privilegios por defecto y endurecer la gestión de sesiones. Specs: SPEC-001. ADR-0003."),
-    ("E2", "Seguridad: Aplicación (AppSec)", "area/security",
-     "Saneo de entradas no confiables y control de egress. Specs: SPEC-002. ADR-0003."),
-    ("E3", "Infraestructura y Despliegue", "area/infra",
-     "No exponer servicios internos, gestionar secretos, contenedores no-root. ADR-0003."),
-    ("E4", "Datos y Persistencia", "area/backend",
-     "Migraciones gestionadas (Alembic) y estado externalizable."),
-    ("E5", "Observabilidad", "area/observability",
-     "Logging estructurado, métricas, tracing y health checks. ADR-0004."),
-    ("E6", "Gobernanza y Calidad (SDD)", "area/governance",
-     "CI, cadena de suministro, auditoría y adopción de SDD. ADR-0002/0004."),
+    ("E1", "Seguridad: Identidad y Acceso", "area/security", """## Objetivo
+Garantizar el **mínimo privilegio** en la identidad y endurecer la gestión de
+sesiones basada en JWT.
+
+## Alcance
+Registro de usuarios, asignación de roles, expiración/revocación de tokens,
+atajos de desarrollo y protección contra fuerza bruta.
+
+## Fuera de alcance
+SSO / OIDC (se valorará en una épica futura).
+
+## Criterio de cierre
+Todas las tareas con su DoD cumplido; un usuario recién registrado **no** puede
+ejecutar pipelines, subir documentos al RAG ni usar el scraper.
+
+## Referencias
+SPEC-001 · ADR-0003 · docs/governance/GOVERNANCE.md"""),
+    ("E2", "Seguridad: Aplicación (AppSec)", "area/security", """## Objetivo
+Sanear toda entrada no confiable y **controlar el egress** de la aplicación.
+
+## Alcance
+Validación/saneo de URLs y subidas, control de peticiones salientes (SSRF),
+verificación TLS y manejo uniforme de errores sin fuga de información.
+
+## Criterio de cierre
+Sin vectores de SSRF ni XSS conocidos; errores 500 sin stack traces; subidas
+validadas por contenido.
+
+## Referencias
+SPEC-002 · ADR-0003 · OWASP Top 10 (A03, A05, A10)"""),
+    ("E3", "Infraestructura y Despliegue", "area/infra", """## Objetivo
+No exponer servicios internos, **gestionar secretos** correctamente y ejecutar
+contenedores sin privilegios.
+
+## Alcance
+Qdrant/Ollama/Postgres/Redis, docker-compose, Dockerfiles, TLS, cabeceras de
+seguridad y separación dev/prod.
+
+## Criterio de cierre
+Servicios internos autenticados y no publicados; sin secretos en git;
+contenedores no-root; despliegue prod separado de dev.
+
+## Referencias
+ADR-0003 · docker-compose.yml"""),
+    ("E4", "Datos y Persistencia", "area/backend", """## Objetivo
+Migraciones **gestionadas** y estado de aplicación externalizable para escalar.
+
+## Alcance
+Alembic, limpieza de artefactos binarios en git y externalización del estado en
+memoria (streams/tasks/decisiones) a Redis.
+
+## Criterio de cierre
+Esquema versionado con Alembic; el backend funciona con múltiples workers."""),
+    ("E5", "Observabilidad", "area/observability", """## Objetivo
+Dar visibilidad de **salud, rendimiento y uso de LLM** del sistema.
+
+## Alcance
+Logging estructurado con correlación, métricas Prometheus, tracing y health
+checks de liveness/readiness.
+
+## Criterio de cierre
+Dashboards con latencia/errores/tokens; /health comprueba dependencias.
+
+## Referencias
+ADR-0004"""),
+    ("E6", "Gobernanza y Calidad (SDD)", "area/governance", """## Objetivo
+Asegurar calidad y trazabilidad mediante **CI, cadena de suministro, auditoría**
+y la adopción de Spec-Driven Development.
+
+## Alcance
+Pipeline de CI, escaneo de dependencias, pinning, audit log, retención de datos
+y formalización de SDD (specs, DoR/DoD, CODEOWNERS).
+
+## Criterio de cierre
+CI obligatorio en PRs; dependencias escaneadas y pineadas; SDD en uso.
+
+## Referencias
+ADR-0002 · ADR-0004 · docs/specs/README.md"""),
 ]
 
-# título, area, sev, epic, body
+# título, area, sev, epic, problema
 TASKS = [
     ("T1.1 Rol seguro por defecto en el registro (SPEC-001)", "area/security", "sev/high", "E1",
      "register() asigna REDACTOR por defecto. Aplicar mínimo privilegio. Ver SPEC-001."),
@@ -116,8 +180,34 @@ TASKS = [
      "Formalizado en la rama docs/sdd-governance."),
 ]
 
-DOD = ("\n\n— Ver docs/backlog/security-hardening-backlog.md y la Definition of Done "
-       "en docs/governance/GOVERNANCE.md.")
+# Dependencias entre tareas (TID -> [TIDs que deben ir antes]).
+DEPS = {
+    "T3.4": ["T3.1", "T3.2"],
+    "T4.3": ["T3.2"],
+    "T5.2": ["T5.1"],
+    "T5.3": ["T5.1"],
+    "T6.2": ["T6.1"],
+    "T6.3": ["T6.2"],
+}
+
+DOD = """## Definition of Done
+- [ ] Cumple los criterios de aceptación (spec/ADR si aplica)
+- [ ] Tests automatizados que cubren el cambio (verdes en CI)
+- [ ] Sin secretos ni PII en el diff
+- [ ] Documentación/ADR/spec actualizados
+- [ ] Observabilidad (logs/métricas) añadida si aplica
+- [ ] Revisado y aprobado según CODEOWNERS"""
+
+
+def tid_of(title):
+    m = re.match(r"^(T\d+\.\d+)", title)
+    return m.group(1) if m else title
+
+
+def task_body(problem, epic, deps_text):
+    return (f"## Problema\n{problem}\n\n{DOD}\n\n"
+            f"## Dependencias\n{deps_text}\n\n"
+            f"_Épica: {epic} · ver docs/governance/GOVERNANCE.md §6_")
 
 
 def gh(*args, check=True):
@@ -131,15 +221,14 @@ def gh_json(*args):
     return json.loads(gh(*args))
 
 
-def node_id(issue_number):
-    return gh("issue", "view", str(issue_number), "--repo", REPO, "--json", "id", "-q", ".id").strip()
+def node_id(num):
+    return gh("issue", "view", str(num), "--repo", REPO, "--json", "id", "-q", ".id").strip()
 
 
 def create_issue(title, body, labels):
     url = gh("issue", "create", "--repo", REPO, "--title", title, "--body", body,
              "--label", labels).strip().splitlines()[-1]
-    number = int(re.search(r"/issues/(\d+)", url).group(1))
-    return number, url
+    return int(re.search(r"/issues/(\d+)", url).group(1)), url
 
 
 def main():
@@ -160,21 +249,20 @@ def main():
         gh("project", "link", number, "--owner", OWNER, "--repo", REPO)
         print("    enlazado al repositorio")
     except RuntimeError as e:
-        print(f"    aviso: no se pudo enlazar automáticamente ({e}). Usa 'Link a project' en la UI.")
+        print(f"    aviso: no se pudo enlazar ({e}). Usa 'Link a project' en la UI.")
 
     print("==> Campo Epic")
     gh("project", "field-create", number, "--owner", OWNER, "--name", FIELD_NAME,
-       "--data-type", "SINGLE_SELECT", "--single-select-options",
-       ",".join(c for c, *_ in EPICS))
+       "--data-type", "SINGLE_SELECT", "--single-select-options", ",".join(c for c, *_ in EPICS))
     fields = gh_json("project", "field-list", number, "--owner", OWNER, "--format", "json")["fields"]
     field = next(f for f in fields if f.get("name") == FIELD_NAME)
     field_id = field["id"]
     opt = {o["name"]: o["id"] for o in field.get("options", [])}
 
-    def add_and_tag(issue_url, epic_code):
-        item = gh_json("project", "item-add", number, "--owner", OWNER, "--url", issue_url, "--format", "json")
+    def add_and_tag(url, code):
+        item = gh_json("project", "item-add", number, "--owner", OWNER, "--url", url, "--format", "json")
         gh("project", "item-edit", "--id", item["id"], "--project-id", project_id,
-           "--field-id", field_id, "--single-select-option-id", opt[epic_code])
+           "--field-id", field_id, "--single-select-option-id", opt[code])
 
     print("==> Épicas")
     epic_node = {}
@@ -185,20 +273,31 @@ def main():
         print(f"    {code} -> #{n}")
 
     print("==> Tareas + sub-issues")
-    for title, area, sev, code, body in TASKS:
-        n, url = create_issue(title, body + DOD, f"task,{area},{sev}")
+    tid_num = {}
+    for title, area, sev, code, problem in TASKS:
+        body = task_body(problem, code, "Ninguna." if tid_of(title) not in DEPS else "_(se calculará)_")
+        n, url = create_issue(title, body, f"task,{area},{sev}")
+        tid_num[tid_of(title)] = n
         add_and_tag(url, code)
-        # Relación jerárquica nativa: la épica es la issue padre.
         try:
             gh("api", "graphql", "-f",
                "query=mutation($p:ID!,$c:ID!){addSubIssue(input:{issueId:$p,subIssueId:$c}){subIssue{number}}}",
                "-f", f"p={epic_node[code]}", "-f", f"c={node_id(n)}")
         except RuntimeError as e:
-            print(f"    aviso sub-issue {title[:30]}: {e}")
-        print(f"    {code} ◂ #{n}")
+            print(f"    aviso sub-issue {title[:28]}: {e}")
+        print(f"    {code} <- #{n}")
+
+    print("==> Dependencias entre tareas")
+    by_tid = {tid_of(t[0]): t for t in TASKS}
+    for tid, deps in DEPS.items():
+        title, area, sev, code, problem = by_tid[tid]
+        refs = ", ".join(f"#{tid_num[d]}" for d in deps if d in tid_num)
+        deps_text = f"⛔ Bloqueada por: {refs} (deben completarse antes)."
+        gh("issue", "edit", str(tid_num[tid]), "--repo", REPO, "--body", task_body(problem, code, deps_text))
+        print(f"    {tid} (#{tid_num[tid]}) depende de {refs}")
 
     print(f"\nListo. Project: {proj.get('url','')}")
-    print("En la UI:  View ▸ Group by ▸ Epic  (y activa 'sub-issues' en la tabla si quieres el árbol).")
+    print("En la UI:  View > Group by > Epic  (y activa 'sub-issues' en la tabla para ver el árbol).")
 
 
 if __name__ == "__main__":
