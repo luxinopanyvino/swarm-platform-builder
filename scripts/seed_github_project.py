@@ -148,6 +148,11 @@ def main():
         gh("label", "create", name, "--color", color, "--description", desc, "--force", "--repo", REPO)
 
     print("==> Project")
+    existing = [p for p in gh_json("project", "list", "--owner", OWNER, "--format", "json")["projects"]
+                if p.get("title") == PROJECT_TITLE]
+    if existing and "--force" not in sys.argv:
+        sys.exit(f"Ya existe un Project '{PROJECT_TITLE}' (#{existing[0]['number']}). "
+                 "Bórralo con  python scripts/delete_github_project.py --yes  o reejecuta con --force.")
     proj = gh_json("project", "create", "--owner", OWNER, "--title", PROJECT_TITLE, "--format", "json")
     number, project_id = str(proj["number"]), proj["id"]
     print(f"    #{number} ({proj.get('url','')})")
