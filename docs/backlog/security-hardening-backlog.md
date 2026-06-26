@@ -4,8 +4,11 @@
 ejes: **Seguridad (Identidad y AppSec), Infra, Datos, Observabilidad,
 Gobernanza**. Severidad: 🔴 alto · 🟠 medio · 🟡 bajo.
 
-Estas tareas se vuelcan al **GitHub Project** del repositorio con
-[`scripts/seed-github-project.sh`](../../scripts/seed-github-project.sh).
+Estas tareas se vuelcan al **GitHub Project** con
+[`scripts/seed_github_project.py`](../../scripts/seed_github_project.py) (atómico
+y jerárquico: crea el campo `Epic`, enlaza el proyecto al repo y crea relaciones
+sub-issue épica→tareas). Para limpiar todo:
+[`scripts/delete_github_project.py`](../../scripts/delete_github_project.py).
 Labels: `epic`, `task`, `area/*`, `sev/{high,medium,low}`.
 
 ---
