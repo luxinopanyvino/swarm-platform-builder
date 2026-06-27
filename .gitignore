@@ -60,3 +60,12 @@ htmlcov/
 storage/
 backend/app/.rag_local/
 docs/.vitepress/cache/
+
+# Local SQLite databases (no versionar datos de desarrollo/tests)
+backend/data/*.db
+backend/tests/*.db
+
+# Claude Code: configuración personal (puede contener secretos/credenciales).
+# La configuración compartida del equipo va en .claude/settings.json (versionada).
+.claude/settings.local.json
+.claude/*.local.json
