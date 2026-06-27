@@ -56,8 +56,25 @@ Una tarea/épica está *Ready* cuando:
 
 ## 7. Gestión del trabajo
 
-- El backlog vive en el **GitHub Project** del repositorio (ver
-  `docs/backlog/`). Épicas y tareas etiquetadas por `area/*` y `sev/*`.
+**Fuentes de verdad (separación definición ↔ ejecución):**
+
+| Artefacto | Es fuente de verdad de | Cómo se actualiza |
+|-----------|------------------------|-------------------|
+| `docs/specs` + `docs/adr` | **Definición**: qué trabajo existe, criterios de aceptación, decisiones | Editando la spec/ADR vía PR (sección 8 *Backlog* de cada spec) |
+| **GitHub Project / Issues** | **Ejecución**: open/closed, progreso, asignados, prioridad | En GitHub, durante el trabajo diario |
+| `docs/backlog/*.md` | **Overview** humano de alto nivel | A mano, refleja el alcance vigente |
+
+- El backlog operativo vive en el **GitHub Project**; épicas y tareas etiquetadas
+  por `epic`/`task`, `area/*` y `sev/*`.
+- La **definición** de épicas/tareas se declara en el bloque estructurado
+  `sdd-sync` de cada spec (sección 8 del [TEMPLATE](../specs/TEMPLATE.md)). El
+  agente [`sdd-sync`](../../.claude/agents/sdd-sync.md) (comando `/sdd-sync`)
+  reconcilia esa definición con los issues: **crea/actualiza** la definición pero
+  **nunca** toca el estado de ejecución (no cierra/reabre/borra). Dry-run por
+  defecto; aplica con `--apply`.
+- [`scripts/seed_github_project.py`](../../scripts/seed_github_project.py) es un
+  **bootstrap de un solo uso** (creación inicial del Project), **no** un sync
+  incremental. Para mantener el backlog al día tras el bootstrap se usa `/sdd-sync`.
 - Prioridad: primero 🔴, luego 🟠 de bajo esfuerzo, según
   [ADR-0003](../adr/0003-security-baseline-and-threat-model.md).
 

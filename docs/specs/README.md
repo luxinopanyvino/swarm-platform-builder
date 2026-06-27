@@ -25,6 +25,11 @@ Draft ──▶ Ready (cumple DoR) ──▶ In progress ──▶ Done (cumple 
   o comprobación los puede validar).
 - Las specs enlazan a su ADR (si lo hay) y a su épica del backlog.
 - Cambios de comportamiento → nueva versión o `Superseded`.
+- La **épica y tareas** de la spec se declaran en el bloque estructurado
+  `sdd-sync` (sección 8 del [TEMPLATE](TEMPLATE.md)). El agente
+  [`sdd-sync`](../../.claude/agents/sdd-sync.md) (comando `/sdd-sync`) reconcilia
+  ese bloque con el GitHub Project sin tocar el estado de ejecución. Ver
+  [GOVERNANCE §7](../governance/GOVERNANCE.md).
 
 ## Índice
 

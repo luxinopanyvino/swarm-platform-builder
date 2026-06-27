@@ -12,6 +12,13 @@ dependencias entre tareas.
   5. Relaciones sub-issue (épica → tareas) para jerarquía nativa.
   6. Segunda pasada: inyecta "Depende de: #N" con los números reales de issue.
 
+BOOTSTRAP DE UN SOLO USO — no es un sync incremental. Se ejecuta una vez para
+crear el Project desde cero (se niega a correr si ya existe, salvo --force, que
+recrea de forma destructiva). Para mantener el backlog al día tras el bootstrap,
+la definición vive en las specs (bloque `sdd-sync`) y se reconcilia con el
+comando `/sdd-sync` (agente .claude/agents/sdd-sync.md), que actualiza issues sin
+tocar su estado de ejecución. Ver docs/governance/GOVERNANCE.md §7.
+
 Requisitos: gh CLI autenticado con scope `project` (o GH_TOKEN con ese scope).
 Uso:        python scripts/seed_github_project.py [--force]
 """

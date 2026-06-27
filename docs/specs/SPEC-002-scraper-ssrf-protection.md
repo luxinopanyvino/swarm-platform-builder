@@ -75,3 +75,19 @@ verificación TLS (MITM).
 
 - Métrica/contador de URLs bloqueadas por egress.
 - Documentar `SCRAPER_ALLOWED_DOMAINS` en `.env.example`.
+
+## 8. Backlog (sincronización SDD)
+
+```yaml
+# sdd-sync v1
+epic:
+  id: E2
+  title: "Seguridad: Aplicación (AppSec)"
+  area: area/security
+tasks:
+  - id: T2.1
+    title: Protección SSRF en el scraper + quitar verify=False
+    sev: high
+    depends_on: []
+    acceptance: [AC1, AC2, AC3, AC4, AC5]
+```

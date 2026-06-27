@@ -4,10 +4,17 @@
 ejes: **Seguridad (Identidad y AppSec), Infra, Datos, Observabilidad,
 Gobernanza**. Severidad: 🔴 alto · 🟠 medio · 🟡 bajo.
 
-Estas tareas se vuelcan al **GitHub Project** con
+Este documento es un **overview** de alto nivel. La **fuente de verdad** de la
+definición de épicas/tareas son las specs (bloque `sdd-sync`, sección 8 del
+[TEMPLATE](../specs/TEMPLATE.md)); el **estado de ejecución** vive en el GitHub
+Project (ver [GOVERNANCE §7](../governance/GOVERNANCE.md)).
+
+El **bootstrap inicial** del GitHub Project se hizo con
 [`scripts/seed_github_project.py`](../../scripts/seed_github_project.py) (atómico
 y jerárquico: crea el campo `Epic`, enlaza el proyecto al repo y crea relaciones
-sub-issue épica→tareas). Para limpiar todo:
+sub-issue épica→tareas). Es un **script de un solo uso**, no un sync incremental;
+para mantener el backlog al día tras el bootstrap usa el comando **`/sdd-sync`**
+(agente [`sdd-sync`](../../.claude/agents/sdd-sync.md)). Para limpiar todo:
 [`scripts/delete_github_project.py`](../../scripts/delete_github_project.py).
 Labels: `epic`, `task`, `area/*`, `sev/{high,medium,low}`.
 
