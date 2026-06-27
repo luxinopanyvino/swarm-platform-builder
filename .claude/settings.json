@@ -18,5 +18,18 @@
       "Bash(gh run list:*)",
       "Bash(gh run view:*)"
     ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python .claude/hooks/guard_git.py"
+          }
+        ]
+      }
+    ]
   }
 }
