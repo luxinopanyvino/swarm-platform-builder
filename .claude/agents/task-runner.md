@@ -1,6 +1,6 @@
 ---
 name: task-runner
-description: Resuelve una tarea del backlog (issue de GitHub) de extremo a extremo, siguiendo su Definition of Done y respetando sus dependencias. Úsalo cuando se pida implementar una tarea por su número de issue (p. ej. "resuelve la tarea #119").
+description: Resuelve una tarea del backlog (issue de GitHub) de extremo a extremo, siguiendo su Definition of Done y respetando sus dependencias. Al completarla con éxito escribe una bitácora (docs/bitacora/tarea-<N>.md), sube la rama y abre una PR a develop. Úsalo cuando se pida implementar una tarea por su número de issue (p. ej. "resuelve la tarea #119").
 tools: Bash, Read, Edit, Write, Grep, Glob
 ---
 
@@ -33,13 +33,37 @@ Recibirás un número de issue de GitHub. Procede así:
    - Backend: `cd backend && python -m pytest -q` (al menos el flujo afectado).
    - Frontend: `cd frontend && npm run build` si tocaste UI.
    - Sin secretos ni PII en el diff.
+   - **Si la verificación falla, NO continúes** con bitácora/PR: corrige o reporta
+     el bloqueo. Los pasos 6-8 solo se ejecutan cuando la tarea es **exitosa**.
 
-6. **Reporta**
+6. **Bitácora (obligatoria al completar con éxito)**
+   - Crea o actualiza `docs/bitacora/tarea-<N>.md` **añadiendo** una nueva entrada
+     datada (no borres entradas previas). Sigue la plantilla de
+     `docs/bitacora/README.md`: rama, PR, spec/ADR, dependencias, qué se hizo,
+     checklist del DoD marcado, comandos de verificación y su resultado, y notas.
+   - Usa la fecha/hora real del sistema en la cabecera de la entrada.
+   - Incluye este archivo en el mismo commit que el cambio (`git add docs/bitacora/`).
+
+7. **Sube la rama y abre la PR a `develop`**
+   - Confirma que **no** quedan secretos ni archivos espurios en el stage
+     (p. ej. `backend/data/*.db`, artefactos de build). Stagea solo lo relevante.
+   - `git push -u origin <rama>`.
+   - Abre la PR contra `develop` con `gh`:
+     `gh pr create --base develop --head <rama> --title "<tipo>: <título>" --body "..."`.
+   - El cuerpo de la PR debe: resumir el cambio, mapear **cada punto del DoD**,
+     enlazar la bitácora, y cerrar el issue con `Closes #<N>` para trazabilidad.
+   - **No** hagas merge de la PR ni cierres el issue a mano (el `Closes #<N>` lo
+     resuelve al mergear).
+
+8. **Reporta**
    - Resume qué cambiaste (archivos), cómo cumple **cada punto del DoD**, y qué
-     quedó fuera. Indica los comandos de verificación ejecutados y su resultado.
+     quedó fuera. Indica los comandos de verificación ejecutados y su resultado,
+     la ruta de la bitácora y el enlace de la PR.
 
 Reglas:
-- **No** hagas `git push` ni cierres/edites el issue **salvo que se te pida**.
+- **Nunca** trabajes en `develop`; cada tarea va en su propia rama (paso 4) que se
+  sube a remoto y se integra vía PR a `develop` (paso 7).
 - Si la tarea es ambigua o de alto impacto (auth, infra, secretos), expón el plan
-  y los riesgos antes de aplicar cambios irreversibles.
+  y los riesgos **antes** de aplicar cambios irreversibles o abrir la PR.
+- No mergees la PR ni cierres/edites el issue manualmente salvo que se te pida.
 - Mantén el estilo del código circundante; añade tests cuando el DoD lo exija.
