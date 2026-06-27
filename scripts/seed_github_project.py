@@ -40,6 +40,7 @@ LABELS = [
     ("area/backend", "0052cc", "Backend / datos"),
     ("area/observability", "fbca04", "Observabilidad"),
     ("area/governance", "5319e7", "Gobernanza / calidad / CI"),
+    ("area/ux", "c2e0c6", "Experiencia de usuario / UI / accesibilidad"),
     ("sev/high", "b60205", "Severidad alta"),
     ("sev/medium", "d93f0b", "Severidad media"),
     ("sev/low", "fef2c0", "Severidad baja"),

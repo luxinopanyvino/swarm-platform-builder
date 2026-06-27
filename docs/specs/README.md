@@ -37,6 +37,7 @@ Draft ──▶ Ready (cumple DoR) ──▶ In progress ──▶ Done (cumple 
 |------|--------|--------|-------|
 | [SPEC-001](SPEC-001-secure-registration-rbac.md) | Registro seguro y RBAC de mínimo privilegio | Ready | E1 |
 | [SPEC-002](SPEC-002-scraper-ssrf-protection.md) | Protección SSRF del scraper del Investigador | Ready | E2 |
+| [SPEC-003](SPEC-003-ux-design-system-accessibility.md) | Sistema de diseño y accesibilidad de la UI | Ready | E7 |
 
 > El resto de remediaciones están en
 > [`docs/backlog/security-hardening-backlog.md`](../backlog/security-hardening-backlog.md);
