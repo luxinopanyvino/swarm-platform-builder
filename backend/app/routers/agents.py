@@ -598,12 +598,16 @@ async def run_agent_pipeline(
     article_id: UUID,
     req: AgentRunRequest,
     background_tasks: BackgroundTasks,
+    resume: bool = False,
     token_data=Depends(get_current_user),
     session: AsyncSession = Depends(get_session)
 ):
     """
     Run the multi-agent pipeline on a specific article in the background.
     Compiles and executes LangGraph nodes in the requested flow sequence.
+
+    When ``resume`` is true, the run continues from the last persisted checkpoint
+    (the agent that previously failed) instead of restarting from the first agent.
     """
     # Verify article exists and belongs to the authenticated author
     stmt = select(ArticleModel).where(ArticleModel.id == article_id)
@@ -685,9 +689,11 @@ async def run_agent_pipeline(
         # the already-generated content instead of an empty draft.
         initial_draft_text=article.body or "",
         article_outline=req.article_outline,
+        resume=resume,
     )
-    
-    return {"status": "accepted", "message": "Agent execution pipeline started"}
+
+    action = "resumed" if resume else "started"
+    return {"status": "accepted", "message": f"Agent execution pipeline {action}", "resumed": resume}
 
 
 @router.delete("/{article_id}/run", status_code=200)

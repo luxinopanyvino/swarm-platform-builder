@@ -8,8 +8,10 @@ from typing import Dict, Any, List
 
 from sqlalchemy import select
 from langgraph.graph import StateGraph, START, END
+from langgraph.checkpoint.memory import InMemorySaver
 
 from app.shared.database import AsyncSessionLocal
+from app.shared.llm import TransientLLMError
 from app.models import AgentRunModel
 from app.modules.agents.domain.entities import AgentState
 from app.modules.agents.adapters.investigador import run_investigador
@@ -26,6 +28,26 @@ active_streams: Dict[uuid.UUID, list] = {}
 
 # Global registry for active pipeline tasks: article_id -> asyncio.Task
 active_tasks: Dict[uuid.UUID, asyncio.Task] = {}
+
+# LangGraph checkpointer: persists the graph state after every completed node so a
+# failed pipeline can be resumed from the last successful step instead of restarting.
+# Keyed by thread_id == str(article_id). In-memory: survives transient agent errors
+# (e.g. Ollama momentarily unreachable) while the backend process keeps running.
+_pipeline_checkpointer = InMemorySaver()
+
+
+def _thread_config(article_id: uuid.UUID) -> Dict[str, Any]:
+    """Build the LangGraph config that scopes checkpoints to a single article run."""
+    return {"configurable": {"thread_id": str(article_id)}}
+
+
+async def has_pipeline_checkpoint(article_id: uuid.UUID) -> bool:
+    """Return True if a resumable checkpoint exists for this article's pipeline."""
+    try:
+        tuple_ = await _pipeline_checkpointer.aget_tuple(_thread_config(article_id))
+        return tuple_ is not None
+    except Exception:
+        return False
 
 # Pending human-in-the-loop decisions: article_id -> Future resolved by the user
 pending_decisions: Dict[uuid.UUID, "asyncio.Future[str]"] = {}
@@ -349,7 +371,9 @@ class Orchestrator:
             else:
                 workflow.add_edge(node_name, flow_sequence[i + 1])
 
-        return workflow.compile()
+        # Compile with the shared checkpointer so each completed node is persisted and
+        # the run can be resumed from the last successful step after a failure.
+        return workflow.compile(checkpointer=_pipeline_checkpointer)
 
     @classmethod
     async def run(
@@ -364,9 +388,33 @@ class Orchestrator:
         context_description: str = "",
         initial_draft_text: str = "",
         article_outline: str = "",
+        resume: bool = False,
     ) -> Dict[str, Any]:
-        """Execute the compiled LangGraph flow and return the final state."""
+        """Execute the compiled LangGraph flow and return the final state.
+
+        When ``resume`` is True, re-invoke the graph from the last persisted
+        checkpoint (the node that previously failed) instead of starting over, so
+        the work already done by completed agents is preserved.
+        """
         compiled_graph = cls.compile_graph(flow_sequence)
+        config = _thread_config(article_id)
+
+        # Resume only makes sense if a checkpoint actually exists; otherwise fall
+        # back to a clean run so we never hang waiting for non-existent state.
+        if resume and not await has_pipeline_checkpoint(article_id):
+            logger.warning(
+                "Resume requested for article %s but no checkpoint found — starting fresh.",
+                article_id,
+            )
+            resume = False
+
+        if not resume:
+            # Clear any stale checkpoint from a previous attempt so a fresh run
+            # starts from START instead of resuming an old thread.
+            try:
+                await _pipeline_checkpointer.adelete_thread(str(article_id))
+            except Exception:
+                pass
 
         initial_state = AgentState(
             article_id=article_id,
@@ -390,7 +438,8 @@ class Orchestrator:
             article_outline=article_outline,
         )
 
-        logger.info(f"Starting LangGraph run for article {article_id} with sequence {flow_sequence}")
+        verb = "Resuming" if resume else "Starting"
+        logger.info(f"{verb} LangGraph run for article {article_id} with sequence {flow_sequence}")
 
         # Register this coroutine as a cancellable task
         current_task = asyncio.current_task()
@@ -400,17 +449,61 @@ class Orchestrator:
         # Open log buffer for this run
         _log_buffers[article_id] = []
         ts_start = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        header_title = "PIPELINE LOG (REANUDADO)" if resume else "PIPELINE LOG"
         _log_buffers[article_id].append(
             f"{'='*60}\n"
-            f"PIPELINE LOG — {title}\n"
+            f"{header_title} — {title}\n"
             f"Artículo ID : {article_id}\n"
             f"Inicio      : {ts_start}\n"
             f"Agentes     : {' → '.join(flow_sequence)}\n"
             f"{'='*60}"
         )
+        if resume:
+            publish_event(article_id, {
+                "type": "log", "agent": "pipeline",
+                "message": "↻ Reanudando pipeline desde el último checkpoint", "level": "info",
+            })
 
         try:
-            final_state = await compiled_graph.ainvoke(initial_state)
+            # On resume, pass None so LangGraph continues from the checkpoint
+            # (re-running the node that failed) rather than re-seeding from START.
+            # A transient failure (e.g. Ollama briefly unreachable) that survives the
+            # LLM-layer retries is auto-resumed from the last checkpoint a few times
+            # before we surface the error for a manual retry.
+            from app.core.config import settings
+            max_auto = int(getattr(settings, "PIPELINE_AUTO_RESUME_ATTEMPTS", 2) or 0)
+            auto_delay = float(getattr(settings, "PIPELINE_AUTO_RESUME_DELAY", 3.0) or 0.0)
+
+            local_resume = resume
+            auto_attempt = 0
+            while True:
+                try:
+                    graph_input = None if local_resume else initial_state
+                    final_state = await compiled_graph.ainvoke(graph_input, config=config)
+                    break
+                except asyncio.CancelledError:
+                    raise
+                except TransientLLMError as exc:
+                    can_auto = (
+                        auto_attempt < max_auto
+                        and await has_pipeline_checkpoint(article_id)
+                    )
+                    if not can_auto:
+                        raise
+                    auto_attempt += 1
+                    publish_event(article_id, {
+                        "type": "log", "agent": "pipeline", "level": "warn",
+                        "message": (
+                            f"↻ Error transitorio; reanudando automáticamente desde el "
+                            f"checkpoint (intento {auto_attempt}/{max_auto}) en {auto_delay:.0f}s…"
+                        ),
+                    })
+                    logger.warning(
+                        "Auto-resuming article %s after transient error (attempt %d/%d): %s",
+                        article_id, auto_attempt, max_auto, exc,
+                    )
+                    await asyncio.sleep(auto_delay)
+                    local_resume = True  # subsequent attempts continue from checkpoint
             ts_end = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             _log_buffers.setdefault(article_id, []).append(
                 f"\n{'='*60}\nFIN — {ts_end} — Pipeline completado con éxito\n{'='*60}"
@@ -418,6 +511,11 @@ class Orchestrator:
             publish_event(article_id, {"type": "done"})
             logger.info(f"Completed LangGraph run for article {article_id}")
             _flush_log_file(article_id, title)
+            # Run finished cleanly — drop the checkpoint to free memory.
+            try:
+                await _pipeline_checkpointer.adelete_thread(str(article_id))
+            except Exception:
+                pass
             return final_state
         except asyncio.CancelledError:
             ts_end = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -434,7 +532,12 @@ class Orchestrator:
             _log_buffers.setdefault(article_id, []).append(
                 f"\n{'='*60}\nERROR — {ts_end} — {exc}\n{'='*60}"
             )
-            publish_event(article_id, {"type": "done_error", "error": str(exc)})
+            # A checkpoint of the last successful node remains, so the run can be
+            # resumed from where it broke. Tell the client it may offer "resume".
+            can_resume = await has_pipeline_checkpoint(article_id)
+            publish_event(article_id, {
+                "type": "done_error", "error": str(exc), "can_resume": can_resume,
+            })
             logger.error(f"LangGraph run failed for article {article_id}: {exc}")
             _flush_log_file(article_id, title)
             raise

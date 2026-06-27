@@ -43,6 +43,18 @@ class Settings(BaseModel):
     # LLM Provider — "ollama" (default, on-prem) | "openai" (OpenAI-compatible API)
     LLM_PROVIDER: str = "ollama"
 
+    # LLM resilience — automatic retry of transient failures (connection refused,
+    # timeouts, 5xx, empty responses) with exponential backoff + jitter.
+    LLM_MAX_RETRIES: int = 3          # extra attempts after the first try (0 disables)
+    LLM_RETRY_BASE_DELAY: float = 1.0  # seconds; first backoff, doubles each retry
+    LLM_RETRY_MAX_DELAY: float = 10.0  # cap for a single backoff wait
+
+    # Pipeline auto-resume — when a node fails with a transient error even after the
+    # LLM retries above, the orchestrator resumes from the last checkpoint this many
+    # times (with backoff) before surfacing the failure for a manual retry.
+    PIPELINE_AUTO_RESUME_ATTEMPTS: int = 2
+    PIPELINE_AUTO_RESUME_DELAY: float = 3.0
+
     # OpenAI / OpenAI-compatible (Azure, vLLM, Groq, etc.)
     OPENAI_API_KEY: str = ""
     OPENAI_MODEL: str = "gpt-4o-mini"
@@ -127,6 +139,11 @@ def _build_settings() -> Settings:
         "MINIO_ROOT_PASSWORD": minio.get("root_password", "minioadmin"),
         # LLM provider
         "LLM_PROVIDER": yaml_config.get("llm", {}).get("provider", "ollama"),
+        "LLM_MAX_RETRIES": yaml_config.get("llm", {}).get("max_retries", 3),
+        "LLM_RETRY_BASE_DELAY": yaml_config.get("llm", {}).get("retry_base_delay", 1.0),
+        "LLM_RETRY_MAX_DELAY": yaml_config.get("llm", {}).get("retry_max_delay", 10.0),
+        "PIPELINE_AUTO_RESUME_ATTEMPTS": yaml_config.get("llm", {}).get("auto_resume_attempts", 2),
+        "PIPELINE_AUTO_RESUME_DELAY": yaml_config.get("llm", {}).get("auto_resume_delay", 3.0),
         "OPENAI_API_KEY": yaml_config.get("openai", {}).get("api_key", ""),
         "OPENAI_MODEL": yaml_config.get("openai", {}).get("model", "gpt-4o-mini"),
         "OPENAI_EMBED_MODEL": yaml_config.get("openai", {}).get("embed_model", "text-embedding-3-small"),

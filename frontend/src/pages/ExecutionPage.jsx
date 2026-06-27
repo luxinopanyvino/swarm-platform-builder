@@ -39,6 +39,7 @@ export default function ExecutionPage() {
   const [preview, setPreview] = useState('');
   const [done, setDone] = useState(false);
   const [pipelineFailed, setPipelineFailed] = useState(false);
+  const [canResume, setCanResume] = useState(false);
   const [cancelled, setCancelled] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [runCount, setRunCount] = useState(0);
@@ -135,6 +136,7 @@ export default function ExecutionPage() {
         } else if (data.type === 'done_error') {
           setDone(true);
           setPipelineFailed(true);
+          setCanResume(data.can_resume !== false);
           addLog(`Pipeline fallido: ${data.error || 'error desconocido'}`, 'error');
           evtSource.close();
         } else if (data.type === 'cancelled') {
@@ -161,17 +163,25 @@ export default function ExecutionPage() {
 
   // Trigger the actual pipeline run — ref guard prevents double-fire in React StrictMode
   const pipelineStarted = useRef(false);
+  // When true, the next trigger resumes from the last checkpoint instead of restarting
+  const resumeRef = useRef(false);
   useEffect(() => {
     if (flowSequence.length > 0 && !pipelineStarted.current) {
       pipelineStarted.current = true;
-      agentsApi.run(articleId, {
+      const isResume = resumeRef.current;
+      resumeRef.current = false;
+      const payload = {
         flow_sequence: flowSequence,
         agent_settings: agentSettings,
         keywords: runKeywords,
         context_description: contextDescription,
         article_outline: articleOutline,
-      }).catch(() => {
-        toast.error('Error al iniciar el pipeline');
+      };
+      const request = isResume
+        ? agentsApi.resume(articleId, payload)
+        : agentsApi.run(articleId, payload);
+      request.catch(() => {
+        toast.error(isResume ? 'Error al reanudar el pipeline' : 'Error al iniciar el pipeline');
       });
     }
   }, [runCount]);
@@ -199,8 +209,27 @@ export default function ExecutionPage() {
     setPreview('');
     setDone(false);
     setPipelineFailed(false);
+    setCanResume(false);
     setCancelled(false);
     setCancelling(false);
+    resumeRef.current = false;
+    pipelineStarted.current = false;
+    setRunCount(c => c + 1);
+  };
+
+  // Resume from the last checkpoint: keep the work done by completed agents and
+  // only re-run the failed step onward.
+  const handleResume = () => {
+    setSteps((current) => current.map((step) => (
+      step.status === 'completed' ? step : { ...step, status: 'waiting', output: '' }
+    )));
+    setPreview((current) => (current.startsWith('Error:') ? '' : current));
+    setDone(false);
+    setPipelineFailed(false);
+    setCanResume(false);
+    setCancelled(false);
+    setCancelling(false);
+    resumeRef.current = true;
     pipelineStarted.current = false;
     setRunCount(c => c + 1);
   };
@@ -403,6 +432,13 @@ export default function ExecutionPage() {
                 onClick={() => navigate(`/dashboard/articles/${articleId}`)}>
                 <FileText size={14} /> Ver artículo
               </button>
+              {pipelineFailed && canResume && (
+                <button className="btn btn-primary w-full"
+                  onClick={handleResume}
+                  aria-label="Reanudar el pipeline desde el último checkpoint">
+                  <Play size={14} /> Reanudar desde el último checkpoint
+                </button>
+              )}
               {pipelineFailed && (
                 <button className="btn btn-ghost w-full"
                   onClick={() => navigate('/dashboard/flow-designer')}>

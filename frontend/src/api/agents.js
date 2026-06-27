@@ -7,6 +7,10 @@ export const agentsApi = {
   run: (articleId, data) =>
     api.post(`/api/v1/agents/${articleId}/run`, data).then(r => r.data),
 
+  // Resume a failed pipeline from its last checkpoint (keeps completed agents' work)
+  resume: (articleId, data) =>
+    api.post(`/api/v1/agents/${articleId}/run`, data, { params: { resume: true } }).then(r => r.data),
+
   // Cancel an in-progress pipeline run
   cancel: (articleId) =>
     api.delete(`/api/v1/agents/${articleId}/run`).then(r => r.data),
