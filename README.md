@@ -725,46 +725,97 @@ Además de los agentes *de producto* (el pipeline editorial), el repositorio
 incluye **agentes de desarrollo** en `.claude/` para trabajar el backlog de
 hardening de forma asistida.
 
-### Lógica del agente `task-runner`
+Hay **dos** agentes de desarrollo, cada uno con su comando:
 
-[`.claude/agents/task-runner.md`](.claude/agents/task-runner.md) define un
-subagente que resuelve **una tarea del backlog de extremo a extremo** a partir de
-su número de issue de GitHub:
+| Agente | Comando | Qué hace |
+|--------|---------|----------|
+| [`sdd-sync`](.claude/agents/sdd-sync.md) | `/sdd-sync [--apply]` | Reconcilia las épicas/tareas del GitHub Project con la **fuente de verdad** (specs/ADRs). |
+| [`task-runner`](.claude/agents/task-runner.md) | `/resolve-task <#>` | Implementa **una** tarea del backlog de extremo a extremo. |
 
-1. **Lee la tarea** con `gh issue view <N>` y extrae *Problema*, *Definition of
-   Done* y *Dependencias* ("⛔ Bloqueada por: #X").
-2. **Verifica dependencias**: si alguna está abierta, se detiene y avisa (no
-   implementa tareas bloqueadas).
-3. **Carga contexto**: localiza la spec/ADR referenciados y los archivos
-   implicados.
-4. **Implementa** en una rama `sec/…`/`feat/…` (nunca en `develop`).
+### Flujo de funcionamiento (de la spec al merge)
+
+```
+docs/specs/SPEC-NNN (bloque sdd-sync)          ← fuente de verdad (definición)
+        │  /sdd-sync --apply
+        ▼
+GitHub Project: épica + tareas (issues)        ← estado de ejecución
+        │  /resolve-task <#>
+        ▼
+task-runner: rama feat/… → implementa → pytest/build
+        │  bitácora (docs/bitacora) + push + PR a develop (Closes #N)
+        ▼
+CI (tests · build · specs · secretos) + review + branch protection
+        ▼
+Merge a develop  →  criterios de aceptación verificados
+```
+
+Los dos agentes cubren tramos distintos del ciclo SDD: `sdd-sync` lleva la
+**definición** (specs) al backlog; `task-runner` lleva una tarea del backlog a
+**código + PR**. El estado de ejecución (open/closed, progreso) vive siempre en
+GitHub; los agentes no lo manipulan a mano.
+
+### `sdd-sync` — del spec al backlog
+
+[`.claude/agents/sdd-sync.md`](.claude/agents/sdd-sync.md) reconcilia el backlog
+con las especificaciones, **sin tocar el estado de ejecución**:
+
+1. Lee `docs/specs/SPEC-*.md` en estado `Ready`/`In progress`/`Done` y su bloque
+   estructurado `sdd-sync` (sección 8 de la spec): épica + tareas con `id`
+   estable, `sev`, `depends_on` y `acceptance`.
+2. Empareja con los issues `epic`/`task` por un **marcador oculto** del cuerpo
+   (no por título): así es idempotente y no duplica.
+3. Calcula el diff y lo clasifica: **CREATE · UPDATE · ADOPT** (adopta issues del
+   bootstrap añadiéndoles el marcador) **· DRIFT** (huérfanos) **· NO GESTIONADO**.
+4. **Dry-run por defecto** (solo imprime el plan); aplica los cambios únicamente
+   con `--apply`. Nunca cierra, borra ni reabre issues.
+
+### `task-runner` — implementa una tarea
+
+[`.claude/agents/task-runner.md`](.claude/agents/task-runner.md) resuelve una
+tarea a partir de su número de issue:
+
+1. **Lee la tarea** (`gh issue view <N>`): *Problema*, *Definition of Done* y
+   *Dependencias* ("Bloqueada por: #X").
+2. **Verifica dependencias**: si alguna está abierta, se detiene y avisa.
+3. **Carga contexto**: spec/ADR referenciados y archivos implicados.
+4. **Implementa** en una rama `feat|fix|sec|docs|chore/…` (nunca en `develop`).
 5. **Verifica** (`pytest`, `npm run build`) como parte del DoD.
-6. **Reporta** el cumplimiento de cada punto del DoD. No hace `git push` ni cierra
-   issues salvo que se le pida.
+6. **Escribe la bitácora** datada en [`docs/bitacora/`](docs/bitacora/) (una
+   entrada por ejecución exitosa).
+7. **Sube la rama y abre la PR** a `develop` con `Closes #<N>`. No mergea la PR ni
+   cierra el issue a mano (el `Closes` lo hace al mergear).
+8. **Reporta** el cumplimiento de cada punto del DoD, la bitácora y el enlace de PR.
 
-El backlog y los issues se generan con los scripts de
-[`scripts/`](scripts/) (ver [SDD](#spec-driven-development-sdd)).
+### Guardarraíles y CI (harness)
 
-### Usar agentes desde la terminal
+Refuerzan la gobernanza a dos niveles:
+
+- **Guardarraíles de sesión** ([`.claude/hooks/`](.claude/hooks/), hooks
+  `PreToolUse`): bloquean commit/push directo a ramas protegidas, force-push,
+  `--no-verify`, `git add -f` de secretos y `rm -rf` catastrófico; piden
+  confirmación en operaciones destructivas. Avisan **antes** de actuar.
+- **CI** ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)): en cada PR a
+  `develop` corre tests de backend, build de frontend, validación de specs
+  ([`scripts/validate_specs.py`](scripts/validate_specs.py)) y escaneo de secretos.
+
+### Usar los agentes desde la terminal
 
 ```bash
-# Resolver una tarea por su número de issue
+# Implementar una tarea por su número de issue (una o varias)
 bash scripts/run-task.sh 119
-
-# Resolver varias (1..N)
 bash scripts/run-task.sh 119 120 121
 ```
 
-El wrapper invoca `claude -p "/resolve-task <#issue> …"`. También puedes usarlo
-dentro de una sesión interactiva de Claude Code:
+O dentro de una sesión interactiva de Claude Code:
 
 ```text
-/resolve-task 119
+/sdd-sync            # plan de reconciliación (dry-run)
+/sdd-sync --apply    # aplica los cambios al GitHub Project
+/resolve-task 119    # implementa la tarea #119
 ```
 
-El comando [`/resolve-task`](.claude/commands/resolve-task.md) lee cada issue y
-delega en el subagente `task-runner`. Requisitos: la CLI `claude` instalada y
-`gh` autenticado (con scope `repo`; y `project` si además gestionas el tablero).
+Requisitos: la CLI `claude` instalada y `gh` autenticado (scope `repo`; y
+`project` si gestionas el tablero/épicas).
 
 ---
 
@@ -778,9 +829,48 @@ que el código. Decisión y proceso en
 
 ```
 Idea ─▶ Spec (docs/specs) ─▶ ADR si hay decisión arquitectónica
-     ─▶ Épica + Tareas (GitHub Project) ─▶ Rama feat/… ─▶ PR contra develop
+     ─▶ Bloque sdd-sync en la spec ─▶ /sdd-sync --apply ─▶ Épica + Tareas (GitHub Project)
+     ─▶ /resolve-task <#> ─▶ Rama feat/… ─▶ PR contra develop
      ─▶ CI verde + revisión ─▶ Verificación de criterios de aceptación ─▶ Merge
 ```
+
+La **fuente de verdad** de la definición es `docs/specs` + `docs/adr`; el
+**estado de ejecución** vive en el GitHub Project. El agente
+[`sdd-sync`](.claude/agents/sdd-sync.md) reconcilia una con otra (ver
+[GOVERNANCE §7](docs/governance/GOVERNANCE.md)).
+
+### Cómo añadir una especificación (y crear tareas nuevas)
+
+1. **Crea la spec** desde [`docs/specs/TEMPLATE.md`](docs/specs/TEMPLATE.md) como
+   `SPEC-NNN-titulo.md` (ID incremental, no se reutiliza). Rellena problema,
+   objetivos, **criterios de aceptación** (Given/When/Then) y el resto.
+2. **Declara épica y tareas** en el bloque `sdd-sync` (sección 8) con `id`
+   estables, `sev`, `depends_on` y `acceptance`. Cambia el **Estado** a `Ready`.
+3. **Regístrala** en el índice de [`docs/specs/README.md`](docs/specs/README.md) y,
+   si hay decisión arquitectónica, añade el **ADR** correspondiente.
+4. Abre la PR `docs/…` a `develop`. La CI valida el formato del bloque con
+   [`scripts/validate_specs.py`](scripts/validate_specs.py).
+5. Tras el merge, ejecuta **`/sdd-sync --apply`** para crear/actualizar la épica y
+   las tareas en el GitHub Project. Luego **`/resolve-task <#>`** por cada tarea.
+
+#### En un área existente vs. un área nueva
+
+Las áreas registradas son: `area/security`, `area/infra`, `area/backend`,
+`area/observability`, `area/governance`.
+
+- **Área existente (p. ej. Observabilidad, `area/observability`, épica E5):** basta
+  con los pasos de arriba; en el bloque `sdd-sync` pon `epic.area: area/observability`
+  y un `epic.id` de esa área (E5) o uno nuevo si abres otra épica.
+- **Área nueva (p. ej. UX/diseño):** primero **da de alta el área** (es un cambio
+  de gobernanza, no solo una spec):
+  1. Añade la label `area/ux` en [`scripts/seed_github_project.py`](scripts/seed_github_project.py) (lista `LABELS`)
+     y créala en GitHub (`gh label create area/ux`).
+  2. Añádela al conjunto `ALLOWED_AREAS` de
+     [`scripts/validate_specs.py`](scripts/validate_specs.py) para que la CI la acepte.
+  3. Refléjala en [GOVERNANCE §7](docs/governance/GOVERNANCE.md) y en el
+     [backlog](docs/backlog/).
+  4. Ya puedes crear la spec con `epic.area: area/ux` y un `epic.id` nuevo, y
+     seguir el flujo normal (`/sdd-sync --apply` → `/resolve-task`).
 
 ### Documentación
 
@@ -788,26 +878,31 @@ Idea ─▶ Spec (docs/specs) ─▶ ADR si hay decisión arquitectónica
 |-----------|-----------|
 | [docs/specs/](docs/specs/) | Especificaciones + plantilla y ciclo de vida (Draft→Ready→Done). |
 | [docs/adr/](docs/adr/) | Architecture Decision Records. |
-| [docs/governance/GOVERNANCE.md](docs/governance/GOVERNANCE.md) | Roles, **Definition of Ready/Done**, política de revisión. |
+| [docs/governance/GOVERNANCE.md](docs/governance/GOVERNANCE.md) | Roles, **Definition of Ready/Done**, política de revisión, fuente de verdad. |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Flujo de contribución (SDD) y estándares. |
 | [SECURITY.md](SECURITY.md) | Política y modelo de amenazas. |
-| [docs/backlog/](docs/backlog/) | Épicas y tareas de hardening. |
+| [docs/backlog/](docs/backlog/) | Épicas y tareas de hardening (overview). |
+| [docs/bitacora/](docs/bitacora/) | Bitácora de tareas resueltas (una entrada por ejecución). |
 
 ### Backlog y GitHub Project
 
-Las épicas y tareas se vuelcan al **GitHub Project** del repositorio (jerárquico:
-campo `Epic`, sub-issues épica→tareas, DoD y dependencias):
+El **bootstrap inicial** del GitHub Project (jerárquico: campo `Epic`,
+sub-issues épica→tareas, DoD y dependencias) se hace una sola vez:
 
 ```bash
-# Crear el Project con todo el backlog (requiere gh con scope project)
+# Bootstrap del Project con todo el backlog (requiere gh con scope project)
 python scripts/seed_github_project.py
 
 # Eliminar el Project y sus issues (destructivo)
 python scripts/delete_github_project.py --yes
 ```
 
+`seed_github_project.py` es un **script de un solo uso**, no un sync incremental.
+A partir del bootstrap, las épicas/tareas se mantienen al día desde las specs con
+**`/sdd-sync --apply`** (agente [`sdd-sync`](.claude/agents/sdd-sync.md)).
+
 Luego, en la UI del proyecto: **View ▸ Group by ▸ Epic**. Para implementar una
-tarea, usa el agente: `bash scripts/run-task.sh <#issue>`.
+tarea, usa el agente: `bash scripts/run-task.sh <#issue>` o `/resolve-task <#>`.
 
 ---
 
