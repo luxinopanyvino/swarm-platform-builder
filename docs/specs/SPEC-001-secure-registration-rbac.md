@@ -63,3 +63,19 @@ tiene riesgo SSRF, ver SPEC-002). Es una escalada de privilegios por diseño.
 
 - Log de auditoría en cambios de rol (épica E6).
 - Documentar la variable `DEFAULT_SIGNUP_ROLE` en `.env.example`.
+
+## 8. Backlog (sincronización SDD)
+
+```yaml
+# sdd-sync v1
+epic:
+  id: E1
+  title: "Seguridad: Identidad y Acceso"
+  area: area/security
+tasks:
+  - id: T1.1
+    title: Rol seguro por defecto en el registro
+    sev: high
+    depends_on: []
+    acceptance: [AC1, AC2, AC3, AC4]
+```
