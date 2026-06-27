@@ -1,0 +1,23 @@
+# Configuración de gitleaks para el escaneo de secretos en CI.
+# Extiende las reglas por defecto y añade una allowlist de falsos positivos
+# conocidos (passwords de fixtures en tests, placeholders de desarrollo).
+title = "swarm-platform-builder gitleaks config"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Falsos positivos conocidos"
+# Rutas excluidas del escaneo (datos de prueba, lockfiles).
+paths = [
+  '''backend/tests/.*''',
+  '''.*package-lock\.json''',
+  '''.*\.lock''',
+]
+# Placeholders/valores de desarrollo que no son secretos reales.
+regexes = [
+  '''your-secret-key-change-in-production''',
+  '''sk-placeholder''',
+  '''ci-secret-not-for-prod''',
+  '''minioadmin''',
+]
