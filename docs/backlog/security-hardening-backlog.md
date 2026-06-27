@@ -84,6 +84,17 @@ Labels: `epic`, `task`, `area/*`, `sev/{high,medium,low}`.
 | T6.5 | Política de retención de datos y tratamiento de PII | 🟡 |
 | T6.6 | Adoptar SDD: plantillas de spec, DoR/DoD, CODEOWNERS (este PR) | 🟠 |
 
+## E7 — Experiencia de Usuario (UX/UI)  · `area/ux`
+> Consistencia visual con el design system y accesibilidad de la UI.
+> Definición en [SPEC-003](../specs/SPEC-003-ux-design-system-accessibility.md);
+> las tareas se materializan con `/sdd-sync --apply`.
+
+| ID | Tarea | Sev |
+|----|-------|-----|
+| T7.1 | Unificar colores en tokens de diseño (sin hex hardcodeado) | 🟠 |
+| T7.2 | Accesibilidad AA en modales (focus trap, foco visible, Esc) | 🟠 |
+| T7.3 | Estados consistentes de carga / vacío / error | 🟡 |
+
 ---
 
 ### Orden recomendado de ejecución

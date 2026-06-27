@@ -25,7 +25,7 @@ SPECS_DIR = Path(__file__).resolve().parents[1] / "docs" / "specs"
 SYNC_STATES = {"Ready", "In progress", "Done"}
 ALLOWED_AREAS = {
     "area/security", "area/infra", "area/backend",
-    "area/observability", "area/governance",
+    "area/observability", "area/governance", "area/ux",
 }
 ALLOWED_SEV = {"high", "medium", "low"}
 
