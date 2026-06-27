@@ -15,10 +15,13 @@ Para **cada** número de issue indicado, en orden:
 3. Lanza el subagente **task-runner** (vía la tool Task) para implementarla de
    extremo a extremo: debe leer su Definition of Done y sus dependencias
    ("Bloqueada por: #X"), verificar que las dependencias estén cerradas, crear una
-   rama, implementar, ejecutar las pruebas y reportar el cumplimiento del DoD.
+   rama, implementar, ejecutar las pruebas, **escribir la bitácora**
+   (`docs/bitacora/tarea-<N>.md`), **subir la rama y abrir una PR a `develop`**
+   (con `Closes #<N>`), y reportar el cumplimiento del DoD.
 4. Si una tarea está bloqueada por una dependencia abierta, **no** la implementes:
    anótalo y continúa con las demás.
 
 Al terminar, presenta un resumen por tarea: estado (resuelta / bloqueada /
-omitida), rama creada y verificación ejecutada. No hagas `git push` ni cierres
-issues salvo que el usuario lo pida explícitamente.
+omitida), rama creada, bitácora, verificación ejecutada y enlace de la PR. El
+agente abre la PR a `develop` pero **no** mergea ni cierra issues a mano (el
+`Closes #<N>` de la PR los cierra al mergear).
