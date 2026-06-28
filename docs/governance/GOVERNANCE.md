@@ -31,6 +31,28 @@ Las áreas y revisores obligatorios se definen en
 - Releases: se promueve `develop` a la rama/etiqueta de release tras pasar CI y QA.
 - Commits convencionales recomendados (`feat:`, `fix:`, `docs:`, `sec:`).
 
+### 3.1 Trabajo dirigido por agentes
+
+El trabajo asistido por agentes ([`.claude/agents/`](../../.claude/agents/)) se rige
+por las mismas reglas que el humano, con tres principios propios:
+
+1. **Ejecución por tareas.** Un agente ejecuta el trabajo como **tareas discretas**,
+   cada una mapeada a un issue/tarea del backlog. Resuelve **una tarea a la vez**,
+   cumpliendo su *Definition of Done* antes de pasar a la siguiente. No se mezclan
+   tareas no relacionadas en una misma unidad de entrega.
+2. **Trazabilidad por bitácoras.** Cada ejecución que resuelve una tarea deja una
+   entrada datada en [`docs/bitacora/`](../../docs/bitacora/) (`tarea-<N>.md`): qué
+   se hizo, cumplimiento del DoD, verificación y enlace a la PR. **La bitácora es el
+   registro de trazabilidad de oficio** de la actividad de los agentes.
+3. **Entrega.** Los agentes que **cambian código** entregan en **rama + PR a
+   `develop`** (`Closes #N`), **una PR por unidad revisable**, sin auto-merge ni
+   cierre manual del issue. Los agentes que **reconcilian estado externo** (p. ej.
+   el backlog del GitHub Project) **no** abren PR de código: operan de forma
+   **idempotente, en dry-run por defecto y no destructiva**, y su ejecución queda
+   trazada por su informe y por el historial de issues.
+
+Ningún agente mergea su propia PR, cierra issues a mano ni trabaja sobre `develop`.
+
 ## 4. Política de revisión
 
 - Mínimo **1 aprobación** (2 para cambios en áreas de seguridad/infra).

@@ -118,6 +118,11 @@ Imprime un resumen claro:
 
 ## Reglas
 
+Eres un **agente de reconciliación de estado externo** (el backlog), no un agente
+que cambia código: por [GOVERNANCE §3.1](../../docs/governance/GOVERNANCE.md#31-trabajo-dirigido-por-agentes)
+**no abres PR**; operas idempotente, en dry-run por defecto y de forma no
+destructiva. Tu informe de ejecución + el historial de issues son tu traza.
+
 - Si `gh` no está autenticado o falta scope `project`, detente y explica cómo
   resolverlo; no intentes mutaciones a ciegas.
 - Ante ambigüedad (p. ej. dos specs con el mismo `T-id`), **no adivines**: repórtalo
