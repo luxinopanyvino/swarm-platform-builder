@@ -671,7 +671,21 @@ async def run_agent_pipeline(
             s["tools_enabled"] = profile.tools_enabled
         if "tools" not in s and profile.tools:
             s["tools"] = profile.tools
-        
+
+    # The user's document selection is attached to the investigador. Propagate it
+    # to every other agent in the flow so RAG-enabled agents (redactor, generic…)
+    # honour the same selection instead of searching the whole knowledge base and
+    # pulling unselected documents (e.g. the seeded welcome doc) into the article.
+    investigador_cfg = req.agent_settings.get("investigador", {})
+    selected_doc_ids = investigador_cfg.get("rag_doc_ids")
+    selected_collection = investigador_cfg.get("rag_collection")
+    if selected_doc_ids:
+        for slug in agent_slugs:
+            s = req.agent_settings.setdefault(slug, {})
+            s.setdefault("rag_doc_ids", selected_doc_ids)
+            if selected_collection:
+                s.setdefault("rag_collection", selected_collection)
+
     scientific_format = article.scientific_format.value if article.scientific_format else "apa"
     
     # Run Orchestrator flow as a background task to allow SSE to immediately stream

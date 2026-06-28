@@ -689,13 +689,25 @@ async def _fetch_agent_results(
     agent_name,
     limit: int,
     api_key: Optional[str] = None,
+    doc_ids: Optional[list] = None,
 ) -> List[Dict[str, Any]]:
-    """Non-semantic fallback that returns chunk payloads (with filename/doc_id)."""
+    """Non-semantic fallback that returns chunk payloads (with filename/doc_id).
+
+    When ``doc_ids`` is provided (the user selected specific documents), the
+    selection takes precedence and the agent-bucket filter is bypassed — exactly
+    like the semantic path — so a fallback never leaks unselected documents.
+    """
+    doc_id_set = set(doc_ids) if doc_ids else None
     if not await is_qdrant_available(qdrant_url, api_key):
         out: List[Dict[str, Any]] = []
         for path in sorted(_local_collection_dir(collection).glob("*.json")):
             data = _load_local_document(path)
-            if not data or not _agent_name_matches(data.get("agent_name"), agent_name):
+            if not data:
+                continue
+            if doc_id_set is not None:
+                if data.get("doc_id") not in doc_id_set:
+                    continue
+            elif not _agent_name_matches(data.get("agent_name"), agent_name):
                 continue
             for chunk in data.get("chunks", []):
                 text = chunk.get("text", "")
@@ -718,8 +730,13 @@ async def _fetch_agent_results(
             check = await client.get(f"/collections/{collection}")
             if check.status_code != 200:
                 return []
+            # Explicit doc_ids take precedence and bypass the agent-bucket filter.
+            if doc_id_set is not None:
+                must = [{"key": "doc_id", "match": {"any": list(doc_id_set)}}]
+            else:
+                must = [_agent_name_clause(agent_name)]
             payload = {
-                "filter": {"must": [_agent_name_clause(agent_name)]},
+                "filter": {"must": must},
                 "limit": limit,
                 "with_payload": True,
                 "with_vector": False,
@@ -761,12 +778,12 @@ async def semantic_search_results(
     agent_name}) so callers can build real citations. Filters by agent bucket(s),
     or by doc_ids only when the user selected specific documents."""
     if not await is_qdrant_available(qdrant_url, api_key):
-        return await _fetch_agent_results(qdrant_url, collection, agent_name, limit, api_key)
+        return await _fetch_agent_results(qdrant_url, collection, agent_name, limit, api_key, doc_ids)
 
     query_vector = await get_embedding(query, ollama_base_url, embedding_model)
     if query_vector is None:
         logger.warning("semantic_search_results: embedding failed, falling back to scroll")
-        return await _fetch_agent_results(qdrant_url, collection, agent_name, limit, api_key)
+        return await _fetch_agent_results(qdrant_url, collection, agent_name, limit, api_key, doc_ids)
 
     headers = {"api-key": api_key} if api_key else {}
     try:
@@ -794,7 +811,7 @@ async def semantic_search_results(
             resp = await client.post(f"/collections/{collection}/points/search", json=payload)
             if resp.status_code != 200:
                 logger.warning(f"Qdrant search returned {resp.status_code}: {resp.text[:200]}")
-                return await _fetch_agent_results(qdrant_url, collection, agent_name, limit, api_key)
+                return await _fetch_agent_results(qdrant_url, collection, agent_name, limit, api_key, doc_ids)
 
             out: List[Dict[str, Any]] = []
             for r in resp.json().get("result", []):
@@ -813,7 +830,7 @@ async def semantic_search_results(
             return out
     except Exception as error:
         logger.warning(f"Semantic RAG search failed for agent '{agent_name}': {error}")
-        return await _fetch_agent_results(qdrant_url, collection, agent_name, limit, api_key)
+        return await _fetch_agent_results(qdrant_url, collection, agent_name, limit, api_key, doc_ids)
 
 
 async def semantic_search_context(

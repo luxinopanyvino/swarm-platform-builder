@@ -246,7 +246,11 @@ async def lifespan(app: FastAPI):
     await ensure_local_admin_user()
     await ensure_dev_users()
     await ensure_alejandria_magazine_project()
-    await _seed_default_rag_document()
+    # The "bienvenida" document is a demo fixture for local development only.
+    # Seeding it in production would pollute real article references, so it is
+    # gated behind DEBUG.
+    if settings.DEBUG:
+        await _seed_default_rag_document()
     yield
 
 

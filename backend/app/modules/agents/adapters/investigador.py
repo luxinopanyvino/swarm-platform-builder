@@ -102,6 +102,15 @@ async def run_investigador(state: Dict[str, Any]) -> Dict[str, Any]:
             api_key=settings.QDRANT_API_KEY,
             doc_ids=rag_doc_ids,
         )
+        # Guard: when the user selected specific documents, never build citations
+        # from anything else — even if an upstream fallback ignored the filter.
+        if rag_doc_ids:
+            allowed = set(rag_doc_ids)
+            before = len(rag_results)
+            rag_results = [r for r in rag_results if r.get("doc_id") in allowed]
+            dropped = before - len(rag_results)
+            if dropped:
+                log(f"🛡️ Descartados {dropped} fragmento(s) de documentos no seleccionados.")
         if rag_results:
             # Build one citation per unique source document (by doc_id), using the
             # real filename as the title instead of a generic placeholder.
