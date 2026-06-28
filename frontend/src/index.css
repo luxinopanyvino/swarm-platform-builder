@@ -19,6 +19,7 @@
   --bg-base:     var(--bg-canvas);
   --bg-elevated: var(--bg-surface);
   --bg-overlay:  var(--bg-inset);
+  --bg-card:     var(--bg-surface);
 
   /* Text */
   --text-primary: var(--text-heading);
