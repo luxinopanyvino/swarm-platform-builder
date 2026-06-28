@@ -103,10 +103,23 @@ Con `--apply`, en dos pasadas para resolver dependencias por número real de iss
    `Bloqueada por: #N` en el cuerpo (consistente con lo que lee el agente
    `task-runner`). Si una dependencia apunta a una tarea inexistente, déjala como
    `Bloqueada por: T1.2 (sin issue)` y avísalo.
+3. **Añadir al Project board (pertenencia, no estado):** cada issue creado o
+   adoptado debe aparecer en el GitHub Project del backlog para ser visible.
+   - Descubre el Project: `gh project list --owner <owner>` y toma el de título
+     `Hardening & Platform Backlog` (su `number`).
+   - Añade cada issue: `gh project item-add <number> --owner <owner> --url <url-del-issue>`.
+   - Es idempotente: si el issue ya es item del Project, `item-add` no duplica.
+   - Requiere scope `project` en `gh`. Si **falta** (`gh auth status` no lista
+     `project`), **no falla la sincronización**: omite este paso y avisa al usuario
+     de que ejecute `gh auth refresh -s project` y vuelva a correr `/sdd-sync --apply`
+     (o añada los issues a mano). Todo lo demás (issues, labels, sub-issues) ya
+     quedó aplicado.
 
 Restricciones absolutas en apply: **solo** `issue create`, `issue edit` (título,
-body, labels) y `addSubIssue`. Prohibido `issue close`, `issue reopen`,
-`issue delete`, reasignar o tocar campos del Project (estado/prioridad).
+body, labels), `addSubIssue` y `project item-add` (pertenencia al board).
+Prohibido `issue close`, `issue reopen`, `issue delete`, reasignar y **cambiar
+campos del Project** (Status, prioridad, columnas): el estado de ejecución es del
+humano, no del agente.
 
 ## Paso 5 — Reportar
 
