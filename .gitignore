@@ -31,7 +31,11 @@ node_modules/
 
 # Build outputs
 frontend/dist/
+frontend/dist-public/
 docs/.vitepress/dist/
+
+# Hostinger: config con secretos (se sube solo al servidor, nunca al repo)
+hostinger/api/db.php
 
 # IDE
 .vscode/
