@@ -1,18 +1,58 @@
 """Auth router: register, login, manage users."""
+import logging
 from datetime import datetime, timedelta
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Header, HTTPException
+from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
+from app.core.rate_limit import account_lockout, login_ip_limiter, register_ip_limiter
 from app.core.security import hash_password, verify_password, create_access_token, verify_token
 from app.models import UserModel, UserRegisterDTO, UserLoginDTO, TokenResponse, UserResponse, UserRole, ProjectModel
 from app.database import get_session
 
+logger = logging.getLogger("app.auth")
+
 router = APIRouter(prefix="/api/v1/auth", tags=["auth"])
+
+
+def _client_ip(request: Request) -> str:
+    """Best-effort client IP for throttling (first X-Forwarded-For hop)."""
+    forwarded = request.headers.get("x-forwarded-for")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    if request.client and request.client.host:
+        return request.client.host
+    return "unknown"
+
+
+def _mask_email(email: str) -> str:
+    """Mask the local part of an email so logs carry no raw PII."""
+    local, _, domain = email.partition("@")
+    if not domain:
+        return "***"
+    head = local[0] if local else ""
+    return f"{head}***@{domain}"
+
+
+def _enforce_ip_rate_limit(limiter, client_ip: str, action: str) -> None:
+    """Raise HTTP 429 when the per-IP sliding window is saturated."""
+    retry_after = limiter.check_and_record(
+        client_ip,
+        settings.AUTH_RATELIMIT_MAX_ATTEMPTS,
+        settings.AUTH_RATELIMIT_WINDOW_SECONDS,
+    )
+    if retry_after is not None:
+        retry = int(retry_after) + 1
+        logger.warning("auth.rate_limit_exceeded action=%s ip=%s", action, client_ip)
+        raise HTTPException(
+            status_code=429,
+            detail="Demasiados intentos. Inténtalo de nuevo más tarde.",
+            headers={"Retry-After": str(retry)},
+        )
 
 
 class AssignRoleDTO(BaseModel):
@@ -41,9 +81,13 @@ def resolve_default_signup_role() -> UserRole:
 @router.post("/register", response_model=TokenResponse)
 async def register(
     req: UserRegisterDTO,
+    request: Request,
     session: AsyncSession = Depends(get_session)
 ):
     """Register a new user."""
+    # Throttle account creation per source IP (anti-abuse / mass signup).
+    _enforce_ip_rate_limit(register_ip_limiter, _client_ip(request), "register")
+
     # Check email exists
     stmt = select(UserModel).where(UserModel.email == req.email)
     existing = await session.execute(stmt)
@@ -70,18 +114,58 @@ async def register(
 @router.post("/login", response_model=TokenResponse)
 async def login(
     req: UserLoginDTO,
+    request: Request,
     session: AsyncSession = Depends(get_session)
 ):
-    """Login user."""
+    """Login user.
+
+    Brute-force protections:
+    * per-IP sliding-window rate limit (429 when exceeded);
+    * per-account lockout after consecutive failed attempts (423 while locked).
+    """
+    client_ip = _client_ip(request)
+    account_key = req.email.strip().lower()
+
+    # 1) Rate-limit the source IP before doing any work.
+    _enforce_ip_rate_limit(login_ip_limiter, client_ip, "login")
+
+    # 2) Reject early if the targeted account is currently locked.
+    remaining = account_lockout.locked_for(account_key)
+    if remaining is not None:
+        logger.warning(
+            "auth.login_blocked_locked account=%s ip=%s", _mask_email(account_key), client_ip
+        )
+        raise HTTPException(
+            status_code=423,
+            detail="Cuenta bloqueada temporalmente por demasiados intentos fallidos.",
+            headers={"Retry-After": str(int(remaining) + 1)},
+        )
+
     stmt = select(UserModel).where(UserModel.email == req.email)
     result = await session.execute(stmt)
     user = result.scalars().first()
-    
+
     if not user or not verify_password(req.password, user.hashed_password):
+        locked = account_lockout.record_failure(
+            account_key,
+            settings.AUTH_LOCKOUT_MAX_FAILED,
+            settings.AUTH_LOCKOUT_SECONDS,
+        )
+        if locked:
+            logger.warning(
+                "auth.account_locked account=%s ip=%s", _mask_email(account_key), client_ip
+            )
+        else:
+            logger.info(
+                "auth.login_failed account=%s ip=%s", _mask_email(account_key), client_ip
+            )
         raise HTTPException(status_code=401, detail="Invalid credentials")
-    
+
+    # Successful login clears the failure counter for this account.
+    account_lockout.reset(account_key)
+
     access_token = create_access_token({"user_id": str(user.id), "email": user.email, "role": user.role.value})
-    
+
     return TokenResponse(access_token=access_token)
 
 
