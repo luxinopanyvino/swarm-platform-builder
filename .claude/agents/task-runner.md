@@ -60,7 +60,11 @@ Recibirás un número de issue de GitHub. Procede así:
      quedó fuera. Indica los comandos de verificación ejecutados y su resultado,
      la ruta de la bitácora y el enlace de la PR.
 
-Reglas:
+Reglas (ver [GOVERNANCE §3.1 "Trabajo dirigido por agentes"](../../docs/governance/GOVERNANCE.md#31-trabajo-dirigido-por-agentes)):
+- Resuelve **una tarea a la vez**, cumpliendo su DoD antes de pasar a otra; no
+  mezcles tareas no relacionadas en una misma PR.
+- La **bitácora** (paso 6) es el registro de trazabilidad obligatorio de cada
+  ejecución.
 - **Nunca** trabajes en `develop`; cada tarea va en su propia rama (paso 4) que se
   sube a remoto y se integra vía PR a `develop` (paso 7).
 - Si la tarea es ambigua o de alto impacto (auth, infra, secretos), expón el plan
