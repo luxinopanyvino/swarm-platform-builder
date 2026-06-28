@@ -856,20 +856,21 @@ La **fuente de verdad** de la definición es `docs/specs` + `docs/adr`; el
 #### En un área existente vs. un área nueva
 
 Las áreas registradas son: `area/security`, `area/infra`, `area/backend`,
-`area/observability`, `area/governance`.
+`area/observability`, `area/governance`, `area/ux`.
 
-- **Área existente (p. ej. Observabilidad, `area/observability`, épica E5):** basta
-  con los pasos de arriba; en el bloque `sdd-sync` pon `epic.area: area/observability`
-  y un `epic.id` de esa área (E5) o uno nuevo si abres otra épica.
-- **Área nueva (p. ej. UX/diseño):** primero **da de alta el área** (es un cambio
-  de gobernanza, no solo una spec):
-  1. Añade la label `area/ux` en [`scripts/seed_github_project.py`](scripts/seed_github_project.py) (lista `LABELS`)
-     y créala en GitHub (`gh label create area/ux`).
+- **Área existente (p. ej. Observabilidad `area/observability` E5, o UX/diseño
+  `area/ux` E7 — ver [SPEC-003](docs/specs/SPEC-003-ux-design-system-accessibility.md)):**
+  basta con los pasos de arriba; en el bloque `sdd-sync` pon el `epic.area`
+  correspondiente y un `epic.id` de esa área o uno nuevo si abres otra épica.
+- **Área nueva (la que no esté en la lista de arriba):** primero **da de alta el
+  área** (es un cambio de gobernanza, no solo una spec). Tomando `area/<nueva>`:
+  1. Añade la label `area/<nueva>` en [`scripts/seed_github_project.py`](scripts/seed_github_project.py) (lista `LABELS`)
+     y créala en GitHub (`gh label create area/<nueva>`).
   2. Añádela al conjunto `ALLOWED_AREAS` de
      [`scripts/validate_specs.py`](scripts/validate_specs.py) para que la CI la acepte.
   3. Refléjala en [GOVERNANCE §7](docs/governance/GOVERNANCE.md) y en el
      [backlog](docs/backlog/).
-  4. Ya puedes crear la spec con `epic.area: area/ux` y un `epic.id` nuevo, y
+  4. Ya puedes crear la spec con `epic.area: area/<nueva>` y un `epic.id` nuevo, y
      seguir el flujo normal (`/sdd-sync --apply` → `/resolve-task`).
 
 ### Documentación
