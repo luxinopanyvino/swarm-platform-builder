@@ -26,6 +26,11 @@ class Settings(BaseModel):
     # Access controls — MUST be False in production
     ENABLE_DEV_ROLE_PROMOTION: bool = False
 
+    # Default role assigned to users who self-register. Minimal privilege by
+    # design: only "lector" or "publico" are accepted; anything else falls back
+    # to "lector". Never grant "redactor"/"admin" on signup.
+    DEFAULT_SIGNUP_ROLE: str = "lector"
+
     # Redis
     REDIS_URL: str = "redis://:password@localhost:6379/0"
 
@@ -125,7 +130,9 @@ def _build_settings() -> Settings:
         "ALGORITHM": security.get("algorithm", "HS256"),
         "ACCESS_TOKEN_EXPIRE_MINUTES": security.get("access_token_expire_minutes", 30),
         "REFRESH_TOKEN_EXPIRE_DAYS": security.get("refresh_token_expire_days", 7),
-        "ENABLE_DEV_ROLE_PROMOTION": access.get("enable_dev_role_promotion", True),
+        # Fail-safe: when the key is absent the effective value is False.
+        "ENABLE_DEV_ROLE_PROMOTION": access.get("enable_dev_role_promotion", False),
+        "DEFAULT_SIGNUP_ROLE": access.get("default_signup_role", "lector"),
         "REDIS_URL": redis.get("url", "redis://:password@localhost:6379/0"),
         "OLLAMA_BASE_URL": ollama.get("base_url", "http://localhost:11434"),
         "OLLAMA_MODEL": ollama.get("default_model", "llama3.2:1b"),

@@ -30,7 +30,11 @@ security:
   access_token_expire_minutes: 30
   refresh_token_expire_days: 7
 access_control:
-  enable_dev_role_promotion: true
+  # Secure by default: dev-only role promotion shortcut stays OFF.
+  # Enable explicitly (and only) in local development.
+  enable_dev_role_promotion: false
+  # Role assigned on self-registration. Minimal privilege: lector | publico.
+  default_signup_role: lector
 qdrant:
   url: http://localhost:6333
   api_key: null

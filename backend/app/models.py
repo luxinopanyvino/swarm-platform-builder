@@ -67,7 +67,7 @@ class UserModel(Base):
     email = Column(String(255), unique=True, nullable=False, index=True)
     hashed_password = Column(String(255), nullable=False)
     full_name = Column(String(255), nullable=False)
-    role = Column(SA_Enum(UserRole, values_callable=lambda x: [e.value for e in x]), default=UserRole.REDACTOR, nullable=False)
+    role = Column(SA_Enum(UserRole, values_callable=lambda x: [e.value for e in x]), default=UserRole.LECTOR, nullable=False)
     is_active = Column(Boolean, default=True, nullable=False)
     assigned_project_id = Column(SA_UUID(as_uuid=True), ForeignKey("projects.id", ondelete="SET NULL"), nullable=True, index=True)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
