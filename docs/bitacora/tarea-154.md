@@ -3,7 +3,7 @@
 ## 2026-06-28 17:11 — Completada ✅
 
 - **Rama:** `sec/154-rate-limit-account-lockout`
-- **PR:** #<pendiente> → `develop`
+- **PR:** #213 → `develop`
 - **Spec/ADR:** ADR-0003 (línea base de seguridad e identidad); sin spec dedicada
   (issue sembrado por bootstrap, DoD genérico de `docs/governance/GOVERNANCE.md §6`)
 - **Dependencias:** ninguna (#153 ya mergeada/cerrada)
