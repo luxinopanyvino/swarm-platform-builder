@@ -19,6 +19,25 @@ class AssignRoleDTO(BaseModel):
     role: UserRole
 
 
+# Roles allowed for self-registration. Minimal privilege by design: signup must
+# never grant content-creation, pipeline-execution or RAG/scraper access.
+_MINIMAL_SIGNUP_ROLES: dict[str, UserRole] = {
+    UserRole.LECTOR.value: UserRole.LECTOR,
+    UserRole.PUBLICO.value: UserRole.PUBLICO,
+}
+
+
+def resolve_default_signup_role() -> UserRole:
+    """Resolve the configured default signup role, fail-safe to LECTOR.
+
+    Only minimal-privilege roles (``lector``/``publico``) are honoured; any other
+    or unset value falls back to ``LECTOR`` so a misconfiguration can never grant
+    elevated privileges on registration.
+    """
+    raw = (settings.DEFAULT_SIGNUP_ROLE or "").strip().lower()
+    return _MINIMAL_SIGNUP_ROLES.get(raw, UserRole.LECTOR)
+
+
 @router.post("/register", response_model=TokenResponse)
 async def register(
     req: UserRegisterDTO,
@@ -30,12 +49,13 @@ async def register(
     existing = await session.execute(stmt)
     if existing.scalars().first():
         raise HTTPException(status_code=400, detail="Email already registered")
-    
-    # Create user
+
+    # Create user with the minimal-privilege default role (never REDACTOR/ADMIN).
     user = UserModel(
         email=req.email,
         hashed_password=hash_password(req.password),
-        full_name=req.full_name
+        full_name=req.full_name,
+        role=resolve_default_signup_role(),
     )
     session.add(user)
     await session.commit()
@@ -127,6 +147,17 @@ def require_admin(token_data=Depends(get_current_user)):
     """Dependency that rejects non-admin callers."""
     if token_data.get("role") != UserRole.ADMIN:
         raise HTTPException(status_code=403, detail="Se requiere rol de administrador")
+    return token_data
+
+
+def require_redactor(token_data=Depends(get_current_user)):
+    """Dependency for resource-creating/executing endpoints.
+
+    Only REDACTOR or ADMIN may run pipelines, ingest RAG documents or invoke the
+    scraper. Minimal-privilege roles (LECTOR/PUBLICO) get a 403.
+    """
+    if token_data.get("role") not in (UserRole.ADMIN, UserRole.REDACTOR):
+        raise HTTPException(status_code=403, detail="Se requiere rol de redactor o administrador")
     return token_data
 
 

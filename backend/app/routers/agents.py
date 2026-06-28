@@ -32,7 +32,7 @@ from app.models import (
     AgentProfileModel, AgentProfileResponse,
 )
 from app.database import get_session
-from app.routers.auth import get_current_user
+from app.routers.auth import get_current_user, require_redactor
 from app.core.security import verify_token
 from app.modules.agents.application.use_cases import (
     Orchestrator, active_streams, active_tasks, publish_event,
@@ -240,7 +240,7 @@ async def upload_to_rag_library(
     collection: str | None = Form(None),
     chunk_size: int | None = Form(None),
     chunk_overlap: int | None = Form(None),
-    token_data=Depends(get_current_user),
+    token_data=Depends(require_redactor),
 ):
     """Upload a document to the global RAG library (not tied to any agent)."""
     from app.core.config import settings
@@ -494,7 +494,7 @@ async def upload_rag_document(
     rag_collection: str | None = Form(None),
     rag_chunk_size: int | None = Form(None),
     rag_chunk_overlap: int | None = Form(None),
-    token_data=Depends(get_current_user),
+    token_data=Depends(require_redactor),
 ):
     """Upload a file, chunk it, embed via Ollama and store in Qdrant for an agent."""
     from app.core.config import settings
@@ -599,7 +599,7 @@ async def run_agent_pipeline(
     req: AgentRunRequest,
     background_tasks: BackgroundTasks,
     resume: bool = False,
-    token_data=Depends(get_current_user),
+    token_data=Depends(require_redactor),
     session: AsyncSession = Depends(get_session)
 ):
     """
