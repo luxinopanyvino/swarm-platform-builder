@@ -20,6 +20,13 @@ security:
   algorithm: HS256
   access_token_expire_minutes: 30
   refresh_token_expire_days: 7
+  # Brute-force / credential-stuffing protection for /auth/login y /auth/register.
+  # Rate limit por IP (ventana deslizante) + bloqueo temporal de cuenta tras
+  # varios intentos fallidos consecutivos. Pon max=0 para deshabilitar cada uno.
+  auth_ratelimit_max_attempts: 10      # intentos por ventana y por IP (0 = off)
+  auth_ratelimit_window_seconds: 60    # longitud de la ventana, en segundos
+  auth_lockout_max_failed: 5           # fallos consecutivos antes de bloquear (0 = off)
+  auth_lockout_seconds: 900            # duración del bloqueo de cuenta (15 min)
 access_control:
   # Secure by default: dev-only role promotion shortcut stays OFF.
   # Enable explicitly (and only) in local development.

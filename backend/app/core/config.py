@@ -23,6 +23,14 @@ class Settings(BaseModel):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
 
+    # Brute-force / credential-stuffing protection for the auth endpoints.
+    # Sliding-window rate limit per client IP (login & register) and per-account
+    # lockout after consecutive failed logins.
+    AUTH_RATELIMIT_MAX_ATTEMPTS: int = 10      # attempts per window per IP (0 disables)
+    AUTH_RATELIMIT_WINDOW_SECONDS: int = 60    # rolling window length, seconds
+    AUTH_LOCKOUT_MAX_FAILED: int = 5           # failed logins before lockout (0 disables)
+    AUTH_LOCKOUT_SECONDS: int = 900            # lockout duration, seconds (15 min)
+
     # Access controls — MUST be False in production
     ENABLE_DEV_ROLE_PROMOTION: bool = False
 
@@ -130,6 +138,10 @@ def _build_settings() -> Settings:
         "ALGORITHM": security.get("algorithm", "HS256"),
         "ACCESS_TOKEN_EXPIRE_MINUTES": security.get("access_token_expire_minutes", 30),
         "REFRESH_TOKEN_EXPIRE_DAYS": security.get("refresh_token_expire_days", 7),
+        "AUTH_RATELIMIT_MAX_ATTEMPTS": security.get("auth_ratelimit_max_attempts", 10),
+        "AUTH_RATELIMIT_WINDOW_SECONDS": security.get("auth_ratelimit_window_seconds", 60),
+        "AUTH_LOCKOUT_MAX_FAILED": security.get("auth_lockout_max_failed", 5),
+        "AUTH_LOCKOUT_SECONDS": security.get("auth_lockout_seconds", 900),
         # Fail-safe: when the key is absent the effective value is False.
         "ENABLE_DEV_ROLE_PROMOTION": access.get("enable_dev_role_promotion", False),
         "DEFAULT_SIGNUP_ROLE": access.get("default_signup_role", "lector"),
