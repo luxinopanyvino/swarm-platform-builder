@@ -32,6 +32,7 @@ Crea un ADR cuando una decisión:
 | [0002](0002-adopt-spec-driven-development.md) | Adoptar Spec-Driven Development (SDD) | Aceptado |
 | [0003](0003-security-baseline-and-threat-model.md) | Línea base de seguridad y modelo de amenazas | Propuesto |
 | [0004](0004-observability-and-ci.md) | Observabilidad mínima y CI/CD con escaneo de cadena de suministro | Propuesto |
+| [0005](0005-nocode-architecture.md) | Arquitectura no-code: motor vs paquetes de proyecto e independencia de proyectos | Propuesto |
 
 Ver también: [docs/specs](../specs) (especificaciones SDD) y
 [docs/governance](../governance) (gobernanza, DoD, CODEOWNERS).
