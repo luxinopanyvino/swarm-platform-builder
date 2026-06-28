@@ -23,13 +23,15 @@ branch protection son el control duro).
 
 ```bash
 echo '{"tool_name":"Bash","tool_input":{"command":"git commit -m x"}}' \
-  | python .claude/hooks/guard_git.py
+  | python "$CLAUDE_PROJECT_DIR/.claude/hooks/guard_git.py"
 # En develop → imprime una decisión "deny"; en una rama feature → sin salida (allow).
 ```
 
 ## Nota cross-platform
 
-El comando configurado en `settings.json` es `python .claude/hooks/guard_git.py`.
+El comando configurado en `settings.json` es
+`python "$CLAUDE_PROJECT_DIR/.claude/hooks/guard_git.py"` (ruta absoluta vía
+`$CLAUDE_PROJECT_DIR` para que resuelva desde la raíz sin importar el cwd).
 En entornos donde el intérprete sea `python3` (p. ej. macOS sin alias `python`),
 ajusta el comando del hook a `python3` en tu `.claude/settings.local.json`
 (que tiene prioridad y no se versiona).
