@@ -1,0 +1,25 @@
+# .htaccess para la revista pública en Hostinger (hosting compartido).
+# Colocar en public_html/ junto a index.html y la carpeta api/.
+
+RewriteEngine On
+
+# ── Forzar HTTPS ───────────────────────────────────────────────────────────
+RewriteCond %{HTTPS} !=on
+RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+# ── API: mapear la ruta que usa el frontend al script PHP ──────────────────
+# El frontend llama a /api/v1/magazine; lo servimos con api/magazine.php.
+RewriteRule ^api/v1/magazine/?$ api/magazine.php [L,QSA]
+
+# ── SPA fallback ───────────────────────────────────────────────────────────
+# Cualquier ruta que NO sea un archivo o carpeta real -> index.html
+# (necesario porque la app usa BrowserRouter: /magazine, etc.).
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
+RewriteRule ^ index.html [L]
+
+# ── No servir db.php ni archivos de config aunque se pidan directamente ─────
+<FilesMatch "^(db|_pdo)\.php$">
+  Require all denied
+</FilesMatch>
