@@ -26,7 +26,19 @@ Las áreas y revisores obligatorios se definen en
 ## 3. Flujo de ramas y releases
 
 - Rama principal de integración: **`develop`**.
-- Convención de ramas: `feat/…`, `fix/…`, `docs/…`, `chore/…`, `sec/…`.
+- **Convención de nombres de rama (contrato de prefijos).** Toda rama se nombra
+  `<prefijo>/<descripcion-corta>` (kebab-case; opcionalmente `<prefijo>/<n-issue>-…`).
+  El prefijo es **obligatorio** y determina la naturaleza del cambio:
+
+  | Prefijo | Uso |
+  |---------|-----|
+  | `feat/` | Funcionalidades nuevas. |
+  | `fix/` | Reparaciones / corrección de bugs. |
+  | `docs/` | Documentación (specs, ADR, bitácoras, guías). |
+  | `chore/` | Mantenimiento sin impacto funcional (tooling, deps, config). |
+  | `sec/` | Cambios de seguridad (auth, hardening, mitigaciones). |
+
+  No se permiten ramas sin prefijo ni con prefijos fuera de esta tabla.
 - Todo cambio entra por **PR contra `develop`**; prohibido push directo.
 - Releases: se promueve `develop` a la rama/etiqueta de release tras pasar CI y QA.
 - Commits convencionales recomendados (`feat:`, `fix:`, `docs:`, `sec:`).
@@ -50,6 +62,10 @@ por las mismas reglas que el humano, con tres principios propios:
    el backlog del GitHub Project) **no** abren PR de código: operan de forma
    **idempotente, en dry-run por defecto y no destructiva**, y su ejecución queda
    trazada por su informe y por el historial de issues.
+4. **Nomenclatura de ramas.** Cada vez que un agente crea una rama, **debe** usar
+   el contrato de prefijos de la sección 3 (`feat/`, `fix/`, `docs/`, `chore/`,
+   `sec/`), eligiendo el prefijo según la naturaleza del cambio. Nunca crea ramas
+   sin prefijo ni trabaja sobre `develop`.
 
 Ningún agente mergea su propia PR, cierra issues a mano ni trabaja sobre `develop`.
 
