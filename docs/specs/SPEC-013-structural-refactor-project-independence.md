@@ -1,6 +1,6 @@
 # SPEC-013: Refactor estructural e independencia de proyectos
 
-- **Estado:** Draft
+- **Estado:** Ready
 - **Autor:** Equipo de plataforma
 - **Fecha:** 2026-06-28
 - **Épica:** E8 (Plataforma no-code)
