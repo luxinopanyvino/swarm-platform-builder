@@ -151,7 +151,7 @@ tasks:
     depends_on: [T8.1]
     acceptance: [AC3]
   - id: T8.3
-    title: "Reescribir adapters de AlejandrIA como composicion de capacidades con tests de paridad"
+    title: "Reescribir adapters de AlejandrIA como composición de capacidades con tests de paridad"
     sev: high
     depends_on: [T8.2]
     acceptance: [AC5, AC8]
