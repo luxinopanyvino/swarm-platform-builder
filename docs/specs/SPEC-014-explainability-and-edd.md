@@ -1,6 +1,6 @@
 # SPEC-014: Explicabilidad del pipeline y Evaluation-Driven Development (EDD)
 
-- **Estado:** Draft
+- **Estado:** Ready
 - **Autor:** Luis San Martín
 - **Fecha:** 2026-06-30
 - **Épica:** E9 (GitHub Project)
