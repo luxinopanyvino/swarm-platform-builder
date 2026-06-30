@@ -115,6 +115,29 @@ Una tarea/épica está *Ready* cuando:
   incremental. Para mantener el backlog al día tras el bootstrap se usa `/sdd-sync`.
 - Prioridad: primero 🔴, luego 🟠 de bajo esfuerzo, según
   [ADR-0003](../adr/0003-security-baseline-and-threat-model.md).
+- **Áreas registradas** (`area/*`): `security`, `infra`, `backend`,
+  `observability`, `governance`, `ux`, `evaluation`. Dar de alta un área nueva es
+  un cambio de gobernanza: añadirla a `ALLOWED_AREAS`
+  ([`validate_specs.py`](../../scripts/validate_specs.py)) y a `LABELS`
+  ([`seed_github_project.py`](../../scripts/seed_github_project.py)), crear la label
+  en GitHub y reflejarla aquí y en el backlog.
+
+### 7.1 Evaluation-Driven Development (EDD)
+
+Complementa al SDD para los componentes **probabilísticos** (agentes/modelos). El
+*qué* se gobierna por SDD; el *cómo de bien se comporta* lo gobierna EDD
+([ADR-0006](../adr/0006-adopt-evaluation-driven-development.md), área
+`area/evaluation`, épica E9):
+
+- El comportamiento de los agentes se respalda con **evals versionadas**
+  (`backend/evals/`): datasets *golden* + métricas de comportamiento. **Alcance
+  limitado a los agentes/modelos de la plataforma**, no a modelos *foundation*
+  globales.
+- Un cambio en `prompt_template`, `model` o `temperature` de un agente debe pasar
+  el **gate EDD** (regresión sobre umbrales declarados); arranca como aviso y se
+  endurece tras fijar la línea base.
+- La **explicabilidad** ([SPEC-014](../specs/SPEC-014-explainability-and-edd.md)) es
+  el sustrato de datos de las evals: traza auditable por paso de cada ejecución.
 
 ## 8. Datos y cumplimiento
 

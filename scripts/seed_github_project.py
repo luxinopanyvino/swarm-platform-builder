@@ -41,6 +41,7 @@ LABELS = [
     ("area/observability", "fbca04", "Observabilidad"),
     ("area/governance", "5319e7", "Gobernanza / calidad / CI"),
     ("area/ux", "c2e0c6", "Experiencia de usuario / UI / accesibilidad"),
+    ("area/evaluation", "006b75", "Evaluación de agentes/modelos (EDD) y explicabilidad"),
     ("sev/high", "b60205", "Severidad alta"),
     ("sev/medium", "d93f0b", "Severidad media"),
     ("sev/low", "fef2c0", "Severidad baja"),

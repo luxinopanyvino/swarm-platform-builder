@@ -95,6 +95,22 @@ Labels: `epic`, `task`, `area/*`, `sev/{high,medium,low}`.
 | T7.2 | Accesibilidad AA en modales (focus trap, foco visible, Esc) | 🟠 |
 | T7.3 | Estados consistentes de carga / vacío / error | 🟡 |
 
+## E9 — Explicabilidad y Evaluation-Driven Development (EDD)  · `area/evaluation`
+> Hacer auditable el comportamiento del pipeline y dirigir el desarrollo de
+> agentes/modelos **de la plataforma** por evaluación. Definición en
+> [SPEC-014](../specs/SPEC-014-explainability-and-edd.md) y
+> [ADR-0006](../adr/0006-adopt-evaluation-driven-development.md); las tareas se
+> materializan con `/sdd-sync --apply`.
+
+| ID | Tarea | Sev |
+|----|-------|-----|
+| T9.1 | Traza de explicabilidad por paso (`agent_run_steps`) desde el orquestador | 🟠 |
+| T9.2 | Endpoint `/agents/{id}/explain` + panel UI "Por qué este resultado" | 🟠 |
+| T9.3 | Harness EDD (`backend/evals`) reproducible sobre perfiles de la plataforma | 🔴 |
+| T9.4 | Datasets *golden* + métricas (citas, formato, calibración, coherencia, presupuesto) | 🟠 |
+| T9.5 | Gate EDD en CI para PRs que tocan agentes/modelos (umbrales de regresión) | 🟠 |
+| T9.6 | Gobernanza EDD (alta de `area/evaluation`, DoR/DoD de evaluación, CODEOWNERS) | 🟡 |
+
 ---
 
 ### Orden recomendado de ejecución
