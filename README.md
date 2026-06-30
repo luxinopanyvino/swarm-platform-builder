@@ -856,7 +856,7 @@ La **fuente de verdad** de la definición es `docs/specs` + `docs/adr`; el
 #### En un área existente vs. un área nueva
 
 Las áreas registradas son: `area/security`, `area/infra`, `area/backend`,
-`area/observability`, `area/governance`, `area/ux`.
+`area/observability`, `area/governance`, `area/ux`, `area/evaluation`.
 
 - **Área existente (p. ej. Observabilidad `area/observability` E5, o UX/diseño
   `area/ux` E7 — ver [SPEC-003](docs/specs/SPEC-003-ux-design-system-accessibility.md)):**

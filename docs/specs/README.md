@@ -39,6 +39,7 @@ Draft ──▶ Ready (cumple DoR) ──▶ In progress ──▶ Done (cumple 
 | [SPEC-002](SPEC-002-scraper-ssrf-protection.md) | Protección SSRF del scraper del Investigador | Ready | E2 |
 | [SPEC-003](SPEC-003-ux-design-system-accessibility.md) | Sistema de diseño y accesibilidad de la UI | Ready | E7 |
 | [SPEC-013](SPEC-013-structural-refactor-project-independence.md) | Refactor estructural e independencia de proyectos | Draft | E8 |
+| [SPEC-014](SPEC-014-explainability-and-edd.md) | Explicabilidad del pipeline y Evaluation-Driven Development (EDD) | Draft | E9 |
 
 > El resto de remediaciones están en
 > [`docs/backlog/security-hardening-backlog.md`](../backlog/security-hardening-backlog.md);
