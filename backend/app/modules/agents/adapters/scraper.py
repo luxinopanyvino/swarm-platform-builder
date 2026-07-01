@@ -17,6 +17,9 @@ Architecture
 Security notes
 --------------
 - All URLs are validated (must start with http/https).
+- Every fetch is routed through the SSRF egress guard (``app.shared.egress``):
+  URLs resolving to loopback/private/link-local addresses are refused before the
+  request, and TLS certificate verification is always enabled.
 - Robots.txt is respected via ``_is_allowed_by_robots``.
 - A 2-second per-domain rate-limit prevents hammering.
 - Max payload per page is capped at 50 KB to avoid memory abuse.
@@ -37,6 +40,8 @@ import math
 
 import httpx
 import networkx as nx
+
+from app.shared.egress import EgressBlocked, assert_safe_url, is_egress_allowed
 
 logger = logging.getLogger(__name__)
 
@@ -145,8 +150,13 @@ async def _is_allowed_by_robots(url: str) -> bool:
     if domain in _robots_cache:
         return _robots_cache[domain]
     robots_url = f"https://{domain}/robots.txt"
+    if not is_egress_allowed(robots_url):
+        # Domain resolves to an internal/blocked address — don't fetch it and
+        # don't let the scraper follow this domain at all.
+        _robots_cache[domain] = False
+        return False
     try:
-        async with httpx.AsyncClient(timeout=5.0, verify=False) as c:
+        async with httpx.AsyncClient(timeout=5.0) as c:
             r = await c.get(robots_url, headers=_HEADERS)
             if r.status_code == 200:
                 # Very simple: look for "User-agent: *" + "Disallow: /"
@@ -225,7 +235,6 @@ async def _fetch_with_requests(url: str) -> Tuple[str, int]:
         async with httpx.AsyncClient(
             timeout=_REQUEST_TIMEOUT,
             follow_redirects=True,
-            verify=False,
             headers=_HEADERS,
         ) as client:
             r = await client.get(url)
@@ -247,7 +256,7 @@ async def _fetch_with_playwright(url: str) -> str:
             ctx = await browser.new_context(
                 user_agent=_UA,
                 java_script_enabled=True,
-                ignore_https_errors=True,
+                ignore_https_errors=False,   # keep TLS verification on (SPEC-002 AC3)
             )
             page = await ctx.new_page()
             await page.goto(url, timeout=_PLAYWRIGHT_TIMEOUT, wait_until="domcontentloaded")
@@ -271,6 +280,11 @@ async def _fetch_page(url: str, use_playwright_fallback: bool = True) -> Optiona
        headless Chromium.
     """
     if not _is_valid_url(url):
+        return None
+    try:
+        assert_safe_url(url)
+    except EgressBlocked as exc:
+        logger.warning("scraper: refusing to fetch %s — %s", url, exc.reason)
         return None
     if not await _is_allowed_by_robots(url):
         logger.debug("robots.txt disallows %s", url)
@@ -397,7 +411,7 @@ async def _arxiv_seeds(query: str, max_results: int = 5) -> List[str]:
             "start": 0,
             "max_results": max_results,
         }
-        async with httpx.AsyncClient(timeout=10.0, verify=False) as c:
+        async with httpx.AsyncClient(timeout=10.0) as c:
             r = await c.get("https://export.arxiv.org/api/query", params=params)
         import xml.etree.ElementTree as ET
         root = ET.fromstring(r.text)
@@ -425,7 +439,7 @@ async def _wikipedia_seeds(query: str, max_results: int = 3) -> List[str]:
             "namespace": 0,
             "format": "json",
         }
-        async with httpx.AsyncClient(timeout=8.0, verify=False) as c:
+        async with httpx.AsyncClient(timeout=8.0) as c:
             r = await c.get("https://en.wikipedia.org/w/api.php", params=params)
         data = r.json()
         return data[3] if len(data) > 3 else []
@@ -438,7 +452,7 @@ async def _semantic_scholar_seeds(query: str, max_results: int = 4) -> List[str]
     """Return Semantic Scholar paper URLs."""
     try:
         params = {"query": query, "limit": max_results, "fields": "externalIds,title"}
-        async with httpx.AsyncClient(timeout=10.0, verify=False) as c:
+        async with httpx.AsyncClient(timeout=10.0) as c:
             r = await c.get("https://api.semanticscholar.org/graph/v1/paper/search", params=params)
         if r.status_code != 200:
             return []

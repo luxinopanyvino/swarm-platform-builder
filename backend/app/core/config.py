@@ -78,6 +78,10 @@ class Settings(BaseModel):
 
     # Investigador scraper
     SCRAPER_SEMANTIC_RERANK: bool = True
+    # Egress allowlist for outbound scraper/robots fetches (SSRF guard, SPEC-002).
+    # Empty = allow any public destination; non-empty = only these domains (and
+    # their subdomains) are permitted. Comma-separated when set via env var.
+    SCRAPER_ALLOWED_DOMAINS: list[str] = []
 
     # RAG global defaults
     RAG_CHUNK_SIZE: int = 800
@@ -173,6 +177,11 @@ def _build_settings() -> Settings:
             if yaml_config.get("agents", {}).get("investigador", {}).get("semantic_rerank") is not None
             else yaml_config.get("investigador", {}).get("semantic_rerank", True)
         ),
+        "SCRAPER_ALLOWED_DOMAINS": (
+            yaml_config.get("agents", {}).get("investigador", {}).get("allowed_domains")
+            or yaml_config.get("investigador", {}).get("allowed_domains")
+            or []
+        ),
         # RAG global defaults
         "RAG_CHUNK_SIZE": yaml_config.get("rag", {}).get("chunk_size", 800),
         "RAG_CHUNK_OVERLAP": yaml_config.get("rag", {}).get("chunk_overlap", 80),
@@ -187,6 +196,8 @@ def _build_settings() -> Settings:
             continue
         if isinstance(merged[key], bool):
             merged[key] = _to_bool(env_value)
+        elif isinstance(merged[key], list):
+            merged[key] = [item.strip() for item in env_value.split(",") if item.strip()]
         elif isinstance(merged[key], int):
             merged[key] = int(env_value)
         else:

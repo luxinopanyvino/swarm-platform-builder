@@ -210,8 +210,7 @@ async def ddg_search_with_urls(query: str, max_results: int = 5) -> List[Dict[st
             "max_results": max(2, max_results // 2 + 1),
             "sortBy": "relevance",
         }
-        # verify=False handles corporate proxies with SSL inspection
-        async with httpx.AsyncClient(timeout=8.0, verify=False) as client:
+        async with httpx.AsyncClient(timeout=8.0) as client:
             r = await client.get(arxiv_url, params=arxiv_params)
         if r.status_code == 200:
             ns = {"atom": "http://www.w3.org/2005/Atom"}
@@ -248,7 +247,7 @@ async def ddg_search_with_urls(query: str, max_results: int = 5) -> List[Dict[st
             wiki_headers = {
                 "User-Agent": "AlejandrIA-Magazine/0.1 (scientific article generation; contact@alejandria.local)"
             }
-            async with httpx.AsyncClient(timeout=8.0, verify=False, headers=wiki_headers) as client:
+            async with httpx.AsyncClient(timeout=8.0, headers=wiki_headers) as client:
                 r = await client.get(wiki_url, params=wiki_params)
             if r.status_code == 200:
                 data = r.json()

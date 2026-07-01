@@ -35,17 +35,17 @@ verificación TLS (MITM).
 
 ## 3. Criterios de aceptación
 
-- [ ] **AC1** — *Given* una URL que resuelve a loopback/privada/enlace-local
+- [x] **AC1** — *Given* una URL que resuelve a loopback/privada/enlace-local
   (incl. `169.254.169.254` y IPv6), *When* el scraper intenta obtenerla,
   *Then* se rechaza **antes** de la petición y se registra el bloqueo.
-- [ ] **AC2** — La resolución DNS se valida (anti *DNS-rebinding*): se comprueba
+- [x] **AC2** — La resolución DNS se valida (anti *DNS-rebinding*): se comprueba
   la **IP resuelta**, no solo el hostname.
-- [ ] **AC3** — Ninguna llamada de red usa `verify=False`; la verificación TLS
+- [x] **AC3** — Ninguna llamada de red usa `verify=False`; la verificación TLS
   está activa por defecto.
-- [ ] **AC4** — Existe una allowlist/denylist configurable de dominios y una
+- [x] **AC4** — Existe una allowlist/denylist configurable de dominios y una
   función central `is_egress_allowed(url)` reutilizada por todo fetch saliente
   (scraper, robots.txt, RAG remoto).
-- [ ] **AC5** — Tests que cubren AC1–AC3 con casos representativos.
+- [x] **AC5** — Tests que cubren AC1–AC3 con casos representativos.
 
 ## 4. Diseño propuesto
 
