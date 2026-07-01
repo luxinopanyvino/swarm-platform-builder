@@ -6,6 +6,7 @@ from pydantic import BaseModel, Field
 
 from app.core.config import settings
 from app.shared.llm import call_llm, get_default_model
+from app.shared.qdrant import qdrant_client
 
 router = APIRouter(prefix="/api/v1/ai", tags=["ai"])
 
@@ -107,7 +108,7 @@ async def ingest_source(req: IngestRequest):
         raise HTTPException(status_code=400, detail="Texto vacio para indexar")
 
     try:
-        async with httpx.AsyncClient(base_url=settings.QDRANT_URL, timeout=10.0) as client:
+        async with qdrant_client() as client:
             await _ensure_collection(client)
             points = []
             for index, chunk in enumerate(chunks):
@@ -143,7 +144,7 @@ async def ingest_source(req: IngestRequest):
 @router.post("/assist")
 async def assist(req: AssistRequest):
     try:
-        async with httpx.AsyncClient(base_url=settings.QDRANT_URL, timeout=10.0) as client:
+        async with qdrant_client() as client:
             await _ensure_collection(client)
             search_response = await client.post(
                 f"/collections/{settings.QDRANT_COLLECTION}/points/search",
