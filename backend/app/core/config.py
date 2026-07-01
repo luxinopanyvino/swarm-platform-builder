@@ -31,6 +31,10 @@ class Settings(BaseModel):
     AUTH_LOCKOUT_MAX_FAILED: int = 5           # failed logins before lockout (0 disables)
     AUTH_LOCKOUT_SECONDS: int = 900            # lockout duration, seconds (15 min)
 
+    # SSE stream auth — the JWT is never placed in the stream query string (T1.4);
+    # clients exchange it for a single-use ticket valid for this many seconds.
+    SSE_TICKET_TTL_SECONDS: int = 30
+
     # Access controls — MUST be False in production
     ENABLE_DEV_ROLE_PROMOTION: bool = False
 
@@ -142,6 +146,7 @@ def _build_settings() -> Settings:
         "AUTH_RATELIMIT_WINDOW_SECONDS": security.get("auth_ratelimit_window_seconds", 60),
         "AUTH_LOCKOUT_MAX_FAILED": security.get("auth_lockout_max_failed", 5),
         "AUTH_LOCKOUT_SECONDS": security.get("auth_lockout_seconds", 900),
+        "SSE_TICKET_TTL_SECONDS": security.get("sse_ticket_ttl_seconds", 30),
         # Fail-safe: when the key is absent the effective value is False.
         "ENABLE_DEV_ROLE_PROMOTION": access.get("enable_dev_role_promotion", False),
         "DEFAULT_SIGNUP_ROLE": access.get("default_signup_role", "lector"),
@@ -195,13 +200,51 @@ def _build_settings() -> Settings:
     return Settings(**merged)
 
 
+# Minimum entropy proxy for a production SECRET_KEY. `openssl rand -hex 32`
+# yields 64 hex chars; we accept anything at/above this length that is not an
+# obvious placeholder.
+SECRET_KEY_MIN_LENGTH = 32
+
+# Substrings that mark a value as an obvious non-production placeholder. Matched
+# case-insensitively anywhere in the key so committed defaults (docker-compose,
+# config.yaml, .env.example) cannot slip through as "valid" in production.
+_INSECURE_SECRET_MARKERS = (
+    "change-in-production",
+    "change-me",
+    "changeme",
+    "cambia-esto",
+    "cambia",
+    "dev-secret",
+    "local-dev-secret",
+    "your-secret-key",
+    "not-for-production",
+    "not-for-prod",
+    "placeholder",
+    "example",
+    "insecure",
+    "secret-key",
+    "password",
+)
+
+
+def _is_insecure_secret_key(value: str) -> bool:
+    """True when SECRET_KEY is empty, too short, or a known weak placeholder."""
+    key = (value or "").strip()
+    if len(key) < SECRET_KEY_MIN_LENGTH:
+        return True
+    lowered = key.lower()
+    return any(marker in lowered for marker in _INSECURE_SECRET_MARKERS)
+
+
 def _validate_settings(s: Settings) -> None:
     """Fail fast on insecure production configurations."""
-    insecure_defaults = {"", "your-secret-key-change-in-production", "local-dev-secret", "local-dev-secret-key-not-for-production"}
-    if not s.DEBUG and s.SECRET_KEY in insecure_defaults:
+    if not s.DEBUG and _is_insecure_secret_key(s.SECRET_KEY):
         raise ValueError(
-            "SECRET_KEY must be set to a strong random value in production. "
-            "Generate one with: python -c \"import secrets; print(secrets.token_hex(32))\""
+            "SECRET_KEY must be set to a strong random value in production "
+            f"(>= {SECRET_KEY_MIN_LENGTH} chars, no committed placeholder). "
+            "Generate one with: openssl rand -hex 32  (or: "
+            "python -c \"import secrets; print(secrets.token_hex(32))\"). "
+            "Inject it via the SECRET_KEY environment variable — never commit it."
         )
 
 

@@ -33,7 +33,8 @@ from app.models import (
 )
 from app.database import get_session
 from app.routers.auth import get_current_user, require_redactor
-from app.core.security import verify_token
+from app.core.config import settings
+from app.core.stream_auth import issue_ticket, consume_ticket
 from app.modules.agents.application.use_cases import (
     Orchestrator, active_streams, active_tasks, publish_event,
     submit_user_decision,
@@ -797,27 +798,53 @@ async def get_article_agent_runs(
     )
 
 
+@router.post("/{article_id}/stream-ticket")
+async def create_stream_ticket(
+    article_id: UUID,
+    token_data=Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+):
+    """Issue a short-lived, single-use ticket to authenticate an SSE connection.
+
+    The browser ``EventSource`` API cannot send an ``Authorization`` header, so
+    instead of leaking the JWT in the stream query string (T1.4) the client
+    exchanges its Bearer token here for an opaque ticket.
+    """
+    stmt = select(ArticleModel).where(ArticleModel.id == article_id)
+    res = await session.execute(stmt)
+    article = res.scalars().first()
+    if not article:
+        raise HTTPException(status_code=404, detail="Article not found")
+    if str(article.author_id) != token_data["user_id"]:
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    ticket = issue_ticket(token_data["user_id"], str(article_id), settings.SSE_TICKET_TTL_SECONDS)
+    return {"ticket": ticket, "expires_in": settings.SSE_TICKET_TTL_SECONDS}
+
+
 @router.get("/{article_id}/stream")
 async def stream_agent_runs(
     article_id: UUID,
-    token: str | None = None,
+    ticket: str | None = None,
     session: AsyncSession = Depends(get_session)
 ):
-    """SSE endpoint for real-time monitoring of active agent runs."""
-    if not token:
-        raise HTTPException(status_code=401, detail="Unauthorized")
-    token_data = verify_token(token)
-    if not token_data:
-        raise HTTPException(status_code=401, detail="Invalid token")
-        
+    """SSE endpoint for real-time monitoring of active agent runs.
+
+    Authenticated with a single-use ticket from ``POST /{id}/stream-ticket``;
+    the JWT is never placed in the query string (T1.4).
+    """
+    user_id = consume_ticket(ticket, str(article_id)) if ticket else None
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Invalid or missing stream ticket")
+
     # Verify ownership of the article
     stmt = select(ArticleModel).where(ArticleModel.id == article_id)
     res = await session.execute(stmt)
     article = res.scalars().first()
-    
+
     if not article:
         raise HTTPException(status_code=404, detail="Article not found")
-    if str(article.author_id) != token_data["user_id"]:
+    if str(article.author_id) != user_id:
         raise HTTPException(status_code=403, detail="Forbidden")
 
     q = asyncio.Queue()

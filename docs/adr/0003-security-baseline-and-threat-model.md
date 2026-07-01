@@ -51,3 +51,13 @@ Marco de referencia: **OWASP ASVS** (nivel 2 como objetivo) y **OWASP Top 10**.
 - **Negativas / coste:** fricción adicional en PRs; trabajo de remediación.
 - **Seguimiento:** SPEC-001 y SPEC-002 detallan las dos primeras remediaciones;
   el resto se desglosa en `docs/backlog/security-hardening-backlog.md`.
+
+## Notas de implementación
+
+- **Secretos fuera de git + rotación (T3.2, #164):** `docker-compose.yml` inyecta
+  `SECRET_KEY`, `POSTGRES_PASSWORD` y `QDRANT_API_KEY` con guardas `"${VAR:?...}"`
+  (fail-fast si faltan); `DATABASE_URL` se deriva de `POSTGRES_PASSWORD` sin
+  contraseña inline. `_validate_settings` (`backend/app/core/config.py`) rechaza en
+  producción (`DEBUG=false`) claves vacías, cortas (< 32) o con placeholders
+  evidentes. Procedimiento de generación y rotación documentado en
+  [`SECURITY.md`](../../SECURITY.md#gestión-y-rotación-de-secretos).
