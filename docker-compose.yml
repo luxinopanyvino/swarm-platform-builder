@@ -18,8 +18,7 @@ services:
       # value. Must match the password used in the backend's DATABASE_URL.
       POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in your environment}"
       POSTGRES_DB: alejandria
-    ports:
-      - "5432:5432"
+    # Internal-only: not published to the host (reachable on alejandria_network).
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
@@ -37,9 +36,11 @@ services:
     image: qdrant/qdrant:v1.13.6
     container_name: alejandria_qdrant
     restart: unless-stopped
-    ports:
-      - "6333:6333"   # REST + gRPC dashboard
-      - "6334:6334"   # gRPC
+    environment:
+      # Require an API key on every request. Injected from the environment —
+      # never commit a value. Must match the backend's QDRANT_API_KEY.
+      QDRANT__SERVICE__API_KEY: "${QDRANT_API_KEY:?set QDRANT_API_KEY in your environment}"
+    # Internal-only: no host ports published (reachable on alejandria_network).
     volumes:
       - qdrant_data:/qdrant/storage
     networks:
@@ -57,8 +58,7 @@ services:
     image: ollama/ollama:latest
     container_name: alejandria_ollama
     restart: unless-stopped
-    ports:
-      - "11434:11434"
+    # Internal-only: not published to the host (reachable on alejandria_network).
     volumes:
       - ollama_data:/root/.ollama
     networks:
@@ -108,6 +108,9 @@ services:
       OLLAMA_EMBED_MODEL: "nomic-embed-text"
       # ── Qdrant ──────────────────────────────────────────────
       QDRANT_URL: "http://qdrant:6333"
+      # Must match the qdrant service's QDRANT__SERVICE__API_KEY. Injected from
+      # the environment; never commit a value.
+      QDRANT_API_KEY: "${QDRANT_API_KEY:?set QDRANT_API_KEY in your environment}"
       QDRANT_COLLECTION: "rag_docs"
       # ── CORS ────────────────────────────────────────────────
       ALLOWED_ORIGINS: "http://localhost:8080,http://127.0.0.1:8080"
