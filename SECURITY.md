@@ -26,6 +26,36 @@ obligatorios:
   git; contenedores no-root.
 - **Cadena de suministro:** dependencias pineadas y escaneadas en CI.
 
+## Gestión y rotación de secretos
+
+Los secretos **nunca** se commitean. Se inyectan por entorno (`.env`, git-ignored,
+o un gestor de secretos) y `docker-compose.yml` los exige con guardas
+`"${VAR:?...}"`: si falta `SECRET_KEY`, `POSTGRES_PASSWORD` o `QDRANT_API_KEY`,
+el arranque falla en claro. `DATABASE_URL` se deriva de `POSTGRES_PASSWORD`, sin
+contraseña inline.
+
+Además, el backend valida `SECRET_KEY` al arranque (`_validate_settings`,
+`backend/app/core/config.py`) y **aborta en producción** (`DEBUG=false`) si la
+clave está vacía, mide menos de 32 caracteres o contiene un placeholder evidente
+(`change-in-production`, `changeme`, `cambia-esto`, `dev-secret`, `password`, …).
+Esto impide que un valor débil commiteado pase como válido.
+
+Generar un secreto fuerte:
+
+```bash
+openssl rand -hex 32   # o: python -c "import secrets; print(secrets.token_hex(32))"
+```
+
+**Rotación** (los secretos viven solo en el entorno, así que rotar = cambiar el
+valor y reiniciar):
+
+1. Genera el nuevo valor y actualízalo en `.env` / el gestor de secretos.
+2. Reinicia el/los servicio(s) afectados:
+   `docker compose up -d --force-recreate <servicio>`.
+3. `SECRET_KEY`: rotarla invalida los JWT en circulación (los usuarios
+   re-autentican). `POSTGRES_PASSWORD`: cambia también la contraseña del rol en
+   Postgres (`ALTER ROLE postgres WITH PASSWORD …`) para que coincida.
+
 ## Modelo de amenazas (resumen)
 
 | Activo | Amenaza | Mitigación |
