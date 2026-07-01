@@ -42,8 +42,7 @@ backend/
 │   │       │   ├── formateador.py   # APA · IEEE · Vancouver · Chicago · Nature
 │   │       │   ├── publicador.py    # Escribe en DB · PUBLISHED · published_at
 │   │       │   ├── generic.py       # Agentes personalizados desde .agent.md
-│   │       │   ├── rag.py           # Extracción · chunking · embeddings · Qdrant
-│   │       │   └── scraper.py       # Grafo de navegación web con requests + playwright
+│   │       │   └── rag.py           # Extracción · chunking · embeddings · Qdrant
 │   │       └── domain/
 │   │           └── entities.py      # AgentState (TypedDict)
 │   │
