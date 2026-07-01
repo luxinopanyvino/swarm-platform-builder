@@ -86,10 +86,24 @@ export default function ExecutionPage() {
   // Connect SSE
   useEffect(() => {
     if (!articleId) return;
-    const token_ = localStorage.getItem('access_token');
-    const url = `${agentsApi.getStreamUrl(articleId)}?token=${token_}`;
-    const evtSource = new EventSource(url);
-    evtSourceRef.current = evtSource;
+    let cancelled = false;
+    let evtSource;
+
+    // Exchange the JWT for a single-use stream ticket, then open the SSE
+    // connection with it — the token is never placed in the URL (T1.4).
+    (async () => {
+      let ticket;
+      try {
+        const res = await agentsApi.getStreamTicket(articleId);
+        ticket = res?.ticket;
+      } catch {
+        addLog('No se pudo autenticar el stream en tiempo real', 'error');
+        return;
+      }
+      if (cancelled || !ticket) return;
+
+      evtSource = new EventSource(agentsApi.getStreamUrl(articleId, ticket));
+      evtSourceRef.current = evtSource;
 
     evtSource.onmessage = (e) => {
       try {
@@ -157,8 +171,13 @@ export default function ExecutionPage() {
         if (art?.body) setPreview(p => p || art.body);
       }).catch(() => {});
     };
+    })();
 
-    return () => evtSource.close();
+    return () => {
+      cancelled = true;
+      if (evtSource) evtSource.close();
+      else if (evtSourceRef.current) evtSourceRef.current.close();
+    };
   }, [articleId, runCount]);
 
   // Trigger the actual pipeline run — ref guard prevents double-fire in React StrictMode
