@@ -87,6 +87,11 @@ de cambiar código lee [GOVERNANCE.md](docs/governance/GOVERNANCE.md). Lo esenci
   `docs/bitacora/tarea-<N>.md` por ejecución exitosa.
 - **Definition of Done** (§6): criterios de aceptación cumplidos, tests que cubren
   el cambio en verde, docs/spec/ADR actualizados, sin secretos en el diff.
+- **Ayudas de autoría (opcionales)**: `/speckit-clarify`, `/speckit-checklist` y
+  `/speckit-analyze` (adaptadas de [spec-kit](https://github.com/github/spec-kit))
+  ayudan a pulir un SPEC antes de pasarlo a Ready. Son **complemento**, no parte
+  del flujo ni de la DoD. Ver
+  [docs/governance/speckit-authoring-aids.md](docs/governance/speckit-authoring-aids.md).
 
 ### Guardarraíles activos (hooks)
 
