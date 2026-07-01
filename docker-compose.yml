@@ -14,7 +14,9 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: password
+      # Injected from the environment (.env / secrets store) — never commit a
+      # value. Must match the password used in the backend's DATABASE_URL.
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in your environment}"
       POSTGRES_DB: alejandria
     ports:
       - "5432:5432"
@@ -91,11 +93,13 @@ services:
       # ── Aplicación ──────────────────────────────────────────
       DEBUG: "false"
       # ── Base de datos ────────────────────────────────────────
-      DATABASE_URL: "postgresql+asyncpg://postgres:password@postgres:5432/alejandria"
+      # Built from POSTGRES_PASSWORD so the credential lives only in the
+      # environment, never inline in git.
+      DATABASE_URL: "postgresql+asyncpg://postgres:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in your environment}@postgres:5432/alejandria"
       # ── Seguridad JWT ────────────────────────────────────────
-      # IMPORTANT: override SECRET_KEY in production with a strong random value
-      # Generate with: openssl rand -hex 32
-      SECRET_KEY: "local-dev-secret-key-change-in-production"
+      # Injected from the environment; never commit a value. Rotate by changing
+      # the env var and restarting. Generate with: openssl rand -hex 32
+      SECRET_KEY: "${SECRET_KEY:?set SECRET_KEY (openssl rand -hex 32) in your environment}"
       # ── Acceso ──────────────────────────────────────────────
       ENABLE_DEV_ROLE_PROMOTION: "false"
       # ── Ollama ──────────────────────────────────────────────
