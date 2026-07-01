@@ -31,6 +31,10 @@ class Settings(BaseModel):
     AUTH_LOCKOUT_MAX_FAILED: int = 5           # failed logins before lockout (0 disables)
     AUTH_LOCKOUT_SECONDS: int = 900            # lockout duration, seconds (15 min)
 
+    # SSE stream auth — the JWT is never placed in the stream query string (T1.4);
+    # clients exchange it for a single-use ticket valid for this many seconds.
+    SSE_TICKET_TTL_SECONDS: int = 30
+
     # Access controls — MUST be False in production
     ENABLE_DEV_ROLE_PROMOTION: bool = False
 
@@ -142,6 +146,7 @@ def _build_settings() -> Settings:
         "AUTH_RATELIMIT_WINDOW_SECONDS": security.get("auth_ratelimit_window_seconds", 60),
         "AUTH_LOCKOUT_MAX_FAILED": security.get("auth_lockout_max_failed", 5),
         "AUTH_LOCKOUT_SECONDS": security.get("auth_lockout_seconds", 900),
+        "SSE_TICKET_TTL_SECONDS": security.get("sse_ticket_ttl_seconds", 30),
         # Fail-safe: when the key is absent the effective value is False.
         "ENABLE_DEV_ROLE_PROMOTION": access.get("enable_dev_role_promotion", False),
         "DEFAULT_SIGNUP_ROLE": access.get("default_signup_role", "lector"),

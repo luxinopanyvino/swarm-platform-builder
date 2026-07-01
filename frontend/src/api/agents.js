@@ -99,8 +99,14 @@ export const agentsApi = {
   getAvailableTools: () =>
     api.get('/api/v1/agents/tools').then(r => r.data),
 
-  // SSE stream URL (used directly with EventSource)
-  getStreamUrl: (articleId) =>
-    `${BASE_API_URL}/api/v1/agents/${articleId}/stream`,
+  // Request a single-use ticket to authenticate the SSE stream. EventSource
+  // cannot send an Authorization header, so we never put the JWT in the URL;
+  // the client exchanges its Bearer token for a short-lived ticket instead.
+  getStreamTicket: (articleId) =>
+    api.post(`/api/v1/agents/${articleId}/stream-ticket`).then(r => r.data),
+
+  // SSE stream URL (used directly with EventSource), authenticated by ticket.
+  getStreamUrl: (articleId, ticket) =>
+    `${BASE_API_URL}/api/v1/agents/${articleId}/stream?ticket=${encodeURIComponent(ticket)}`,
 };
 
