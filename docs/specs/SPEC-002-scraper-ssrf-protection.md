@@ -1,11 +1,22 @@
 # SPEC-002: Protección SSRF del scraper del Investigador
 
-- **Estado:** Ready
+- **Estado:** Superseded
 - **Autor:** Equipo de plataforma
 - **Fecha:** 2026-06-26
 - **Épica:** E2 (AppSec)
 - **ADR relacionado:** ADR-0003
 - **Severidad:** 🔴
+
+> **Obsoleta (2026-07-02).** La superficie de ataque que esta spec mitigaba
+> **dejó de existir**: el scraper de navegación web (`scraper.py`) se eliminó como
+> código muerto en el commit `71e3923` (*"eliminar el scraper del Investigador"*,
+> Refs #159). El Investigador ya no realiza fetch saliente influido por el usuario
+> (sus fuentes son el RAG local), por lo que no hay vector SSRF que proteger y la
+> guarda de egress propuesta (`app/shared/egress.py`, `assert_safe_url`) **nunca se
+> implementó ni es necesaria** con la arquitectura actual. Se conserva como registro
+> histórico. Si en el futuro se reintroduce fetch saliente, ábrase una **nueva spec**
+> de control de egress en vez de reactivar esta. La tarea T2.1 queda sin efecto (el
+> bloque `sdd-sync` de la sección 8 ya no se sincroniza al no estar en Ready).
 
 ## 1. Problema
 

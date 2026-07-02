@@ -37,7 +37,7 @@ Labels: `epic`, `task`, `area/*`, `sev/{high,medium,low}`.
 
 | ID | Tarea | Sev |
 |----|-------|-----|
-| T2.1 | Protección SSRF en el scraper + quitar `verify=False` (SPEC-002) | 🔴 |
+| ~~T2.1~~ | ~~Protección SSRF en el scraper + quitar `verify=False`~~ · **Obsoleta**: el scraper se eliminó (#159, commit `71e3923`); [SPEC-002](../specs/SPEC-002-scraper-ssrf-protection.md) → *Superseded* | — |
 | T2.2 | Sanear URLs `javascript:`/`data:` en `paper_layout` y añadir `sandbox` al iframe | 🟠 |
 | T2.3 | Validar subidas por *magic bytes*/content-type (no solo extensión) | 🟡 |
 | T2.4 | Manejador global de excepciones (sin fugas de stack en 500) | 🟠 |
@@ -115,7 +115,7 @@ Labels: `epic`, `task`, `area/*`, `sev/{high,medium,low}`.
 
 ### Orden recomendado de ejecución
 
-1. **🔴 primero:** T1.1, T1.4, T2.1, T3.1, T3.2, T6.1.
+1. **🔴 primero:** T1.1, T1.4, T3.1, T3.2, T6.1. (~~T2.1~~ obsoleta — scraper eliminado)
 2. **🟠 baratos:** T1.5, T2.2, T2.4, T4.2, T5.4, T6.2.
 3. Resto de 🟠 y 🟡 por capacidad.
 
