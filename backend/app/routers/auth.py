@@ -12,7 +12,7 @@ from app.core.config import settings
 from app.core.rate_limit import account_lockout, login_ip_limiter, register_ip_limiter
 from app.core.security import hash_password, verify_password, create_access_token, verify_token
 from app.models import UserModel, UserRegisterDTO, UserLoginDTO, TokenResponse, UserResponse, UserRole, ProjectModel
-from app.database import get_session
+from app.core.database import get_session
 
 logger = logging.getLogger("app.auth")
 

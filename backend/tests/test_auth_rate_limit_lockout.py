@@ -30,7 +30,7 @@ from app.core.rate_limit import (  # noqa: E402
     SlidingWindowCounter,
 )
 from app.main import app  # noqa: E402
-from app.shared.database import Base, engine  # noqa: E402
+from app.core.database import Base, engine  # noqa: E402
 
 
 async def _reset_database() -> None:

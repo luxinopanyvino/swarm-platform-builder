@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, Header, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
-from app.shared.database import get_session
+from app.core.database import get_session
 from app.modules.auth.application.dtos import RegisterDTO, LoginDTO, TokenResponse, UserResponse
 from app.modules.auth.application.use_cases import RegisterUseCase, LoginUseCase, GetUserUseCase
 from app.modules.auth.adapters.repository import UserRepositoryImpl

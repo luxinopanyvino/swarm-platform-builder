@@ -24,7 +24,7 @@ from app.core import stream_auth  # noqa: E402
 from app.core.stream_auth import consume_ticket, issue_ticket, reset_stream_tickets  # noqa: E402
 from app.main import app  # noqa: E402
 from app.models import ArticleModel, UserModel  # noqa: E402
-from app.shared.database import Base, engine  # noqa: E402
+from app.core.database import Base, engine  # noqa: E402
 
 
 @pytest.fixture(autouse=True)

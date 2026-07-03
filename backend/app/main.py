@@ -4,14 +4,14 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import select
 
-from app.database import init_db
+from app.core.database import init_db
 # Import models to ensure they are registered on Base.metadata
 from app import models
 from app.core.config import settings
 from app.core.security import hash_password
 from app.routers import auth, articles, ai, agents, flows, config, notifications, checkpoints, projects
 from app.routers.magazine import router as magazine_router
-from app.shared.database import AsyncSessionLocal
+from app.core.database import AsyncSessionLocal
 from app.shared.agents_seed import seed_agents_for_project
 from app.models import (
     UserModel,
