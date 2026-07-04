@@ -169,7 +169,7 @@ tasks:
   - id: T9.1
     title: Traza de explicabilidad por paso (agent_run_steps) persistida desde el orquestador
     sev: high
-    depends_on: ["#171"]
+    depends_on: [T5.1]      # logging estructurado (SPEC-019, antes "#171")
     acceptance: [AC1]
   - id: T9.2
     title: Endpoint GET /agents/{id}/explain + panel UI "Por qué este resultado"
