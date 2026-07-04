@@ -82,6 +82,10 @@ Una tarea/épica está *Ready* cuando:
 - [ ] Riesgos y dependencias identificados.
 - [ ] Impacto de seguridad evaluado (¿toca auth, datos, egress, secretos?).
 - [ ] Plan de pruebas definido.
+- [ ] *(Recomendado, no bloqueante — [ADR-0007](../adr/0007-adopt-spec-kit-authoring-layer.md))*
+  La spec pasó el pipeline de autoría Spec Kit: `/speckit-clarify` (ambigüedades
+  resueltas) y `/speckit-checklist` del dominio dominante; `/speckit-analyze`
+  antes de sembrar el backlog. Ver [speckit-authoring-aids.md](speckit-authoring-aids.md).
 
 ## 6. Definition of Done (DoD) — para cerrar
 
@@ -110,6 +114,12 @@ Una tarea/épica está *Ready* cuando:
   reconcilia esa definición con los issues: **crea/actualiza** la definición pero
   **nunca** toca el estado de ejecución (no cierra/reabre/borra). Dry-run por
   defecto; aplica con `--apply`.
+- Las specs **nacen y maduran** con la capa de autoría Spec Kit
+  (`/speckit-specify` → `/speckit-clarify` → `/speckit-checklist` →
+  `/speckit-analyze`), recomendada en la DoR (§5) y documentada en
+  [speckit-authoring-aids.md](speckit-authoring-aids.md) (ADR-0007). **Toda
+  épica del Project debe estar respaldada por una spec** con bloque `sdd-sync`
+  (las tareas del bootstrap sin spec se adoptaron en SPEC-015…020).
 - [`scripts/seed_github_project.py`](../../scripts/seed_github_project.py) es un
   **bootstrap de un solo uso** (creación inicial del Project), **no** un sync
   incremental. Para mantener el backlog al día tras el bootstrap se usa `/sdd-sync`.

@@ -732,9 +732,19 @@ Hay **dos** agentes de desarrollo, cada uno con su comando:
 | [`sdd-sync`](.claude/agents/sdd-sync.md) | `/sdd-sync [--apply]` | Reconcilia las épicas/tareas del GitHub Project con la **fuente de verdad** (specs/ADRs). |
 | [`task-runner`](.claude/agents/task-runner.md) | `/resolve-task <#>` | Implementa **una** tarea del backlog de extremo a extremo. |
 
+Las specs, además, **nacen y maduran** con la capa de autoría
+[Spec Kit](https://github.com/github/spec-kit) adaptada a este repo
+([ADR-0007](docs/adr/0007-adopt-spec-kit-authoring-layer.md)):
+`/speckit-specify` (crear SPEC en Draft), `/speckit-clarify` (ambigüedades),
+`/speckit-checklist` (calidad de requisitos) y `/speckit-analyze`
+(consistencia SPEC↔ADR↔tareas). Detalle:
+[docs/governance/speckit-authoring-aids.md](docs/governance/speckit-authoring-aids.md).
+
 ### Flujo de funcionamiento (de la spec al merge)
 
 ```
+/speckit-specify → clarify → checklist → analyze   ← autoría (recomendado en DoR)
+        ▼
 docs/specs/SPEC-NNN (bloque sdd-sync)          ← fuente de verdad (definición)
         │  /sdd-sync --apply
         ▼
