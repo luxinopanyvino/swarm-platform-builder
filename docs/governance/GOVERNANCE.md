@@ -66,6 +66,15 @@ por las mismas reglas que el humano, con tres principios propios:
    el contrato de prefijos de la sección 3 (`feat/`, `fix/`, `docs/`, `chore/`,
    `sec/`), eligiendo el prefijo según la naturaleza del cambio. Nunca crea ramas
    sin prefijo ni trabaja sobre `develop`.
+5. **Higiene de contexto** ([ADR-0008](../adr/0008-agent-memory-and-context-budget.md)).
+   Los LLM degradan **antes** de agotar su ventana (típicamente al entrar en el
+   último ~20%). La memoria de largo plazo del proyecto está **externalizada** en
+   los artefactos SDD (specs, ADRs, bitácoras, issues): un agente nuevo debe poder
+   retomar cualquier trabajo solo con ellos. Por eso: una tarea por sesión; al
+   completarla, la bitácora/PR es el estado — no el historial del chat; si una
+   sesión se acerca a la saturación de contexto, **compacta o reinicia** apoyándote
+   en los artefactos en lugar de continuar degradado. No acumules tareas no
+   relacionadas en una misma sesión larga.
 
 Ningún agente mergea su propia PR, cierra issues a mano ni trabaja sobre `develop`.
 
