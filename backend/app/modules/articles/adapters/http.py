@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, Header, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from uuid import UUID
 
-from app.shared.database import get_session
+from app.core.database import get_session
 from app.modules.articles.application.dtos import (
     CreateArticleDTO,
     UpdateArticleDTO,

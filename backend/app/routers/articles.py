@@ -11,7 +11,7 @@ from app.models import (
     ArticleModel, ArticleStatus, CreateArticleDTO, UpdateArticleDTO,
     ArticleResponse, ArticleListResponse, UserModel, NotificationModel, UserRole
 )
-from app.database import get_session
+from app.core.database import get_session
 from app.routers.auth import get_current_user
 from pydantic import BaseModel
 

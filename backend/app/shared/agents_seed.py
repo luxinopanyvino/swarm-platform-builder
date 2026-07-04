@@ -5,7 +5,7 @@ from pathlib import Path
 from sqlalchemy import select
 
 from app.models import AgentProfileModel, ProjectUseCaseType
-from app.shared.database import AsyncSessionLocal
+from app.core.database import AsyncSessionLocal
 
 
 # ── Agent templates per use-case type ─────────────────────────────────────────

@@ -4,7 +4,7 @@ from typing import Dict, Any
 
 from sqlalchemy import select
 
-from app.shared.database import AsyncSessionLocal
+from app.core.database import AsyncSessionLocal
 from app.models import ArticleModel, ArticleStatus
 from app.modules.agents.adapters.paper_layout import build_paper_html
 

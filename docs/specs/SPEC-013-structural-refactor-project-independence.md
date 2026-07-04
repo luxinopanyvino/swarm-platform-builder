@@ -51,10 +51,10 @@ y cada proyecto nuevo seguiría exigiendo código.
 
 ## 3. Criterios de aceptación (Given/When/Then)
 
-- [ ] **AC1** — *Given* el backend, *When* se inspeccionan config y base de datos,
+- [x] **AC1** — *Given* el backend, *When* se inspeccionan config y base de datos,
   *Then* existe un único módulo de configuración y uno de base de datos bajo `core/`
   (no quedan `app/config.py` ni `app/database.py` duplicados) y la app arranca.
-- [ ] **AC2** — *Given* el backend, *When* se inspeccionan los modelos, *Then*
+- [x] **AC2** — *Given* el backend, *When* se inspeccionan los modelos, *Then*
   `app/models.py` monolítico ya no existe: cada modelo vive en su módulo y los tests
   existentes siguen pasando.
 - [ ] **AC3** — *Given* el motor, *When* se listan las capacidades, *Then* existe un

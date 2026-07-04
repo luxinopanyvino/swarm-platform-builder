@@ -31,7 +31,7 @@ from app.models import (
     AgentRunListResponse, AgentRunDetailResponse,
     AgentProfileModel, AgentProfileResponse,
 )
-from app.database import get_session
+from app.core.database import get_session
 from app.routers.auth import get_current_user, require_redactor
 from app.core.config import settings
 from app.core.stream_auth import issue_ticket, consume_ticket

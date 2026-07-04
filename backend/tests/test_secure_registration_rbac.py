@@ -24,7 +24,7 @@ TEST_DB_PATH = (ROOT_DIR / "tests" / "test_rbac.db").resolve()
 os.environ["DATABASE_URL"] = f"sqlite+aiosqlite:///{TEST_DB_PATH.as_posix()}"
 
 from app.main import app, ensure_local_admin_user  # noqa: E402
-from app.shared.database import Base, engine  # noqa: E402
+from app.core.database import Base, engine  # noqa: E402
 
 
 async def _reset_database() -> None:
