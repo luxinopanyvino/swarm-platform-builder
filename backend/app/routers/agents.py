@@ -39,7 +39,7 @@ from app.modules.agents.application.use_cases import (
     Orchestrator, active_streams, active_tasks, publish_event,
     submit_user_decision,
 )
-from app.modules.agents.adapters.rag import (
+from app.platform.capabilities.rag import (
     extract_text, chunk_text, ensure_collection, upsert_chunks,
     list_documents, delete_document, get_rag_backend, backfill_doc_metadata,
 )
@@ -155,7 +155,7 @@ async def get_claude_agent_definitions(
 @router.get("/rag/collections")
 async def get_rag_collections_overview(token_data=Depends(get_current_user)):
     """Return all RAG documents stored in the local filesystem store (no Qdrant required)."""
-    from app.modules.agents.adapters.rag import _local_rag_root, _load_local_document
+    from app.platform.capabilities.rag import _local_rag_root, _load_local_document
 
     rag_root = _local_rag_root()
     collections: dict[str, dict[str, Any]] = {}
@@ -209,7 +209,7 @@ async def get_rag_collections_overview(token_data=Depends(get_current_user)):
 async def get_rag_library(token_data=Depends(get_current_user)):
     """Return all documents stored in Qdrant (or local fallback) across all collections."""
     from app.core.config import settings
-    from app.modules.agents.adapters.rag import list_library_documents
+    from app.platform.capabilities.rag import list_library_documents
 
     docs = await list_library_documents(settings.QDRANT_URL, settings.QDRANT_API_KEY)
 
@@ -335,7 +335,7 @@ async def delete_from_rag_library(
 @router.get("/tools")
 async def list_available_tools(_token=Depends(get_current_user)):
     """Return the catalog of available tools for agent tool calling."""
-    from app.modules.agents.adapters.tools import TOOL_CATALOG
+    from app.platform.capabilities.tools import TOOL_CATALOG
     return {"tools": TOOL_CATALOG}
 
 

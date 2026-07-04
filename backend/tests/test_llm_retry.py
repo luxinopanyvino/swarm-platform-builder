@@ -1,8 +1,8 @@
 """Tests for the LLM resilience layer: retry of transient failures with backoff."""
 import pytest
 
-import app.shared.llm as llm
-from app.shared.llm import TransientLLMError
+import app.platform.llm as llm
+from app.platform.llm import TransientLLMError
 
 
 @pytest.fixture(autouse=True)

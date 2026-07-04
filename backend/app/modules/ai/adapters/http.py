@@ -5,7 +5,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
 from app.core.config import settings
-from app.shared.llm import call_llm, get_default_model
+from app.platform.llm import call_llm, get_default_model
 from app.shared.qdrant import qdrant_client
 
 router = APIRouter(prefix="/api/v1/ai", tags=["ai"])

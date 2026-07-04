@@ -3,7 +3,7 @@ import re
 from typing import Dict, Any
 
 from app.core.config import settings
-from app.shared.llm import call_llm, get_default_model
+from app.platform.llm import call_llm, get_default_model
 
 logger = logging.getLogger(__name__)
 

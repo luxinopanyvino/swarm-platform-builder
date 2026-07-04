@@ -57,7 +57,7 @@ y cada proyecto nuevo seguiría exigiendo código.
 - [x] **AC2** — *Given* el backend, *When* se inspeccionan los modelos, *Then*
   `app/models.py` monolítico ya no existe: cada modelo vive en su módulo y los tests
   existentes siguen pasando.
-- [ ] **AC3** — *Given* el motor, *When* se listan las capacidades, *Then* existe un
+- [x] **AC3** — *Given* el motor, *When* se listan las capacidades, *Then* existe un
   `platform/capabilities/registry.py` con capacidades tipadas (rag/search/scrape/
   format/publish/llm) y la infraestructura (`rag`, `scraper`, `tools`, `llm`) vive
   bajo `platform/`, no bajo `modules/agents/adapters/`.

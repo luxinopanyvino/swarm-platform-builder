@@ -5,8 +5,8 @@ from typing import Dict, Any, Optional
 
 import yaml
 
-from app.modules.agents.adapters.rag import fetch_agent_context
-from app.shared.llm import call_llm, get_default_model
+from app.platform.capabilities.rag import fetch_agent_context
+from app.platform.llm import call_llm, get_default_model
 
 logger = logging.getLogger(__name__)
 
@@ -131,7 +131,7 @@ async def run_generic_agent(agent_name: str, state: Dict[str, Any]) -> Dict[str,
     if rag_enabled:
         if graph_rag_enabled:
             log(f"🕸️ Buscando contexto mediante Graph RAG en colección '{rag_collection}'...")
-            from app.modules.agents.adapters.rag import graph_rag_search_context
+            from app.platform.capabilities.rag import graph_rag_search_context
             title = state.get("title") or ""
             keywords = state.get("keywords") or []
             title_words = [w.strip(".,;:?!()[]") for w in title.split() if len(w) > 3] if title else []
@@ -152,7 +152,7 @@ async def run_generic_agent(agent_name: str, state: Dict[str, Any]) -> Dict[str,
             )
         elif semantic_search_enabled:
             log(f"🔎 Buscando contexto mediante Búsqueda Semántica en colección '{rag_collection}'...")
-            from app.modules.agents.adapters.rag import semantic_search_context
+            from app.platform.capabilities.rag import semantic_search_context
             title = state.get("title") or ""
             keywords = state.get("keywords") or []
             title_words = [w.strip(".,;:?!()[]") for w in title.split() if len(w) > 3] if title else []

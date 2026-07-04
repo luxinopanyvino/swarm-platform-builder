@@ -11,7 +11,7 @@ from langgraph.graph import StateGraph, START, END
 from langgraph.checkpoint.memory import InMemorySaver
 
 from app.core.database import AsyncSessionLocal
-from app.shared.llm import TransientLLMError
+from app.platform.llm import TransientLLMError
 from app.models import AgentRunModel
 from app.modules.agents.domain.entities import AgentState
 from app.modules.agents.adapters.investigador import run_investigador

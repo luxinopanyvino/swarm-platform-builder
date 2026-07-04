@@ -19,7 +19,7 @@ async def test_basic_langgraph_flow_monkeypatched_logs(monkeypatch):
     monkeypatch.setattr(orquestador, "log_run_end", noop_log_end)
 
     # Mock the LLM calls to avoid hitting local Ollama/OpenAI in tests
-    import app.shared.llm
+    import app.platform.llm
     import app.modules.agents.adapters.redactor as redactor_adapter
     import app.modules.agents.adapters.revisor as revisor_adapter
 
@@ -33,8 +33,8 @@ async def test_basic_langgraph_flow_monkeypatched_logs(monkeypatch):
         for token in tokens:
             yield token
 
-    monkeypatch.setattr(app.shared.llm, "call_llm", mock_call_llm)
-    monkeypatch.setattr(app.shared.llm, "call_llm_stream", mock_call_llm_stream)
+    monkeypatch.setattr(app.platform.llm, "call_llm", mock_call_llm)
+    monkeypatch.setattr(app.platform.llm, "call_llm_stream", mock_call_llm_stream)
     monkeypatch.setattr(redactor_adapter, "call_llm_stream", mock_call_llm_stream)
     monkeypatch.setattr(redactor_adapter, "call_llm", mock_call_llm)
     monkeypatch.setattr(revisor_adapter, "call_llm", mock_call_llm)

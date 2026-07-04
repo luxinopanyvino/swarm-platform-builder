@@ -3,7 +3,7 @@ import re
 from typing import Dict, Any, List
 
 from app.core.config import settings
-from app.modules.agents.adapters.rag import semantic_search_results, get_rag_backend, fetch_doc_head, LIBRARY_AGENT
+from app.platform.capabilities.rag import semantic_search_results, get_rag_backend, fetch_doc_head, LIBRARY_AGENT
 from app.modules.agents.adapters.doc_metadata import extract_doc_metadata
 
 logger = logging.getLogger(__name__)
@@ -176,7 +176,7 @@ async def run_investigador(state: Dict[str, Any]) -> Dict[str, Any]:
     # Always run synthesis — with or without external sources.
     # If no external content was found, the LLM uses its parametric knowledge.
     try:
-        from app.shared.llm import call_llm, get_default_model
+        from app.platform.llm import call_llm, get_default_model
         model = (agent_cfg.get("model") or "").strip() or get_default_model()
 
         # When there are no external sources, use a lightweight model for
