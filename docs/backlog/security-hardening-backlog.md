@@ -20,6 +20,24 @@ Labels: `epic`, `task`, `area/*`, `sev/{high,medium,low}`.
 
 ---
 
+## Mapa épica → spec (fuente de verdad)
+
+| Épica | Spec(s) |
+|-------|---------|
+| E1 Identidad y Acceso | SPEC-001 · SPEC-015 |
+| E2 AppSec | SPEC-002 (Superseded) · SPEC-016 |
+| E3 Infraestructura | SPEC-017 |
+| E4 Datos y Persistencia | SPEC-018 |
+| E5 Observabilidad | SPEC-019 |
+| E6 Gobernanza | SPEC-020 |
+| E7 UX/UI | SPEC-003 |
+| E8 Plataforma no-code | SPEC-013 |
+| E9 Explicabilidad y EDD | SPEC-014 |
+| E10 Memoria y contexto de agentes | SPEC-021 (Draft) |
+
+> E8 y E10 no tienen sección propia en este overview histórico; su definición
+> completa vive en sus specs.
+
 ## E1 — Seguridad: Identidad y Acceso  · `area/security`
 > Reducir privilegios por defecto y endurecer la gestión de sesiones.
 
