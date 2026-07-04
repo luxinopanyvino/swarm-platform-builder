@@ -3,8 +3,8 @@ import logging
 from typing import Dict, Any
 
 from app.core.config import settings
-from app.modules.agents.adapters.rag import semantic_search_context, LIBRARY_AGENT
-from app.shared.llm import call_llm, call_llm_stream, get_default_model
+from app.platform.capabilities.rag import semantic_search_context, LIBRARY_AGENT
+from app.platform.llm import call_llm, call_llm_stream, get_default_model
 
 logger = logging.getLogger(__name__)
 

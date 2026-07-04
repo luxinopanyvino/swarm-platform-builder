@@ -4,7 +4,7 @@ import uuid
 import pytest
 
 from app.modules.agents.application import use_cases as orquestador
-from app.shared.llm import TransientLLMError
+from app.platform.llm import TransientLLMError
 
 
 @pytest.mark.asyncio
