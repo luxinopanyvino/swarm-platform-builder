@@ -35,6 +35,7 @@ Crea un ADR cuando una decisión:
 | [0005](0005-nocode-architecture.md) | Arquitectura no-code: motor vs paquetes de proyecto e independencia de proyectos | Propuesto |
 | [0006](0006-adopt-evaluation-driven-development.md) | Adoptar Evaluation-Driven Development (EDD) para los agentes de la plataforma | Propuesto |
 | [0007](0007-adopt-spec-kit-authoring-layer.md) | Adoptar Spec Kit como capa de autoría del SDD | Propuesto |
+| [0008](0008-agent-memory-and-context-budget.md) | Memoria a largo plazo y presupuesto de contexto para los agentes | Propuesto |
 
 Ver también: [docs/specs](../specs) (especificaciones SDD) y
 [docs/governance](../governance) (gobernanza, DoD, CODEOWNERS).
