@@ -7,10 +7,10 @@
 - **ADR relacionado:** ADR-0008
 - **Severidad:** 🟠
 
-> **Draft deliberado** (pipeline ADR-0007): contiene marcadores
-> `[NEEDS CLARIFICATION]` a resolver con `/speckit-clarify` y debe pasar
-> `/speckit-checklist` antes de Ready. Mientras esté en Draft, `/sdd-sync`
-> **no** siembra su épica/tareas.
+> **Draft** (pipeline ADR-0007): ambigüedades **resueltas** con
+> `/speckit-clarify` (ver `## Clarifications`, sesión 2026-07-04); pendiente
+> `/speckit-checklist` antes de pasar a Ready. Mientras esté en Draft,
+> `/sdd-sync` **no** siembra su épica/tareas.
 
 ## 1. Problema
 
@@ -43,6 +43,7 @@ y no configurable por despliegue.
 - Q: ¿Con qué *scope* se almacena y recupera la memoria episódica (AC4)? → A: **Ambos** — cada memoria lleva `project_id` y `user_id` en el payload; la recuperación es **por proyecto** con filtro opcional por usuario.
 - Q: ¿La recuperación de memorias está activada por defecto u opt-in (AC4)? → A: **Opt-in** — `AGENT_MEMORY_ENABLED=false` por defecto; se activa por despliegue.
 - Q: ¿Valor por defecto de `CONTEXT_BUDGET_RATIO` (AC1)? → A: **0.8** — el último 20% de la ventana queda como zona de seguridad (coincide con la degradación observada); calibrable con EDD sin cambiar la spec.
+- Q: ¿Cómo se estiman los tokens del prompt (§4, AC1/AC2)? → A: **Aproximación configurable** — heurística chars/token por modelo (default ≈4), sin dependencias nuevas; el margen del ratio 0.8 absorbe su imprecisión. Sustituible por tokenizador real sin cambiar los AC.
 
 ## 3. Criterios de aceptación
 
@@ -78,10 +79,10 @@ y no configurable por despliegue.
 
 ## 4. Diseño propuesto
 
-- `platform/context_budget.py` (tras T8.2): `estimate_tokens(text)`
-  (aproximación chars/4 configurable [NEEDS CLARIFICATION: ¿aprox. o
-  tokenizador real por modelo?]), `assemble(prompt_parts, budget)` con
-  prioridades tipadas y reporte de recortes.
+- `platform/context_budget.py` (tras T8.2): `estimate_tokens(text)` —
+  **aproximación configurable** (chars/token por modelo, default ≈4; sin
+  dependencias nuevas) — y `assemble(prompt_parts, budget)` con prioridades
+  tipadas y reporte de recortes.
 - Compactación en `application/use_cases.py`: helper `compact_history(state)`
   invocado antes de reinvocar al Redactor cuando `estimate > budget`; usa el
   LLM configurado con prompt de resumen acotado (~15% del presupuesto).
