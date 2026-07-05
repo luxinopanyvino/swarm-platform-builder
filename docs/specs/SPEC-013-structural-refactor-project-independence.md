@@ -81,16 +81,18 @@ y cada proyecto nuevo seguiría exigiendo código.
 
 Sigue ADR-0005. Resumen por área:
 
-- **`core/`**: fusionar `app/config.py` → `app/core/config.py`; `app/database.py` →
-  `app/core/db.py` (o `shared/database.py` unificado). Actualizar imports.
+- **`core/`** *(hecho — T8.1, #237)*: fusionar `app/config.py` → `app/core/config.py`;
+  `app/database.py` → `app/core/database.py`. Imports actualizados.
 - **`platform/`**: nuevo paquete motor.
   - `engine/graph.py` + `engine/runtime.py` + `engine/routing.py` (desde
-    `application/use_cases.py`, con routing como datos).
-  - `capabilities/registry.py` + subcarpetas; mover `rag.py`, `scraper.py`,
-    `tools.py`, `shared/llm.py`.
-  - `agents/generic_runner.py` (desde `generic.py`).
+    `application/use_cases.py`, con routing como datos) — pendiente (T8.3).
+  - `capabilities/registry.py` + subcarpetas *(hecho — T8.2, #239)*: movidos
+    `rag.py`, `tools.py` y `shared/llm.py` → `platform/`. (`scraper.py` ya no
+    existe: eliminado como código muerto, SPEC-002 Superseded; la capacidad
+    `scrape` queda declarada sin proveedor en el registry.)
+  - `agents/generic_runner.py` (desde `generic.py`) — pendiente (T8.3).
 - **`modules/`**: hexagonal consistente (`domain/application/infrastructure/interface`);
-  partir `models.py`; nuevo módulo `templates/`.
+  partir `models.py` *(hecho — T8.1)*; nuevo módulo `templates/`.
 - **`projects/<slug>/`** (filesystem): `template.yaml` (agentes, grafo, routing, rag,
   canales), `agents/*.agent.md`, `capabilities/` opcional, `assets/`. *Loader* que
   registra el paquete y *seed* que clona a BD.

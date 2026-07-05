@@ -46,7 +46,7 @@ Ollama), por lo que un despliegue "sano" puede estar roto.
 AC1: `logging.config` con formatter JSON + middleware ASGI de correlación
 (sustituye los logs con emoji de `use_cases.py`/routers). AC2:
 `prometheus-client` con instrumentación en middleware y en el dispatcher LLM
-(`app/shared/llm.py`, que ya conoce tokens/modelo). AC3: `opentelemetry-sdk`
+(`app/platform/llm.py` tras T8.2, que ya conoce tokens/modelo). AC3: `opentelemetry-sdk`
 opcional tras AC1. AC4: extender el `/health` de `app/main.py` con chequeos
 `asyncio.gather` + timeout corto por dependencia.
 

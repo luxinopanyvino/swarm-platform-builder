@@ -7,10 +7,10 @@
 - **ADR relacionado:** ADR-0008
 - **Severidad:** 🟠
 
-> **Draft deliberado** (pipeline ADR-0007): contiene marcadores
-> `[NEEDS CLARIFICATION]` a resolver con `/speckit-clarify` y debe pasar
-> `/speckit-checklist` antes de Ready. Mientras esté en Draft, `/sdd-sync`
-> **no** siembra su épica/tareas.
+> **Draft** (pipeline ADR-0007): ambigüedades **resueltas** con
+> `/speckit-clarify` (ver `## Clarifications`, sesión 2026-07-04); pendiente
+> `/speckit-checklist` antes de pasar a Ready. Mientras esté en Draft,
+> `/sdd-sync` **no** siembra su épica/tareas.
 
 ## 1. Problema
 
@@ -36,11 +36,20 @@ y no configurable por despliegue.
 - **No-objetivos:** aumentar `num_ctx`/cambiar de modelos como solución;
   memoria conversacional completa; fine-tuning; caché semántica de respuestas.
 
+## Clarifications
+
+### Session 2026-07-04
+
+- Q: ¿Con qué *scope* se almacena y recupera la memoria episódica (AC4)? → A: **Ambos** — cada memoria lleva `project_id` y `user_id` en el payload; la recuperación es **por proyecto** con filtro opcional por usuario.
+- Q: ¿La recuperación de memorias está activada por defecto u opt-in (AC4)? → A: **Opt-in** — `AGENT_MEMORY_ENABLED=false` por defecto; se activa por despliegue.
+- Q: ¿Valor por defecto de `CONTEXT_BUDGET_RATIO` (AC1)? → A: **0.8** — el último 20% de la ventana queda como zona de seguridad (coincide con la degradación observada); calibrable con EDD sin cambiar la spec.
+- Q: ¿Cómo se estiman los tokens del prompt (§4, AC1/AC2)? → A: **Aproximación configurable** — heurística chars/token por modelo (default ≈4), sin dependencias nuevas; el margen del ratio 0.8 absorbe su imprecisión. Sustituible por tokenizador real sin cambiar los AC.
+
 ## 3. Criterios de aceptación
 
 - [ ] **AC1** — *Given* un paso de agente cuyo prompt ensamblado excede el
-  presupuesto (`CONTEXT_BUDGET_RATIO × num_ctx` efectivo; por defecto 0.8
-  [NEEDS CLARIFICATION: ¿0.8 o 0.75? medir con EDD]), *When* se construye la
+  presupuesto (`CONTEXT_BUDGET_RATIO × num_ctx` efectivo; **por defecto 0.8**,
+  calibrable con los evals de AC6), *When* se construye la
   llamada, *Then* el ensamblador recorta con prioridad **instrucciones >
   borrador vigente > feedback activo > contexto RAG** hasta caber, y registra
   tokens estimados y qué se recortó.
@@ -55,11 +64,11 @@ y no configurable por despliegue.
 - [ ] **AC4** — *Given* una ejecución terminada (o cancelada), *Then* se
   persiste una **memoria episódica** del run (tema, decisiones/HITL, fuentes
   citadas, score final, resumen) en una colección de memoria **separada del
-  RAG documental** y con *scope* por proyecto [NEEDS CLARIFICATION: ¿scope por
-  proyecto, por usuario o ambos?]; *Given* una nueva ejecución del mismo
+  RAG documental**, con payload `project_id` + `user_id`; la recuperación es
+  **por proyecto**, con filtro opcional por usuario; *Given* una nueva ejecución del mismo
   proyecto con la memoria habilitada, *Then* el Investigador recupera las
-  memorias relevantes y las aporta como contexto (opt-in por configuración
-  [NEEDS CLARIFICATION: ¿opt-in u on por defecto?]).
+  memorias relevantes y las aporta como contexto. La memoria es **opt-in**:
+  `AGENT_MEMORY_ENABLED=false` por defecto y se activa por despliegue.
 - [ ] **AC5** — *Given* un despliegue, *Then* `keep_alive` es configuración
   documentada (default actual `0` con su tradeoff VRAM ↔ caché KV caliente) y
   el uso de contexto por paso (tokens in/out, % de presupuesto, compactaciones)
@@ -70,17 +79,17 @@ y no configurable por despliegue.
 
 ## 4. Diseño propuesto
 
-- `platform/context_budget.py` (tras T8.2): `estimate_tokens(text)`
-  (aproximación chars/4 configurable [NEEDS CLARIFICATION: ¿aprox. o
-  tokenizador real por modelo?]), `assemble(prompt_parts, budget)` con
-  prioridades tipadas y reporte de recortes.
+- `platform/context_budget.py` (tras T8.2): `estimate_tokens(text)` —
+  **aproximación configurable** (chars/token por modelo, default ≈4; sin
+  dependencias nuevas) — y `assemble(prompt_parts, budget)` con prioridades
+  tipadas y reporte de recortes.
 - Compactación en `application/use_cases.py`: helper `compact_history(state)`
   invocado antes de reinvocar al Redactor cuando `estimate > budget`; usa el
   LLM configurado con prompt de resumen acotado (~15% del presupuesto).
-- Memoria: colección `__memory__` (payload `project_id`, filtrada por
+- Memoria: colección `__memory__` (payload `project_id` + `user_id`, filtrada por
   proyecto — se alinea con el namespace RAG por proyecto de SPEC-013/T8.5);
   escritura al finalizar el grafo; recuperación semántica en el Investigador.
-- Config: `CONTEXT_BUDGET_RATIO`, `LLM_KEEP_ALIVE`, `AGENT_MEMORY_ENABLED`
+- Config: `CONTEXT_BUDGET_RATIO`, `LLM_KEEP_ALIVE`, `AGENT_MEMORY_ENABLED` (default `false`)
   (+ overrides por agente en frontmatter `.agent.md`).
 
 ## 5. Riesgos y mitigaciones
