@@ -42,12 +42,13 @@ y no configurable por despliegue.
 
 - Q: ¿Con qué *scope* se almacena y recupera la memoria episódica (AC4)? → A: **Ambos** — cada memoria lleva `project_id` y `user_id` en el payload; la recuperación es **por proyecto** con filtro opcional por usuario.
 - Q: ¿La recuperación de memorias está activada por defecto u opt-in (AC4)? → A: **Opt-in** — `AGENT_MEMORY_ENABLED=false` por defecto; se activa por despliegue.
+- Q: ¿Valor por defecto de `CONTEXT_BUDGET_RATIO` (AC1)? → A: **0.8** — el último 20% de la ventana queda como zona de seguridad (coincide con la degradación observada); calibrable con EDD sin cambiar la spec.
 
 ## 3. Criterios de aceptación
 
 - [ ] **AC1** — *Given* un paso de agente cuyo prompt ensamblado excede el
-  presupuesto (`CONTEXT_BUDGET_RATIO × num_ctx` efectivo; por defecto 0.8
-  [NEEDS CLARIFICATION: ¿0.8 o 0.75? medir con EDD]), *When* se construye la
+  presupuesto (`CONTEXT_BUDGET_RATIO × num_ctx` efectivo; **por defecto 0.8**,
+  calibrable con los evals de AC6), *When* se construye la
   llamada, *Then* el ensamblador recorta con prioridad **instrucciones >
   borrador vigente > feedback activo > contexto RAG** hasta caber, y registra
   tokens estimados y qué se recortó.
