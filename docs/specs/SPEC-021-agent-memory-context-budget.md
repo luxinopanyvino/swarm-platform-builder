@@ -36,6 +36,12 @@ y no configurable por despliegue.
 - **No-objetivos:** aumentar `num_ctx`/cambiar de modelos como solución;
   memoria conversacional completa; fine-tuning; caché semántica de respuestas.
 
+## Clarifications
+
+### Session 2026-07-04
+
+- Q: ¿Con qué *scope* se almacena y recupera la memoria episódica (AC4)? → A: **Ambos** — cada memoria lleva `project_id` y `user_id` en el payload; la recuperación es **por proyecto** con filtro opcional por usuario.
+
 ## 3. Criterios de aceptación
 
 - [ ] **AC1** — *Given* un paso de agente cuyo prompt ensamblado excede el
@@ -55,8 +61,8 @@ y no configurable por despliegue.
 - [ ] **AC4** — *Given* una ejecución terminada (o cancelada), *Then* se
   persiste una **memoria episódica** del run (tema, decisiones/HITL, fuentes
   citadas, score final, resumen) en una colección de memoria **separada del
-  RAG documental** y con *scope* por proyecto [NEEDS CLARIFICATION: ¿scope por
-  proyecto, por usuario o ambos?]; *Given* una nueva ejecución del mismo
+  RAG documental**, con payload `project_id` + `user_id`; la recuperación es
+  **por proyecto**, con filtro opcional por usuario; *Given* una nueva ejecución del mismo
   proyecto con la memoria habilitada, *Then* el Investigador recupera las
   memorias relevantes y las aporta como contexto (opt-in por configuración
   [NEEDS CLARIFICATION: ¿opt-in u on por defecto?]).
@@ -77,7 +83,7 @@ y no configurable por despliegue.
 - Compactación en `application/use_cases.py`: helper `compact_history(state)`
   invocado antes de reinvocar al Redactor cuando `estimate > budget`; usa el
   LLM configurado con prompt de resumen acotado (~15% del presupuesto).
-- Memoria: colección `__memory__` (payload `project_id`, filtrada por
+- Memoria: colección `__memory__` (payload `project_id` + `user_id`, filtrada por
   proyecto — se alinea con el namespace RAG por proyecto de SPEC-013/T8.5);
   escritura al finalizar el grafo; recuperación semántica en el Investigador.
 - Config: `CONTEXT_BUDGET_RATIO`, `LLM_KEEP_ALIVE`, `AGENT_MEMORY_ENABLED`
