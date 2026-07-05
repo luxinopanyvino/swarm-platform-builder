@@ -41,6 +41,7 @@ y no configurable por despliegue.
 ### Session 2026-07-04
 
 - Q: ¿Con qué *scope* se almacena y recupera la memoria episódica (AC4)? → A: **Ambos** — cada memoria lleva `project_id` y `user_id` en el payload; la recuperación es **por proyecto** con filtro opcional por usuario.
+- Q: ¿La recuperación de memorias está activada por defecto u opt-in (AC4)? → A: **Opt-in** — `AGENT_MEMORY_ENABLED=false` por defecto; se activa por despliegue.
 
 ## 3. Criterios de aceptación
 
@@ -64,8 +65,8 @@ y no configurable por despliegue.
   RAG documental**, con payload `project_id` + `user_id`; la recuperación es
   **por proyecto**, con filtro opcional por usuario; *Given* una nueva ejecución del mismo
   proyecto con la memoria habilitada, *Then* el Investigador recupera las
-  memorias relevantes y las aporta como contexto (opt-in por configuración
-  [NEEDS CLARIFICATION: ¿opt-in u on por defecto?]).
+  memorias relevantes y las aporta como contexto. La memoria es **opt-in**:
+  `AGENT_MEMORY_ENABLED=false` por defecto y se activa por despliegue.
 - [ ] **AC5** — *Given* un despliegue, *Then* `keep_alive` es configuración
   documentada (default actual `0` con su tradeoff VRAM ↔ caché KV caliente) y
   el uso de contexto por paso (tokens in/out, % de presupuesto, compactaciones)
@@ -86,7 +87,7 @@ y no configurable por despliegue.
 - Memoria: colección `__memory__` (payload `project_id` + `user_id`, filtrada por
   proyecto — se alinea con el namespace RAG por proyecto de SPEC-013/T8.5);
   escritura al finalizar el grafo; recuperación semántica en el Investigador.
-- Config: `CONTEXT_BUDGET_RATIO`, `LLM_KEEP_ALIVE`, `AGENT_MEMORY_ENABLED`
+- Config: `CONTEXT_BUDGET_RATIO`, `LLM_KEEP_ALIVE`, `AGENT_MEMORY_ENABLED` (default `false`)
   (+ overrides por agente en frontmatter `.agent.md`).
 
 ## 5. Riesgos y mitigaciones
