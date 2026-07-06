@@ -65,6 +65,16 @@ entrar en el último tramo de la ventana en lugar de degradarse en silencio).
   editorial. Rechazada.
 - **No hacer nada**: la degradación observada en artículos largos/bucles de
   revisión es precisamente el síntoma reportado. Rechazada.
+- **Memoria de grafo de conocimiento (Graphiti/Zep) o GraphRAG (Microsoft)**:
+  atacan el mismo problema (recuperar solo los hechos relevantes en lugar de
+  saturar el prompt), pero exigen infra nueva (grafo Neo4j/FalkorDB) y la
+  extracción de entidades/comunidades se paga en llamadas LLM — costosa y de
+  calidad dudosa con los modelos locales del stack (llama3.2 1b/3b, mistral 7b).
+  **Diferida, no rechazada.** Criterio de activación: si, medida con los evals
+  EDD (SPEC-021/AC6), la memoria episódica vectorial se queda corta para
+  consultas *relacionales/temporales* (autores↔temas↔fuentes↔decisiones a lo
+  largo del tiempo), se abrirá una spec propia para evaluar Graphiti como
+  evolución de T10.3.
 
 ## Consecuencias
 
