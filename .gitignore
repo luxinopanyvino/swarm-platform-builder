@@ -60,3 +60,5 @@ htmlcov/
 storage/
 backend/app/.rag_local/
 docs/.vitepress/cache/
+backend/data/dev.db
+*.db
