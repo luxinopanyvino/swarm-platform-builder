@@ -23,8 +23,25 @@ class Settings(BaseModel):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
 
+    # Brute-force / credential-stuffing protection for the auth endpoints.
+    # Sliding-window rate limit per client IP (login & register) and per-account
+    # lockout after consecutive failed logins.
+    AUTH_RATELIMIT_MAX_ATTEMPTS: int = 10      # attempts per window per IP (0 disables)
+    AUTH_RATELIMIT_WINDOW_SECONDS: int = 60    # rolling window length, seconds
+    AUTH_LOCKOUT_MAX_FAILED: int = 5           # failed logins before lockout (0 disables)
+    AUTH_LOCKOUT_SECONDS: int = 900            # lockout duration, seconds (15 min)
+
+    # SSE stream auth — the JWT is never placed in the stream query string (T1.4);
+    # clients exchange it for a single-use ticket valid for this many seconds.
+    SSE_TICKET_TTL_SECONDS: int = 30
+
     # Access controls — MUST be False in production
     ENABLE_DEV_ROLE_PROMOTION: bool = False
+
+    # Default role assigned to users who self-register. Minimal privilege by
+    # design: only "lector" or "publico" are accepted; anything else falls back
+    # to "lector". Never grant "redactor"/"admin" on signup.
+    DEFAULT_SIGNUP_ROLE: str = "lector"
 
     # Redis
     REDIS_URL: str = "redis://:password@localhost:6379/0"
@@ -42,6 +59,18 @@ class Settings(BaseModel):
 
     # LLM Provider — "ollama" (default, on-prem) | "openai" (OpenAI-compatible API)
     LLM_PROVIDER: str = "ollama"
+
+    # LLM resilience — automatic retry of transient failures (connection refused,
+    # timeouts, 5xx, empty responses) with exponential backoff + jitter.
+    LLM_MAX_RETRIES: int = 3          # extra attempts after the first try (0 disables)
+    LLM_RETRY_BASE_DELAY: float = 1.0  # seconds; first backoff, doubles each retry
+    LLM_RETRY_MAX_DELAY: float = 10.0  # cap for a single backoff wait
+
+    # Pipeline auto-resume — when a node fails with a transient error even after the
+    # LLM retries above, the orchestrator resumes from the last checkpoint this many
+    # times (with backoff) before surfacing the failure for a manual retry.
+    PIPELINE_AUTO_RESUME_ATTEMPTS: int = 2
+    PIPELINE_AUTO_RESUME_DELAY: float = 3.0
 
     # OpenAI / OpenAI-compatible (Azure, vLLM, Groq, etc.)
     OPENAI_API_KEY: str = ""
@@ -113,7 +142,14 @@ def _build_settings() -> Settings:
         "ALGORITHM": security.get("algorithm", "HS256"),
         "ACCESS_TOKEN_EXPIRE_MINUTES": security.get("access_token_expire_minutes", 30),
         "REFRESH_TOKEN_EXPIRE_DAYS": security.get("refresh_token_expire_days", 7),
-        "ENABLE_DEV_ROLE_PROMOTION": access.get("enable_dev_role_promotion", True),
+        "AUTH_RATELIMIT_MAX_ATTEMPTS": security.get("auth_ratelimit_max_attempts", 10),
+        "AUTH_RATELIMIT_WINDOW_SECONDS": security.get("auth_ratelimit_window_seconds", 60),
+        "AUTH_LOCKOUT_MAX_FAILED": security.get("auth_lockout_max_failed", 5),
+        "AUTH_LOCKOUT_SECONDS": security.get("auth_lockout_seconds", 900),
+        "SSE_TICKET_TTL_SECONDS": security.get("sse_ticket_ttl_seconds", 30),
+        # Fail-safe: when the key is absent the effective value is False.
+        "ENABLE_DEV_ROLE_PROMOTION": access.get("enable_dev_role_promotion", False),
+        "DEFAULT_SIGNUP_ROLE": access.get("default_signup_role", "lector"),
         "REDIS_URL": redis.get("url", "redis://:password@localhost:6379/0"),
         "OLLAMA_BASE_URL": ollama.get("base_url", "http://localhost:11434"),
         "OLLAMA_MODEL": ollama.get("default_model", "llama3.2:1b"),
@@ -127,6 +163,11 @@ def _build_settings() -> Settings:
         "MINIO_ROOT_PASSWORD": minio.get("root_password", "minioadmin"),
         # LLM provider
         "LLM_PROVIDER": yaml_config.get("llm", {}).get("provider", "ollama"),
+        "LLM_MAX_RETRIES": yaml_config.get("llm", {}).get("max_retries", 3),
+        "LLM_RETRY_BASE_DELAY": yaml_config.get("llm", {}).get("retry_base_delay", 1.0),
+        "LLM_RETRY_MAX_DELAY": yaml_config.get("llm", {}).get("retry_max_delay", 10.0),
+        "PIPELINE_AUTO_RESUME_ATTEMPTS": yaml_config.get("llm", {}).get("auto_resume_attempts", 2),
+        "PIPELINE_AUTO_RESUME_DELAY": yaml_config.get("llm", {}).get("auto_resume_delay", 3.0),
         "OPENAI_API_KEY": yaml_config.get("openai", {}).get("api_key", ""),
         "OPENAI_MODEL": yaml_config.get("openai", {}).get("model", "gpt-4o-mini"),
         "OPENAI_EMBED_MODEL": yaml_config.get("openai", {}).get("embed_model", "text-embedding-3-small"),
@@ -159,13 +200,51 @@ def _build_settings() -> Settings:
     return Settings(**merged)
 
 
+# Minimum entropy proxy for a production SECRET_KEY. `openssl rand -hex 32`
+# yields 64 hex chars; we accept anything at/above this length that is not an
+# obvious placeholder.
+SECRET_KEY_MIN_LENGTH = 32
+
+# Substrings that mark a value as an obvious non-production placeholder. Matched
+# case-insensitively anywhere in the key so committed defaults (docker-compose,
+# config.yaml, .env.example) cannot slip through as "valid" in production.
+_INSECURE_SECRET_MARKERS = (
+    "change-in-production",
+    "change-me",
+    "changeme",
+    "cambia-esto",
+    "cambia",
+    "dev-secret",
+    "local-dev-secret",
+    "your-secret-key",
+    "not-for-production",
+    "not-for-prod",
+    "placeholder",
+    "example",
+    "insecure",
+    "secret-key",
+    "password",
+)
+
+
+def _is_insecure_secret_key(value: str) -> bool:
+    """True when SECRET_KEY is empty, too short, or a known weak placeholder."""
+    key = (value or "").strip()
+    if len(key) < SECRET_KEY_MIN_LENGTH:
+        return True
+    lowered = key.lower()
+    return any(marker in lowered for marker in _INSECURE_SECRET_MARKERS)
+
+
 def _validate_settings(s: Settings) -> None:
     """Fail fast on insecure production configurations."""
-    insecure_defaults = {"", "your-secret-key-change-in-production", "local-dev-secret", "local-dev-secret-key-not-for-production"}
-    if not s.DEBUG and s.SECRET_KEY in insecure_defaults:
+    if not s.DEBUG and _is_insecure_secret_key(s.SECRET_KEY):
         raise ValueError(
-            "SECRET_KEY must be set to a strong random value in production. "
-            "Generate one with: python -c \"import secrets; print(secrets.token_hex(32))\""
+            "SECRET_KEY must be set to a strong random value in production "
+            f"(>= {SECRET_KEY_MIN_LENGTH} chars, no committed placeholder). "
+            "Generate one with: openssl rand -hex 32  (or: "
+            "python -c \"import secrets; print(secrets.token_hex(32))\"). "
+            "Inject it via the SECRET_KEY environment variable — never commit it."
         )
 
 

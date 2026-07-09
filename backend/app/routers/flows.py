@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models import (
     SavedFlowModel, CreateSavedFlowDTO, UpdateSavedFlowDTO, SavedFlowResponse, UserRole
 )
-from app.database import get_session
+from app.core.database import get_session
 from app.routers.auth import get_current_user
 
 router = APIRouter(prefix="/api/v1/flows", tags=["flows"])

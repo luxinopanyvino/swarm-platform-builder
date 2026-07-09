@@ -2,6 +2,7 @@
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import HTMLResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -10,7 +11,7 @@ from app.models import (
     ArticleModel, ArticleStatus, CreateArticleDTO, UpdateArticleDTO,
     ArticleResponse, ArticleListResponse, UserModel, NotificationModel, UserRole
 )
-from app.database import get_session
+from app.core.database import get_session
 from app.routers.auth import get_current_user
 from pydantic import BaseModel
 
@@ -153,7 +154,11 @@ async def update_article(
         article.body = req.body
     if req.scientific_format is not None:
         article.scientific_format = req.scientific_format
-    
+    if req.authors is not None:
+        article.authors = [a.model_dump() for a in req.authors]
+    if req.abstract is not None:
+        article.abstract = req.abstract
+
     session.add(article)
     await session.commit()
     await session.refresh(article)
@@ -415,6 +420,50 @@ async def assign_reviewer(
     await session.commit()
     await session.refresh(article)
     return ArticleResponse.model_validate(article)
+
+
+@router.get("/{article_id}/paper", response_class=HTMLResponse)
+async def get_article_paper(
+    article_id: UUID,
+    token_data=Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+):
+    """Return the printable paper-layout HTML for an article.
+
+    Serves the stored ``paper_html`` produced by the Publicador. If it is empty
+    (e.g. the article was never run through the Publicador), the layout is built
+    on the fly so the paper view always works. Visibility matches get_article.
+    """
+    stmt = select(ArticleModel).where(ArticleModel.id == article_id)
+    result = await session.execute(stmt)
+    article = result.scalars().first()
+    if not article:
+        raise HTTPException(status_code=404, detail="Article not found")
+
+    role = token_data.get("role", "redactor")
+    user_id = token_data.get("user_id")
+    is_admin = role == UserRole.ADMIN
+    is_redactor = role == UserRole.REDACTOR
+    is_owner = str(article.author_id) == user_id
+    is_published = article.status == ArticleStatus.PUBLISHED
+    is_assigned_reviewer = article.reviewer_id and str(article.reviewer_id) == user_id
+    if not is_admin and not is_redactor and not is_owner and not is_published and not is_assigned_reviewer:
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    paper_html = article.paper_html or ""
+    if not paper_html.strip():
+        from app.modules.agents.adapters.paper_layout import build_paper_html
+
+        fmt = (article.scientific_format.value if article.scientific_format else None) or "apa"
+        paper_html = build_paper_html(
+            title=article.title or "",
+            authors=article.authors or [],
+            abstract=article.abstract or "",
+            body_markdown=article.body or "",
+            scientific_format=fmt,
+        )
+
+    return HTMLResponse(content=paper_html)
 
 
 @router.post("/{article_id}/format-body", response_model=ArticleResponse)

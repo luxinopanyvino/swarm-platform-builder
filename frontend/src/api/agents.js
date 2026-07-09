@@ -7,9 +7,17 @@ export const agentsApi = {
   run: (articleId, data) =>
     api.post(`/api/v1/agents/${articleId}/run`, data).then(r => r.data),
 
+  // Resume a failed pipeline from its last checkpoint (keeps completed agents' work)
+  resume: (articleId, data) =>
+    api.post(`/api/v1/agents/${articleId}/run`, data, { params: { resume: true } }).then(r => r.data),
+
   // Cancel an in-progress pipeline run
   cancel: (articleId) =>
     api.delete(`/api/v1/agents/${articleId}/run`).then(r => r.data),
+
+  // Resolve a paused human-in-the-loop decision ("add_source" | "continue")
+  submitDecision: (articleId, decision) =>
+    api.post(`/api/v1/agents/${articleId}/decision`, { decision }).then(r => r.data),
 
   // Get run history
   getRuns: (articleId) =>
@@ -67,6 +75,12 @@ export const agentsApi = {
   getLibraryDocs: () =>
     api.get('/api/v1/agents/rag/library').then(r => r.data),
 
+  // Re-derive title/authors for documents ingested before metadata extraction
+  backfillMetadata: (collection) =>
+    api.post('/api/v1/agents/rag/backfill-metadata', null, {
+      params: collection ? { collection } : {},
+    }).then(r => r.data),
+
   uploadLibraryDocument: (file, collection, chunkSize, chunkOverlap) => {
     const form = new FormData();
     form.append('file', file);
@@ -85,8 +99,14 @@ export const agentsApi = {
   getAvailableTools: () =>
     api.get('/api/v1/agents/tools').then(r => r.data),
 
-  // SSE stream URL (used directly with EventSource)
-  getStreamUrl: (articleId) =>
-    `${BASE_API_URL}/api/v1/agents/${articleId}/stream`,
+  // Request a single-use ticket to authenticate the SSE stream. EventSource
+  // cannot send an Authorization header, so we never put the JWT in the URL;
+  // the client exchanges its Bearer token for a short-lived ticket instead.
+  getStreamTicket: (articleId) =>
+    api.post(`/api/v1/agents/${articleId}/stream-ticket`).then(r => r.data),
+
+  // SSE stream URL (used directly with EventSource), authenticated by ticket.
+  getStreamUrl: (articleId, ticket) =>
+    `${BASE_API_URL}/api/v1/agents/${articleId}/stream?ticket=${encodeURIComponent(ticket)}`,
 };
 

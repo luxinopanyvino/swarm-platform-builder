@@ -7,7 +7,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import ArticleModel, ArticleStatus, ArticleResponse
-from app.database import get_session
+from app.core.database import get_session
 
 router = APIRouter(prefix="/api/v1/magazine", tags=["magazine"])
 

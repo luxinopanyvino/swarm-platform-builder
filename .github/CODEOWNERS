@@ -1,0 +1,26 @@
+# CODEOWNERS — revisores obligatorios por área.
+# Sustituye los @placeholders por los handles/equipos reales de GitHub.
+# Ver docs/governance/GOVERNANCE.md.
+
+# Por defecto
+*                                   @luxinopanyvino
+
+# Seguridad: auth, identidad y secretos (revisión de security owner)
+/backend/app/core/security.py       @luxinopanyvino
+/backend/app/routers/auth.py        @luxinopanyvino
+/backend/app/core/config.py         @luxinopanyvino
+/SECURITY.md                        @luxinopanyvino
+
+# Egress / scraper (riesgo SSRF)
+/backend/app/modules/agents/adapters/scraper.py   @luxinopanyvino
+
+# Infraestructura y despliegue
+/docker-compose.yml                 @luxinopanyvino
+/backend/Dockerfile                 @luxinopanyvino
+/frontend/Dockerfile                @luxinopanyvino
+/.github/                           @luxinopanyvino
+
+# Decisiones y gobernanza
+/docs/adr/                          @luxinopanyvino
+/docs/governance/                   @luxinopanyvino
+/docs/specs/                        @luxinopanyvino

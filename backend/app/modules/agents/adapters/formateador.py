@@ -3,7 +3,7 @@ import re
 from typing import Dict, Any
 
 from app.core.config import settings
-from app.shared.llm import call_llm, get_default_model
+from app.platform.llm import call_llm, get_default_model
 
 logger = logging.getLogger(__name__)
 
@@ -24,41 +24,132 @@ _FORMAT_INSTRUCTIONS = {
 }
 
 
-def format_source_deterministic(s: dict, style: str, index: int) -> str:
-    """Format a single source dictionary into a bibliography citation string deterministically."""
-    title = s.get("title", "").strip() or "Untitled Document"
-    authors = s.get("authors", "").strip() or "N/A"
-    journal = s.get("journal", "").strip() or "Scientific Report"
-    year = str(s.get("year", "")).strip() or "N/A"
-    url = s.get("url", "").strip()
-    doi = s.get("doi", "").strip()
+_EMPTY_VALUES = {"", "n/a", "none", "null", "na"}
 
-    ref_link = f" https://doi.org/{doi}" if doi else (f" {url}" if url else "")
+
+def _clean_source_fields(s: dict) -> tuple:
+    """Normalise a source dict: blank out placeholder values and resolve a real
+    (http/doi) link, ignoring internal pseudo-URLs like local:// or synthesis://."""
+    def _val(key: str) -> str:
+        v = str(s.get(key, "") or "").strip()
+        return "" if v.lower() in _EMPTY_VALUES else v
+
+    title = _val("title") or "Documento sin título"
+    authors = _val("authors")
+    journal = _val("journal")
+    year = _val("year")
+    doi = _val("doi")
+    url = _val("url")
+
+    if doi:
+        link = f"https://doi.org/{doi}"
+    elif url.startswith("http://") or url.startswith("https://"):
+        link = url
+    else:
+        link = ""
+    return title, authors, journal, year, link
+
+
+def _finalize(parts: list, link: str) -> str:
+    """Join non-empty segments, tidy punctuation, ensure a terminal period, then
+    append the link."""
+    ref = " ".join(p for p in parts if p).strip()
+    ref = ref.rstrip(", ")               # drop a dangling comma (e.g. empty year)
+    ref = re.sub(r"\s*,\s*\.", ".", ref)  # ", ." -> "."
+    # Already terminated if it ends with a period or a quoted period (e.g. Chicago title).
+    if ref and not ref.endswith(".") and not ref.endswith('."'):
+        ref += "."
+    ref = re.sub(r"\.{2,}", ".", ref)     # collapse duplicate periods
+    if link:
+        ref += f" {link}"
+    return ref
+
+
+def format_source_deterministic(s: dict, style: str, index: int) -> str:
+    """Format a single source into a bibliography citation deterministically.
+
+    Missing fields (authors, year, journal) are omitted rather than rendered as
+    'N/A', and only real http/doi links are appended.
+    """
+    title, authors, journal, year, link = _clean_source_fields(s)
 
     if style == "apa":
-        # Authors (Year). Title. Journal. URL/DOI
-        return f"{authors} ({year}). *{title}*. {journal}.{ref_link}"
+        if authors and year:
+            lead = f"{authors} ({year})."
+        elif authors:
+            lead = f"{authors}."
+        elif year:
+            lead = f"({year})."
+        else:
+            lead = ""
+        return _finalize([lead, f"*{title}*.", (f"{journal}." if journal else "")], link)
     elif style == "ieee":
-        # [index] Authors, "Title," Journal, Year. URL/DOI
-        return f"[{index}] {authors}, \"{title},\" *{journal}*, {year}.{ref_link}"
+        parts = [f"[{index}]"]
+        if authors:
+            parts.append(f"{authors},")
+        parts.append(f"\"{title},\"")
+        if journal:
+            parts.append(f"*{journal}*,")
+        if year:
+            parts.append(year)
+        return _finalize(parts, link)
     elif style == "vancouver":
-        # index. Authors. Title. Journal. Year. URL/DOI
-        return f"{index}. {authors}. {title}. {journal}. {year}.{ref_link}"
+        parts = [f"{index}."]
+        if authors:
+            parts.append(f"{authors}.")
+        parts.append(f"{title}.")
+        if journal:
+            parts.append(f"{journal}.")
+        if year:
+            parts.append(f"{year}.")
+        return _finalize(parts, link)
     elif style == "chicago":
-        # Authors. Year. "Title." Journal. URL/DOI
-        return f"{authors}. {year}. \"{title}.\" *{journal}*.{ref_link}"
+        if authors and year:
+            lead = f"{authors}. {year}."
+        elif authors:
+            lead = f"{authors}."
+        elif year:
+            lead = f"{year}."
+        else:
+            lead = ""
+        return _finalize([lead, f"\"{title}.\"", (f"*{journal}*." if journal else "")], link)
     elif style == "nature":
-        # index. Authors. Title. Journal Vol, pages (Year). URL/DOI
-        return f"{index}. {authors}. {title}. *{journal}* ({year}).{ref_link}"
+        parts = [f"{index}."]
+        if authors:
+            parts.append(f"{authors}.")
+        parts.append(f"{title}.")
+        if journal:
+            parts.append(f"*{journal}*")
+        if year:
+            parts.append(f"({year}).")
+        return _finalize(parts, link)
     else:
-        return f"[{index}] {authors}. {title}. {year}. {url}"
+        parts = [f"[{index}]"]
+        if authors:
+            parts.append(f"{authors}.")
+        parts.append(f"{title}.")
+        if year:
+            parts.append(f"{year}.")
+        return _finalize(parts, link)
 
 
 def clean_references_section(text: str) -> str:
-    """Strip any markdown References or Bibliography section from the end of the text."""
-    pattern = r"(?i)\n#+\s*(referencias|references|bibliografía|bibliography)\s*\n.*$"
-    cleaned = re.sub(pattern, "", text, flags=re.DOTALL)
-    return cleaned.strip()
+    """Strip any References/Bibliography section from the text.
+
+    Cuts from the LAST heading line onward, whether or not it uses a markdown
+    '#' heading — small models often emit a plain 'Referencias' line with their
+    own (hallucinated) citations, which must be removed before the deterministic
+    bibliography is appended.
+    """
+    if not text:
+        return ""
+    heading = re.compile(
+        r"(?im)^[ \t]*#{0,6}[ \t]*(referencias|references|bibliograf[ií]a|bibliography)[ \t:]*$"
+    )
+    matches = list(heading.finditer(text))
+    if matches:
+        return text[:matches[-1].start()].rstrip()
+    return text.strip()
 
 
 async def run_formateador(state: Dict[str, Any]) -> Dict[str, Any]:
@@ -139,8 +230,17 @@ async def run_formateador(state: Dict[str, Any]) -> Dict[str, Any]:
     except Exception as exc:
         logger.warning("Formateador LLM call failed: %s; falling back to original body.", exc)
 
-    # 3. Assemble references section deterministically using Python code
-    sources = state.get("sources") or []
+    # The reformat step often re-introduces a (hallucinated) references section
+    # despite instructions — strip it again so only the deterministic one remains.
+    formatted_body = clean_references_section(formatted_body)
+
+    # 3. Assemble references section deterministically using Python code.
+    # Exclude non-citable placeholders: parametric LLM synthesis has no real
+    # bibliographic value and would otherwise render as a bogus "N/A" reference.
+    sources = [
+        s for s in (state.get("sources") or [])
+        if not str(s.get("url", "")).startswith("synthesis://")
+    ]
 
     formatted_refs = []
     seen_urls = set()
@@ -159,7 +259,10 @@ async def run_formateador(state: Dict[str, Any]) -> Dict[str, Any]:
 
     if formatted_refs:
         ref_title = "Referencias" if scientific_format in ("apa", "vancouver") else "References"
-        bibliography_block = f"\n\n## {ref_title}\n" + "\n".join(formatted_refs)
+        # Two trailing spaces force a markdown hard line-break so each reference
+        # renders on its own line instead of collapsing into one paragraph.
+        refs_md = "  \n".join(formatted_refs)
+        bibliography_block = f"\n\n## {ref_title}\n\n{refs_md}"
         final_text = formatted_body + bibliography_block
         log(f"✅ Formato bibliográfico determinista aplicado: {len(formatted_refs)} fuentes indexadas.")
     else:

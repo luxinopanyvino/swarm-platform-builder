@@ -2,7 +2,7 @@ from sqlalchemy import Column, String, Boolean, DateTime, func
 from sqlalchemy.dialects.postgresql import UUID
 from uuid import uuid4
 from datetime import datetime
-from app.shared.database import Base
+from app.core.database import Base
 
 
 class UserORM(Base):

@@ -6,7 +6,8 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from app.core.config import settings
 from app.models import AIAssistRequest, AIAssistResponse, AIIngestRequest, AIFormatRequest, AIFormatResponse, ScientificFormat
-from app.shared.llm import call_llm, get_default_model
+from app.platform.llm import call_llm, get_default_model
+from app.shared.qdrant import qdrant_client
 from app.routers.auth import get_current_user
 
 router = APIRouter(prefix="/api/v1/ai", tags=["ai"])
@@ -34,7 +35,7 @@ async def _ensure_qdrant_collection() -> None:
     """Ensure Qdrant collection exists."""
     collection = settings.QDRANT_COLLECTION
     try:
-        async with httpx.AsyncClient(base_url=settings.QDRANT_URL, timeout=10.0) as client:
+        async with qdrant_client() as client:
             response = await client.get(f"/collections/{collection}")
             if response.status_code == 200:
                 return
@@ -138,7 +139,7 @@ async def ingest(req: AIIngestRequest, token_data=Depends(get_current_user)):
     
     # Upsert to Qdrant
     try:
-        async with httpx.AsyncClient(base_url=settings.QDRANT_URL, timeout=10.0) as client:
+        async with qdrant_client() as client:
             points = [
                 {
                     "id": str(uuid4()),

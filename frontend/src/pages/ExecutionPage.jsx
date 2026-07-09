@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
-import { CheckCircle, XCircle, Clock, Loader, ArrowRight, ArrowLeft, FileText, UserPlus, Square } from 'lucide-react';
+import { CheckCircle, XCircle, Clock, Loader, ArrowRight, ArrowLeft, FileText, UserPlus, Square, Upload, Play, AlertTriangle } from 'lucide-react';
 import { agentsApi } from '../api/agents';
 import { useArticleStore } from '../store/articleStore';
 import toast from 'react-hot-toast';
@@ -39,12 +39,17 @@ export default function ExecutionPage() {
   const [preview, setPreview] = useState('');
   const [done, setDone] = useState(false);
   const [pipelineFailed, setPipelineFailed] = useState(false);
+  const [canResume, setCanResume] = useState(false);
   const [cancelled, setCancelled] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [runCount, setRunCount] = useState(0);
   const [hasPublicador] = useState(flowSequence.includes('publicador'));
   const [reviewerEmail, setReviewerEmail] = useState('');
   const [assigning, setAssigning] = useState(false);
+  // Human-in-the-loop coherence gate
+  const [pendingDecision, setPendingDecision] = useState(null);
+  const [decisionBusy, setDecisionBusy] = useState(false);
+  const sourceInputRef = useRef(null);
   const logsEndRef = useRef(null);
   const evtSourceRef = useRef(null);
   const hasFailedSteps = steps.some((step) => step.status === 'failed');
@@ -81,10 +86,24 @@ export default function ExecutionPage() {
   // Connect SSE
   useEffect(() => {
     if (!articleId) return;
-    const token_ = localStorage.getItem('access_token');
-    const url = `${agentsApi.getStreamUrl(articleId)}?token=${token_}`;
-    const evtSource = new EventSource(url);
-    evtSourceRef.current = evtSource;
+    let cancelled = false;
+    let evtSource;
+
+    // Exchange the JWT for a single-use stream ticket, then open the SSE
+    // connection with it — the token is never placed in the URL (T1.4).
+    (async () => {
+      let ticket;
+      try {
+        const res = await agentsApi.getStreamTicket(articleId);
+        ticket = res?.ticket;
+      } catch {
+        addLog('No se pudo autenticar el stream en tiempo real', 'error');
+        return;
+      }
+      if (cancelled || !ticket) return;
+
+      evtSource = new EventSource(agentsApi.getStreamUrl(articleId, ticket));
+      evtSourceRef.current = evtSource;
 
     evtSource.onmessage = (e) => {
       try {
@@ -108,6 +127,13 @@ export default function ExecutionPage() {
           markStepStatus(data.agent, 'failed');
           addLog(`✗ ${data.agent}: ${data.error}`, 'error');
           setPreview((current) => current || `Error: ${data.error}`);
+        } else if (data.type === 'await_decision') {
+          setPendingDecision(data);
+          addLog('⏸️ El pipeline espera tu decisión (coherencia)', 'warn');
+        } else if (data.type === 'decision_resolved') {
+          setPendingDecision(null);
+          setDecisionBusy(false);
+          addLog(`▶️ Decisión: ${data.decision === 'add_source' ? 'nueva fuente añadida' : 'continuar'}`, 'info');
         } else if (data.type === 'log') {
           addLog(data.message, data.level || '');
         } else if (data.type === 'done') {
@@ -124,6 +150,7 @@ export default function ExecutionPage() {
         } else if (data.type === 'done_error') {
           setDone(true);
           setPipelineFailed(true);
+          setCanResume(data.can_resume !== false);
           addLog(`Pipeline fallido: ${data.error || 'error desconocido'}`, 'error');
           evtSource.close();
         } else if (data.type === 'cancelled') {
@@ -144,23 +171,36 @@ export default function ExecutionPage() {
         if (art?.body) setPreview(p => p || art.body);
       }).catch(() => {});
     };
+    })();
 
-    return () => evtSource.close();
+    return () => {
+      cancelled = true;
+      if (evtSource) evtSource.close();
+      else if (evtSourceRef.current) evtSourceRef.current.close();
+    };
   }, [articleId, runCount]);
 
   // Trigger the actual pipeline run — ref guard prevents double-fire in React StrictMode
   const pipelineStarted = useRef(false);
+  // When true, the next trigger resumes from the last checkpoint instead of restarting
+  const resumeRef = useRef(false);
   useEffect(() => {
     if (flowSequence.length > 0 && !pipelineStarted.current) {
       pipelineStarted.current = true;
-      agentsApi.run(articleId, {
+      const isResume = resumeRef.current;
+      resumeRef.current = false;
+      const payload = {
         flow_sequence: flowSequence,
         agent_settings: agentSettings,
         keywords: runKeywords,
         context_description: contextDescription,
         article_outline: articleOutline,
-      }).catch(() => {
-        toast.error('Error al iniciar el pipeline');
+      };
+      const request = isResume
+        ? agentsApi.resume(articleId, payload)
+        : agentsApi.run(articleId, payload);
+      request.catch(() => {
+        toast.error(isResume ? 'Error al reanudar el pipeline' : 'Error al iniciar el pipeline');
       });
     }
   }, [runCount]);
@@ -188,10 +228,59 @@ export default function ExecutionPage() {
     setPreview('');
     setDone(false);
     setPipelineFailed(false);
+    setCanResume(false);
     setCancelled(false);
     setCancelling(false);
+    resumeRef.current = false;
     pipelineStarted.current = false;
     setRunCount(c => c + 1);
+  };
+
+  // Resume from the last checkpoint: keep the work done by completed agents and
+  // only re-run the failed step onward.
+  const handleResume = () => {
+    setSteps((current) => current.map((step) => (
+      step.status === 'completed' ? step : { ...step, status: 'waiting', output: '' }
+    )));
+    setPreview((current) => (current.startsWith('Error:') ? '' : current));
+    setDone(false);
+    setPipelineFailed(false);
+    setCanResume(false);
+    setCancelled(false);
+    setCancelling(false);
+    resumeRef.current = true;
+    pipelineStarted.current = false;
+    setRunCount(c => c + 1);
+  };
+
+  const handleContinueDecision = async () => {
+    setDecisionBusy(true);
+    try {
+      await agentsApi.submitDecision(articleId, 'continue');
+      setPendingDecision(null);
+    } catch {
+      toast.error('No se pudo enviar la decisión');
+      setDecisionBusy(false);
+    }
+  };
+
+  const handleUploadSourceClick = () => sourceInputRef.current?.click();
+
+  const onSourceFileSelected = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';  // allow re-selecting the same file later
+    if (!file) return;
+    setDecisionBusy(true);
+    try {
+      // Upload to the investigador bucket so the re-run finds it as a source
+      await agentsApi.uploadRagDocument('investigador', file);
+      toast.success(`Fuente añadida: ${file.name}`);
+      await agentsApi.submitDecision(articleId, 'add_source');
+      setPendingDecision(null);
+    } catch (err) {
+      toast.error(err?.response?.data?.detail || 'No se pudo subir la fuente');
+      setDecisionBusy(false);
+    }
   };
 
   const handleAssignReviewer = async () => {
@@ -248,6 +337,48 @@ export default function ExecutionPage() {
             ID: {articleId?.slice(0, 8)}…
           </div>
         </div>
+
+        {/* Human-in-the-loop decision panel */}
+        {pendingDecision && !done && (
+          <div style={{
+            margin: '0 0 var(--space-3)', padding: 'var(--space-4)',
+            background: 'var(--status-warning-bg)', border: '1px solid var(--status-warning)',
+            borderRadius: 'var(--radius-md)',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+              <AlertTriangle size={16} style={{ color: 'var(--status-warning)' }} />
+              <span style={{ fontWeight: 600, fontSize: 'var(--font-size-sm)', color: 'var(--status-warning)' }}>
+                Coherencia insuficiente
+              </span>
+            </div>
+            <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--text-secondary)', marginBottom: 8 }}>
+              {pendingDecision.message || 'El revisor considera que la redacción no es suficientemente coherente.'}
+              {typeof pendingDecision.approval_score === 'number' && (
+                <span> (puntuación: {pendingDecision.approval_score}/100)</span>
+              )}
+            </div>
+            {Array.isArray(pendingDecision.feedback) && pendingDecision.feedback.length > 0 && (
+              <ul style={{ margin: '0 0 10px 16px', padding: 0, fontSize: 'var(--font-size-xs)', color: 'var(--text-muted)' }}>
+                {pendingDecision.feedback.slice(0, 4).map((f, i) => <li key={i}>{f}</li>)}
+              </ul>
+            )}
+            <input
+              ref={sourceInputRef}
+              type="file"
+              accept=".txt,.md,.pdf"
+              style={{ display: 'none' }}
+              onChange={onSourceFileSelected}
+            />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <button className="btn btn-primary btn-sm w-full" onClick={handleUploadSourceClick} disabled={decisionBusy}>
+                <Upload size={13} /> {decisionBusy ? 'Procesando…' : 'Subir otra fuente y reintentar'}
+              </button>
+              <button className="btn btn-ghost btn-sm w-full" onClick={handleContinueDecision} disabled={decisionBusy}>
+                <Play size={13} /> Continuar con el borrador actual
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Steps */}
         <div className="execution-steps">
@@ -320,6 +451,13 @@ export default function ExecutionPage() {
                 onClick={() => navigate(`/dashboard/articles/${articleId}`)}>
                 <FileText size={14} /> Ver artículo
               </button>
+              {pipelineFailed && canResume && (
+                <button className="btn btn-primary w-full"
+                  onClick={handleResume}
+                  aria-label="Reanudar el pipeline desde el último checkpoint">
+                  <Play size={14} /> Reanudar desde el último checkpoint
+                </button>
+              )}
               {pipelineFailed && (
                 <button className="btn btn-ghost w-full"
                   onClick={() => navigate('/dashboard/flow-designer')}>

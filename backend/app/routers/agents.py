@@ -1,6 +1,7 @@
 """Agents router: run and monitor agent orchestrations, manage agent prompts."""
 import asyncio
 import json
+import logging
 import re
 import uuid
 import yaml
@@ -21,6 +22,7 @@ import httpx
 
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, UploadFile, File, Form
 from fastapi.responses import StreamingResponse
+from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -29,16 +31,23 @@ from app.models import (
     AgentRunListResponse, AgentRunDetailResponse,
     AgentProfileModel, AgentProfileResponse,
 )
-from app.database import get_session
-from app.routers.auth import get_current_user
-from app.core.security import verify_token
-from app.modules.agents.application.use_cases import Orchestrator, active_streams, active_tasks, publish_event
-from app.modules.agents.adapters.rag import (
-    extract_text, chunk_text, ensure_collection, upsert_chunks,
-    list_documents, delete_document, get_rag_backend,
+from app.core.database import get_session
+from app.routers.auth import get_current_user, require_redactor
+from app.core.config import settings
+from app.core.stream_auth import issue_ticket, consume_ticket
+from app.modules.agents.application.use_cases import (
+    Orchestrator, active_streams, active_tasks, publish_event,
+    submit_user_decision,
 )
+from app.platform.capabilities.rag import (
+    extract_text, chunk_text, ensure_collection, upsert_chunks,
+    list_documents, delete_document, get_rag_backend, backfill_doc_metadata,
+)
+from app.modules.agents.adapters.doc_metadata import extract_doc_metadata
 
 router = APIRouter(prefix="/api/v1/agents", tags=["agents"])
+
+logger = logging.getLogger(__name__)
 
 
 def get_claude_agents_dir() -> Path:
@@ -146,7 +155,7 @@ async def get_claude_agent_definitions(
 @router.get("/rag/collections")
 async def get_rag_collections_overview(token_data=Depends(get_current_user)):
     """Return all RAG documents stored in the local filesystem store (no Qdrant required)."""
-    from app.modules.agents.adapters.rag import _local_rag_root, _load_local_document
+    from app.platform.capabilities.rag import _local_rag_root, _load_local_document
 
     rag_root = _local_rag_root()
     collections: dict[str, dict[str, Any]] = {}
@@ -200,7 +209,7 @@ async def get_rag_collections_overview(token_data=Depends(get_current_user)):
 async def get_rag_library(token_data=Depends(get_current_user)):
     """Return all documents stored in Qdrant (or local fallback) across all collections."""
     from app.core.config import settings
-    from app.modules.agents.adapters.rag import list_library_documents
+    from app.platform.capabilities.rag import list_library_documents
 
     docs = await list_library_documents(settings.QDRANT_URL, settings.QDRANT_API_KEY)
 
@@ -232,7 +241,7 @@ async def upload_to_rag_library(
     collection: str | None = Form(None),
     chunk_size: int | None = Form(None),
     chunk_overlap: int | None = Form(None),
-    token_data=Depends(get_current_user),
+    token_data=Depends(require_redactor),
 ):
     """Upload a document to the global RAG library (not tied to any agent)."""
     from app.core.config import settings
@@ -255,6 +264,7 @@ async def upload_to_rag_library(
     c_overlap = max(0, min(int(chunk_overlap or 50), 499))
 
     doc_id = str(uuid.uuid4())
+    metadata = extract_doc_metadata(file.filename, raw, text)
     chunks = chunk_text(text, chunk_size=c_size, overlap=c_overlap)
 
     await ensure_collection(settings.QDRANT_URL, col, settings.RAG_VECTOR_SIZE, settings.QDRANT_API_KEY)
@@ -269,6 +279,8 @@ async def upload_to_rag_library(
         embedding_model=settings.OLLAMA_EMBED_MODEL,
         vector_size=settings.RAG_VECTOR_SIZE,
         api_key=settings.QDRANT_API_KEY,
+        doc_title=metadata.get("title", ""),
+        doc_authors=metadata.get("authors", ""),
     )
 
     if count <= 0:
@@ -280,7 +292,22 @@ async def upload_to_rag_library(
         "filename": file.filename,
         "collection": col,
         "chunks": count,
+        "title": metadata.get("title", ""),
+        "authors": metadata.get("authors", ""),
     }
+
+
+@router.post("/rag/backfill-metadata")
+async def backfill_rag_metadata(
+    collection: str | None = None,
+    token_data=Depends(get_current_user),
+):
+    """Re-derive title/authors for existing documents that were ingested before
+    metadata extraction existed (text heuristic only; re-upload for PDF metadata)."""
+    from app.core.config import settings
+    col = (collection or settings.QDRANT_COLLECTION).strip() or settings.QDRANT_COLLECTION
+    updated = await backfill_doc_metadata(settings.QDRANT_URL, col, settings.QDRANT_API_KEY)
+    return {"collection": col, "updated": len(updated), "documents": updated}
 
 
 @router.delete("/rag/library/{collection}/{doc_id}")
@@ -308,7 +335,7 @@ async def delete_from_rag_library(
 @router.get("/tools")
 async def list_available_tools(_token=Depends(get_current_user)):
     """Return the catalog of available tools for agent tool calling."""
-    from app.modules.agents.adapters.tools import TOOL_CATALOG
+    from app.platform.capabilities.tools import TOOL_CATALOG
     return {"tools": TOOL_CATALOG}
 
 
@@ -468,7 +495,7 @@ async def upload_rag_document(
     rag_collection: str | None = Form(None),
     rag_chunk_size: int | None = Form(None),
     rag_chunk_overlap: int | None = Form(None),
-    token_data=Depends(get_current_user),
+    token_data=Depends(require_redactor),
 ):
     """Upload a file, chunk it, embed via Ollama and store in Qdrant for an agent."""
     from app.core.config import settings
@@ -487,6 +514,7 @@ async def upload_rag_document(
         raise HTTPException(status_code=422, detail="Could not extract text from file")
 
     doc_id = str(uuid.uuid4())
+    metadata = extract_doc_metadata(file.filename, raw, text)
 
     rag_settings = resolve_agent_rag_settings(agent_name, settings, {
         "rag_collection": rag_collection,
@@ -509,11 +537,17 @@ async def upload_rag_document(
         embedding_model=settings.OLLAMA_EMBED_MODEL,
         vector_size=settings.RAG_VECTOR_SIZE,
         api_key=settings.QDRANT_API_KEY,
+        doc_title=metadata.get("title", ""),
+        doc_authors=metadata.get("authors", ""),
     )
 
     if count <= 0:
         raise HTTPException(status_code=502, detail="No se pudo indexar el documento en Qdrant")
 
+    logger.info(
+        "Ingested '%s' — title=%r authors=%r",
+        file.filename, metadata.get("title", ""), metadata.get("authors", ""),
+    )
     return {
         "status": "indexed",
         "doc_id": doc_id,
@@ -522,6 +556,8 @@ async def upload_rag_document(
         "collection": collection,
         "chunk_size": rag_settings["chunk_size"],
         "chunk_overlap": rag_settings["chunk_overlap"],
+        "title": metadata.get("title", ""),
+        "authors": metadata.get("authors", ""),
     }
 
 
@@ -563,12 +599,16 @@ async def run_agent_pipeline(
     article_id: UUID,
     req: AgentRunRequest,
     background_tasks: BackgroundTasks,
-    token_data=Depends(get_current_user),
+    resume: bool = False,
+    token_data=Depends(require_redactor),
     session: AsyncSession = Depends(get_session)
 ):
     """
     Run the multi-agent pipeline on a specific article in the background.
     Compiles and executes LangGraph nodes in the requested flow sequence.
+
+    When ``resume`` is true, the run continues from the last persisted checkpoint
+    (the agent that previously failed) instead of restarting from the first agent.
     """
     # Verify article exists and belongs to the authenticated author
     stmt = select(ArticleModel).where(ArticleModel.id == article_id)
@@ -632,7 +672,21 @@ async def run_agent_pipeline(
             s["tools_enabled"] = profile.tools_enabled
         if "tools" not in s and profile.tools:
             s["tools"] = profile.tools
-        
+
+    # The user's document selection is attached to the investigador. Propagate it
+    # to every other agent in the flow so RAG-enabled agents (redactor, generic…)
+    # honour the same selection instead of searching the whole knowledge base and
+    # pulling unselected documents (e.g. the seeded welcome doc) into the article.
+    investigador_cfg = req.agent_settings.get("investigador", {})
+    selected_doc_ids = investigador_cfg.get("rag_doc_ids")
+    selected_collection = investigador_cfg.get("rag_collection")
+    if selected_doc_ids:
+        for slug in agent_slugs:
+            s = req.agent_settings.setdefault(slug, {})
+            s.setdefault("rag_doc_ids", selected_doc_ids)
+            if selected_collection:
+                s.setdefault("rag_collection", selected_collection)
+
     scientific_format = article.scientific_format.value if article.scientific_format else "apa"
     
     # Run Orchestrator flow as a background task to allow SSE to immediately stream
@@ -650,9 +704,11 @@ async def run_agent_pipeline(
         # the already-generated content instead of an empty draft.
         initial_draft_text=article.body or "",
         article_outline=req.article_outline,
+        resume=resume,
     )
-    
-    return {"status": "accepted", "message": "Agent execution pipeline started"}
+
+    action = "resumed" if resume else "started"
+    return {"status": "accepted", "message": f"Agent execution pipeline {action}", "resumed": resume}
 
 
 @router.delete("/{article_id}/run", status_code=200)
@@ -677,6 +733,38 @@ async def cancel_pipeline_run(
 
     task.cancel()
     return {"status": "cancelled", "article_id": str(article_id)}
+
+
+class PipelineDecisionDTO(BaseModel):
+    # "add_source" → re-run research with a newly uploaded document
+    # "continue"   → proceed with the current draft
+    decision: str
+
+
+@router.post("/{article_id}/decision", status_code=200)
+async def submit_pipeline_decision(
+    article_id: UUID,
+    req: PipelineDecisionDTO,
+    token_data=Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+):
+    """Resolve a pending human-in-the-loop decision for a paused pipeline."""
+    stmt = select(ArticleModel).where(ArticleModel.id == article_id)
+    res = await session.execute(stmt)
+    article = res.scalars().first()
+    if not article:
+        raise HTTPException(status_code=404, detail="Article not found")
+    if str(article.author_id) != token_data["user_id"] and token_data.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    decision = (req.decision or "").strip().lower()
+    if decision not in ("add_source", "continue"):
+        raise HTTPException(status_code=422, detail="decision must be 'add_source' or 'continue'")
+
+    if not submit_user_decision(article_id, decision):
+        raise HTTPException(status_code=409, detail="No pending decision for this article")
+
+    return {"status": "ok", "decision": decision}
 
 
 
@@ -710,27 +798,53 @@ async def get_article_agent_runs(
     )
 
 
+@router.post("/{article_id}/stream-ticket")
+async def create_stream_ticket(
+    article_id: UUID,
+    token_data=Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+):
+    """Issue a short-lived, single-use ticket to authenticate an SSE connection.
+
+    The browser ``EventSource`` API cannot send an ``Authorization`` header, so
+    instead of leaking the JWT in the stream query string (T1.4) the client
+    exchanges its Bearer token here for an opaque ticket.
+    """
+    stmt = select(ArticleModel).where(ArticleModel.id == article_id)
+    res = await session.execute(stmt)
+    article = res.scalars().first()
+    if not article:
+        raise HTTPException(status_code=404, detail="Article not found")
+    if str(article.author_id) != token_data["user_id"]:
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    ticket = issue_ticket(token_data["user_id"], str(article_id), settings.SSE_TICKET_TTL_SECONDS)
+    return {"ticket": ticket, "expires_in": settings.SSE_TICKET_TTL_SECONDS}
+
+
 @router.get("/{article_id}/stream")
 async def stream_agent_runs(
     article_id: UUID,
-    token: str | None = None,
+    ticket: str | None = None,
     session: AsyncSession = Depends(get_session)
 ):
-    """SSE endpoint for real-time monitoring of active agent runs."""
-    if not token:
-        raise HTTPException(status_code=401, detail="Unauthorized")
-    token_data = verify_token(token)
-    if not token_data:
-        raise HTTPException(status_code=401, detail="Invalid token")
-        
+    """SSE endpoint for real-time monitoring of active agent runs.
+
+    Authenticated with a single-use ticket from ``POST /{id}/stream-ticket``;
+    the JWT is never placed in the query string (T1.4).
+    """
+    user_id = consume_ticket(ticket, str(article_id)) if ticket else None
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Invalid or missing stream ticket")
+
     # Verify ownership of the article
     stmt = select(ArticleModel).where(ArticleModel.id == article_id)
     res = await session.execute(stmt)
     article = res.scalars().first()
-    
+
     if not article:
         raise HTTPException(status_code=404, detail="Article not found")
-    if str(article.author_id) != token_data["user_id"]:
+    if str(article.author_id) != user_id:
         raise HTTPException(status_code=403, detail="Forbidden")
 
     q = asyncio.Queue()

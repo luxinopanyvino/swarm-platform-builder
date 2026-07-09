@@ -14,7 +14,7 @@ TEST_DB_PATH = (ROOT_DIR / "tests" / "test_auth.db").resolve()
 os.environ["DATABASE_URL"] = f"sqlite+aiosqlite:///{TEST_DB_PATH.as_posix()}"
 
 from app.main import app  # noqa: E402, isort:skip
-from app.shared.database import Base, engine  # noqa: E402, isort:skip
+from app.core.database import Base, engine  # noqa: E402, isort:skip
 
 
 async def _create_test_database() -> None:

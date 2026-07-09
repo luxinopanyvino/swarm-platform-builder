@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
-import { ArrowLeft, CheckCircle, XCircle, UserPlus, Clock, AlertCircle, Pencil, Save, X, GitBranch } from 'lucide-react';
+import { ArrowLeft, CheckCircle, XCircle, UserPlus, Clock, AlertCircle, Pencil, Save, X, GitBranch, FileText, Plus, Trash2 } from 'lucide-react';
 import { useArticleStore } from '../store/articleStore';
 import { useAuthStore } from '../store/authStore';
 import { agentsApi } from '../api/agents';
@@ -56,6 +56,9 @@ export default function ArticleDetailPage() {
   const [working, setWorking] = useState(false);
   const [editingBody, setEditingBody] = useState(false);
   const [bodyDraft, setBodyDraft] = useState('');
+  const [editingMeta, setEditingMeta] = useState(false);
+  const [abstractDraft, setAbstractDraft] = useState('');
+  const [authorsDraft, setAuthorsDraft] = useState([]);
 
   useEffect(() => {
     fetchArticle(id).finally(() => setLoading(false));
@@ -189,6 +192,35 @@ export default function ArticleDetailPage() {
     } catch { toast.error('Error al guardar'); }
     finally { setWorking(false); }
   };
+
+  const handleEditMeta = () => {
+    setAbstractDraft(article.abstract || '');
+    setAuthorsDraft(
+      (article.authors && article.authors.length)
+        ? article.authors.map(a => ({ name: a.name || '', affiliation: a.affiliation || '', email: a.email || '' }))
+        : [{ name: '', affiliation: '', email: '' }]
+    );
+    setEditingMeta(true);
+  };
+
+  const updateAuthorField = (idx, field, value) =>
+    setAuthorsDraft(prev => prev.map((a, i) => i === idx ? { ...a, [field]: value } : a));
+
+  const handleSaveMeta = async () => {
+    setWorking(true);
+    try {
+      // Drop empty author rows; an author needs at least a name
+      const authors = authorsDraft
+        .map(a => ({ name: a.name.trim(), affiliation: a.affiliation.trim(), email: a.email.trim() }))
+        .filter(a => a.name);
+      await updateArticle(id, { authors, abstract: abstractDraft });
+      setEditingMeta(false);
+      toast.success('Metadatos del paper guardados');
+    } catch { toast.error('Error al guardar los metadatos'); }
+    finally { setWorking(false); }
+  };
+
+  const handleViewPaper = () => navigate(`/articles/${id}/paper`);
 
   if (loading) return <div className="page-body"><div className="empty-state"><div className="spinner spinner-lg" /></div></div>;
   if (!article) return <div className="page-body"><div className="empty-state"><h3>Artículo no encontrado</h3></div></div>;
@@ -366,14 +398,100 @@ export default function ArticleDetailPage() {
           {/* Pipeline actions */}
           <div className="card">
             <div style={{ fontWeight: 600, fontSize: 'var(--font-size-sm)', marginBottom: 'var(--space-3)' }}>Acciones</div>
-            <button
-              className="btn btn-ghost btn-sm w-full"
-              onClick={handleOpenPipelineModal}
-              disabled={working}
-              aria-label="Ejecutar pipeline de agentes sobre este artículo"
-            >
-              <GitBranch size={13} /> Reejecutar pipeline
-            </button>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
+              <button
+                className="btn btn-ghost btn-sm w-full"
+                onClick={handleViewPaper}
+                aria-label="Ver el artículo maquetado como paper"
+              >
+                <FileText size={13} /> Ver maquetación
+              </button>
+              <button
+                className="btn btn-ghost btn-sm w-full"
+                onClick={handleOpenPipelineModal}
+                disabled={working}
+                aria-label="Ejecutar pipeline de agentes sobre este artículo"
+              >
+                <GitBranch size={13} /> Reejecutar pipeline
+              </button>
+            </div>
+          </div>
+
+          {/* Paper metadata (title block) */}
+          <div className="card">
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-3)' }}>
+              <div style={{ fontWeight: 600, fontSize: 'var(--font-size-sm)' }}>Metadatos del paper</div>
+              {isAuthor && !editingMeta && (
+                <button className="btn btn-ghost btn-sm" onClick={handleEditMeta} aria-label="Editar metadatos del paper">
+                  <Pencil size={12} /> Editar
+                </button>
+              )}
+            </div>
+
+            {!editingMeta ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)', fontSize: 'var(--font-size-xs)' }}>
+                <div>
+                  <span style={{ color: 'var(--text-muted)' }}>Autores: </span>
+                  <span style={{ color: 'var(--text-secondary)' }}>
+                    {article.authors && article.authors.length
+                      ? article.authors.map(a => a.name).join(', ')
+                      : '—'}
+                  </span>
+                </div>
+                <div>
+                  <span style={{ color: 'var(--text-muted)' }}>Abstract: </span>
+                  <span style={{ color: 'var(--text-secondary)' }}>
+                    {article.abstract ? `${article.abstract.slice(0, 80)}${article.abstract.length > 80 ? '…' : ''}` : '—'}
+                  </span>
+                </div>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
+                {/* Authors editor */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
+                  {authorsDraft.map((a, idx) => (
+                    <div key={idx} style={{ display: 'flex', flexDirection: 'column', gap: 4, padding: '8px', background: 'var(--bg-surface)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-default)' }}>
+                      <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                        <input className="input" style={{ flex: 1, padding: '4px 8px', fontSize: 'var(--font-size-xs)' }}
+                          placeholder="Nombre" value={a.name}
+                          onChange={e => updateAuthorField(idx, 'name', e.target.value)} aria-label={`Nombre autor ${idx + 1}`} />
+                        <button className="btn btn-ghost btn-sm btn-icon" onClick={() => setAuthorsDraft(prev => prev.filter((_, i) => i !== idx))} aria-label={`Eliminar autor ${idx + 1}`}>
+                          <Trash2 size={12} />
+                        </button>
+                      </div>
+                      <input className="input" style={{ padding: '4px 8px', fontSize: 'var(--font-size-xs)' }}
+                        placeholder="Afiliación" value={a.affiliation}
+                        onChange={e => updateAuthorField(idx, 'affiliation', e.target.value)} aria-label={`Afiliación autor ${idx + 1}`} />
+                      <input className="input" style={{ padding: '4px 8px', fontSize: 'var(--font-size-xs)' }}
+                        placeholder="email" value={a.email}
+                        onChange={e => updateAuthorField(idx, 'email', e.target.value)} aria-label={`Email autor ${idx + 1}`} />
+                    </div>
+                  ))}
+                  <button className="btn btn-ghost btn-sm" onClick={() => setAuthorsDraft(prev => [...prev, { name: '', affiliation: '', email: '' }])}>
+                    <Plus size={12} /> Añadir autor
+                  </button>
+                </div>
+
+                {/* Abstract editor */}
+                <div>
+                  <label className="input-label" style={{ fontSize: 'var(--font-size-xs)' }}>Abstract</label>
+                  <textarea className="input" rows={4}
+                    style={{ width: '100%', fontSize: 'var(--font-size-xs)', boxSizing: 'border-box' }}
+                    placeholder="Resumen del artículo…"
+                    value={abstractDraft}
+                    onChange={e => setAbstractDraft(e.target.value)} aria-label="Abstract del artículo" />
+                </div>
+
+                <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
+                  <button className="btn btn-ghost btn-sm" onClick={() => setEditingMeta(false)} disabled={working}>
+                    <X size={12} /> Cancelar
+                  </button>
+                  <button className="btn btn-primary btn-sm" onClick={handleSaveMeta} disabled={working}>
+                    <Save size={12} /> Guardar
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Metadata */}

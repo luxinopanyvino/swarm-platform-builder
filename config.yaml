@@ -4,6 +4,15 @@ app:
   debug: true
 llm:
   provider: ollama
+  # Resilience: auto-retry transient LLM failures (connection refused, timeouts,
+  # 5xx, empty responses) with exponential backoff + jitter before failing a node.
+  max_retries: 3          # extra attempts after the first try (0 disables)
+  retry_base_delay: 1.0   # seconds; first backoff, doubles each retry
+  retry_max_delay: 10.0   # cap for a single backoff wait
+  # If a node still fails transiently, resume the pipeline from its last checkpoint
+  # this many times before surfacing the error for a manual retry.
+  auto_resume_attempts: 2
+  auto_resume_delay: 3.0
 ollama:
   base_url: http://localhost:11434
   default_model: mistral:7b
@@ -20,8 +29,19 @@ security:
   algorithm: HS256
   access_token_expire_minutes: 30
   refresh_token_expire_days: 7
+  # Brute-force / credential-stuffing protection for /auth/login y /auth/register.
+  # Rate limit por IP (ventana deslizante) + bloqueo temporal de cuenta tras
+  # varios intentos fallidos consecutivos. Pon max=0 para deshabilitar cada uno.
+  auth_ratelimit_max_attempts: 10      # intentos por ventana y por IP (0 = off)
+  auth_ratelimit_window_seconds: 60    # longitud de la ventana, en segundos
+  auth_lockout_max_failed: 5           # fallos consecutivos antes de bloquear (0 = off)
+  auth_lockout_seconds: 900            # duración del bloqueo de cuenta (15 min)
 access_control:
-  enable_dev_role_promotion: true
+  # Secure by default: dev-only role promotion shortcut stays OFF.
+  # Enable explicitly (and only) in local development.
+  enable_dev_role_promotion: false
+  # Role assigned on self-registration. Minimal privilege: lector | publico.
+  default_signup_role: lector
 qdrant:
   url: http://localhost:6333
   api_key: null

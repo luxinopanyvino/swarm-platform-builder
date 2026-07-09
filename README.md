@@ -21,6 +21,8 @@ El proyecto de referencia incluido es **AlejandrIA Magazine**: un pipeline de ci
 8. [Referencia de API](#referencia-de-api)
 9. [Configuración](#configuración)
 10. [Estructura de carpetas](#estructura-de-carpetas)
+11. [Desarrollo asistido por agentes (Claude Code)](#desarrollo-asistido-por-agentes-claude-code)
+12. [Spec-Driven Development (SDD)](#spec-driven-development-sdd)
 
 ---
 
@@ -224,61 +226,83 @@ AlejandrIA Magazine es el proyecto de referencia de la plataforma. Implementa un
 
 ```mermaid
 flowchart TD
-    START([Inicio]) --> INV
+    START([Inicio]) --> INPUT["📝 Primera ejecución (modal)\nTítulo · Descripción (opcional)\nElegir documentos del RAG o subir uno nuevo"]
+    INPUT --> INV
 
     subgraph INV_BLOCK["Etapa 1 — Investigación"]
         INV["🔍 Investigador"]
-        RAG_LOCAL["RAG local\n(colección: rag_docs)"]
-        EUROPMC["EuropePMC API"]
-        SCRAPER["Web scraping\narXiv · Wikipedia · Semantic Scholar"]
+        RAG["RAG (Qdrant)\nbucket del agente + biblioteca compartida\nextrae título/autores de cada documento"]
         SYNTH["Síntesis LLM\nmistral:7b con fuentes\nllama3.2:1b sin fuentes"]
-        INV --> RAG_LOCAL & EUROPMC & SCRAPER --> SYNTH
+        INV --> RAG --> SYNTH
     end
 
     INV --> RED["✍️ Redactor\nllama3.2:3b · Markdown · num_ctx 4096"]
-
-    RED --> REV["🧐 Revisor\nllama3.2:3b · score 0-100 · num_ctx 4096"]
+    RED --> REV["🧐 Revisor\nllama3.2:3b · score 0-100 · coherencia"]
 
     REV -- "score < 80\n(máx. 3 iteraciones)" --> RED
-    REV -- "score ≥ 80\no loops = 3" --> FMT["📐 Formateador\nllama3.2:1b · APA · IEEE · Vancouver"]
+    REV -- "no coherente" --> HITL{"⏸️ HITL — decisión del usuario\n¿Subir otra fuente o continuar?"}
+    HITL -- "Subir documento" --> INV
+    HITL -- "Continuar" --> FMT
+    REV -- "aprobado y coherente" --> FMT["📐 Formateador\nAPA · IEEE · Vancouver · Chicago · Nature\ncitas + referencias deterministas"]
 
-    FMT --> PUB["📢 Publicador\nGuarda en DB · estado PUBLISHED"]
+    FMT --> PUB["📢 Publicador\nGuarda en DB · maquetación tipo paper (paper_html)\nestado PUBLISHED"]
     PUB --> END([Publicado])
 ```
+
+> **Primera ejecución**: al lanzar el flujo, el usuario indica en el modal el
+> **título**, una **descripción/enfoque** opcional y las **fuentes**: puede
+> elegir documentos ya cargados en el RAG o subir uno nuevo. Esas fuentes son las
+> que usa el Investigador (no hay scraping web).
 
 #### Paso a paso
 
 | Paso | Agente | Modelo por defecto | Qué hace |
 |---|---|---|---|
-| 1 | **Investigador** | `mistral:7b` (con fuentes) · `llama3.2:1b` (sin fuentes) | Busca en RAG local (Qdrant), EuropePMC y hace scraping web de arXiv / Wikipedia / Semantic Scholar. Re-rankea semánticamente con `nomic-embed-text`. Sintetiza hasta 9 fragmentos con LLM (`timeout 600s`, `num_ctx 8192`). |
+| 1 | **Investigador** | `mistral:7b` (con fuentes) · `llama3.2:1b` (sin fuentes) | Busca contexto en **RAG (Qdrant)**: en su bucket **y en la biblioteca compartida** (`__library__`), con re-ranking semántico (`nomic-embed-text`); los `rag_doc_ids` elegidos en el modal tienen precedencia. Extrae **título y autores** de cada documento (metadatos PDF + heurística de primera página) para construir citas reales. Sintetiza el contexto con LLM (`timeout 600s`, `num_ctx 8192`). **No realiza scraping web ni consulta APIs externas**; sus fuentes son las del RAG. |
 | 2 | **Redactor** | `llama3.2:3b` | Recibe el contexto de investigación y genera un borrador académico estructurado en Markdown (Abstract, Introducción, Metodología, Resultados y Discusión). Incorpora el feedback del Revisor en iteraciones sucesivas. `num_ctx 4096`, `keep_alive 0`. |
-| 3 | **Revisor** | `llama3.2:3b` | Evalúa el borrador con score 0-100 y lista de comentarios. Si `score < 80` y `loop_count < 3`, reenvía al Redactor. `num_ctx 4096`, `keep_alive 0`. |
+| 3 | **Revisor** | `llama3.2:3b` | Evalúa el borrador (score 0-100 + **coherencia**) y lista comentarios. Si `score < 80` y `loop_count < 3`, reenvía al Redactor. Si determina que la redacción **no es coherente**, dispara un **HITL** que pregunta al usuario: *subir otra fuente* (reejecuta la investigación con el nuevo documento) o *continuar* con el borrador actual. `num_ctx 4096`, `keep_alive 0`. |
 | 4 | **Formateador** | `llama3.2:1b` | Reformatea únicamente las citas y la sección de Referencias según el estilo solicitado: **APA**, **IEEE**, **Vancouver**, **Chicago** o **Nature**. Si el resultado es más corto que el 50 % del original, descarta y devuelve el texto original. `num_ctx 4096`, `keep_alive 0`. |
-| 5 | **Publicador** | — (no usa LLM) | Escribe `formatted_text` (o `draft_text` si el formateador no se ejecutó) en la base de datos, cambia el estado del artículo a `PUBLISHED`, registra `published_at` y devuelve la URL de publicación. |
+| 5 | **Publicador** | — (no usa LLM) | Escribe `formatted_text` (o `draft_text` si el formateador no se ejecutó) en la base de datos, cambia el estado a `PUBLISHED` y registra `published_at`. Además genera la **maquetación tipo paper** (HTML imprimible, una plantilla por formato de cita) y la guarda en `paper_html`, accesible en `GET /api/v1/articles/{id}/paper`. |
 
 > **Gestión de memoria**: cada agente usa `keep_alive=0` para descargar el modelo de la RAM/VRAM al terminar, evitando conflictos de KV-cache entre agentes. `num_ctx` está fijado por agente para controlar el uso de RAM sin sacrificar calidad.
 
-#### Bucle de revisión automática
+#### Revisión, bucle automático y decisión humana (HITL)
 
 ```
-Redactor ──► Revisor
-    ▲            │ score < 80 y loops < 3
-    └────────────┘
-                 │ score ≥ 80 o loops = 3
-                 ▼
-           Formateador
+Redactor ──► Revisor ──(score ≥ 80 y coherente)──► Formateador
+    ▲           │
+    │ score<80  │ no coherente
+    │ y loops<3 ▼
+    └──────  ⏸️ HITL — pregunta al usuario
+                 ├─ Subir documento ─► vuelve al Investigador (nueva fuente)
+                 └─ Continuar ───────► Formateador
 ```
 
-El contador `loop_count` se incrementa solo cuando el Revisor rechaza. Al alcanzar 3 rechazos consecutivos, el flujo avanza igualmente para no bloquear el pipeline.
+- **Bucle automático**: el contador `loop_count` se incrementa solo cuando el
+  Revisor rechaza por `score < 80`; reenvía al Redactor hasta 3 veces y luego
+  avanza igualmente para no bloquear el pipeline.
+- **HITL (human-in-the-loop)**: si el Revisor considera que la redacción **no es
+  coherente** y hay un cliente escuchando (SSE), **pausa** y pregunta al usuario:
+  - **Subir documento** → vuelve al **Investigador** para rehacer la investigación
+    con la nueva fuente (hasta 3 reintentos; luego continúa automáticamente).
+  - **Continuar** → sigue con el borrador actual hacia el Formateador.
+
+  En modo headless (sin oyente) la decisión por defecto es **continuar**. El
+  usuario responde vía `POST /api/v1/agents/{article_id}/decision`.
 
 #### Ejecutar el pipeline
 
-**Desde la UI:**
+**Desde la UI (primera ejecución):**
 
-1. Crea un artículo (**Artículos → Nuevo artículo**) con título y palabras clave.
-2. En el detalle del artículo, haz clic en **Reejecutar pipeline**.
-3. Selecciona los agentes y el orden (todos preseleccionados por defecto).
-4. Haz clic en **Lanzar**. Los eventos aparecen en tiempo real en el panel de ejecución.
+1. En el **Flow Designer**, pulsa **Ejecutar pipeline**.
+2. Indica el **título**, una **descripción / enfoque** (opcional) y las **fuentes
+   de información (RAG)**: elige documentos ya cargados o **sube uno nuevo**. En
+   *Opciones avanzadas* puedes añadir palabras clave y una estructura.
+3. Pulsa **Ejecutar pipeline**. Los eventos aparecen en tiempo real en el panel de
+   ejecución; si el Revisor lanza un **HITL**, responde ahí (subir fuente / continuar).
+
+> Para reejecutar sobre un artículo existente, ve a su detalle → **Reejecutar
+> pipeline** y selecciona los agentes y el orden.
 
 **Desde la API:**
 
@@ -306,7 +330,16 @@ El artículo queda en estado `DRAFT` con el contenido parcial generado hasta el 
 GET /api/v1/agents/{article_id}/stream
 ```
 
-Eventos emitidos: `agent_start`, `log`, `agent_end`, `agent_error`, `done`, `done_error`, `cancelled`.
+Eventos emitidos: `agent_start`, `token`, `log`, `agent_end`, `agent_error`, `await_decision` (HITL), `done`, `done_error`, `cancelled`.
+
+Cuando el Revisor lanza un HITL emite `await_decision` y **pausa**; el usuario
+responde con:
+
+```bash
+curl -X POST http://localhost:8000/api/v1/agents/{article_id}/decision \
+  -H "Authorization: Bearer <token>" -H "Content-Type: application/json" \
+  -d '{"decision": "add_source"}'   # o "continue"
+```
 
 #### Flujos parciales soportados
 
@@ -335,6 +368,34 @@ DRAFT ────────────────────────�
 | `in_review` | Enviado a revisión humana (submit). No editable hasta resolución. |
 | `published` | Aprobado y publicado. Visible en la revista pública. |
 | `rejected` | Rechazado por el revisor humano. Vuelve a `draft` con comentario. |
+
+#### Estado compartido entre agentes (`AgentState`)
+
+El orquestador (LangGraph `StateGraph`) pasa un estado tipado entre nodos. Cada
+ejecución de agente se registra además en la tabla `agent_runs` para trazabilidad.
+
+```python
+class AgentState(TypedDict):
+    article_id: UUID
+    author_id: UUID
+    title: str
+    keywords: list[str]
+    research_data: str        # Contexto sintetizado por el Investigador
+    sources: list[dict]       # Fuentes reales (title, authors, year, url, doi)
+    draft_text: str           # Borrador del Redactor
+    feedback: list[str]       # Comentarios del Revisor (se acumulan)
+    approval_score: float     # Puntuación del Revisor (0-100)
+    formatted_text: str       # Texto del Formateador (citas + referencias)
+    scientific_format: str    # apa | ieee | vancouver | chicago | nature
+    published_url: str
+    metadata: dict            # Metadatos de publicación (word_count, licencia…)
+    flow_sequence: list[str]  # Nodos a ejecutar
+    current_step_index: int
+    loop_count: int           # Iteraciones del bucle Revisor → Redactor
+    agent_settings: dict      # Overrides por agente (modelo, formato, rag_doc_ids…)
+    context_description: str  # Enfoque del autor (Investigador + Redactor)
+    article_outline: str      # Estructura/esquema impuesto al Redactor
+```
 
 ---
 
@@ -658,242 +719,205 @@ Los tests cubren el ciclo completo de autenticación (registro → login → tok
 
 ---
 
+## Desarrollo asistido por agentes (Claude Code)
+
+Además de los agentes *de producto* (el pipeline editorial), el repositorio
+incluye **agentes de desarrollo** en `.claude/` para trabajar el backlog de
+hardening de forma asistida.
+
+Hay **dos** agentes de desarrollo, cada uno con su comando:
+
+| Agente | Comando | Qué hace |
+|--------|---------|----------|
+| [`sdd-sync`](.claude/agents/sdd-sync.md) | `/sdd-sync [--apply]` | Reconcilia las épicas/tareas del GitHub Project con la **fuente de verdad** (specs/ADRs). |
+| [`task-runner`](.claude/agents/task-runner.md) | `/resolve-task <#>` | Implementa **una** tarea del backlog de extremo a extremo. |
+
+Las specs, además, **nacen y maduran** con la capa de autoría
+[Spec Kit](https://github.com/github/spec-kit) adaptada a este repo
+([ADR-0007](docs/adr/0007-adopt-spec-kit-authoring-layer.md)):
+`/speckit-specify` (crear SPEC en Draft), `/speckit-clarify` (ambigüedades),
+`/speckit-checklist` (calidad de requisitos) y `/speckit-analyze`
+(consistencia SPEC↔ADR↔tareas). Detalle:
+[docs/governance/speckit-authoring-aids.md](docs/governance/speckit-authoring-aids.md).
+
+### Flujo de funcionamiento (de la spec al merge)
+
+```
+/speckit-specify → clarify → checklist → analyze   ← autoría (recomendado en DoR)
+        ▼
+docs/specs/SPEC-NNN (bloque sdd-sync)          ← fuente de verdad (definición)
+        │  /sdd-sync --apply
+        ▼
+GitHub Project: épica + tareas (issues)        ← estado de ejecución
+        │  /resolve-task <#>
+        ▼
+task-runner: rama feat/… → implementa → pytest/build
+        │  bitácora (docs/bitacora) + push + PR a develop (Closes #N)
+        ▼
+CI (tests · build · specs · secretos) + review + branch protection
+        ▼
+Merge a develop  →  criterios de aceptación verificados
+```
+
+Los dos agentes cubren tramos distintos del ciclo SDD: `sdd-sync` lleva la
+**definición** (specs) al backlog; `task-runner` lleva una tarea del backlog a
+**código + PR**. El estado de ejecución (open/closed, progreso) vive siempre en
+GitHub; los agentes no lo manipulan a mano.
+
+### `sdd-sync` — del spec al backlog
+
+[`.claude/agents/sdd-sync.md`](.claude/agents/sdd-sync.md) reconcilia el backlog
+con las especificaciones, **sin tocar el estado de ejecución**:
+
+1. Lee `docs/specs/SPEC-*.md` en estado `Ready`/`In progress`/`Done` y su bloque
+   estructurado `sdd-sync` (sección 8 de la spec): épica + tareas con `id`
+   estable, `sev`, `depends_on` y `acceptance`.
+2. Empareja con los issues `epic`/`task` por un **marcador oculto** del cuerpo
+   (no por título): así es idempotente y no duplica.
+3. Calcula el diff y lo clasifica: **CREATE · UPDATE · ADOPT** (adopta issues del
+   bootstrap añadiéndoles el marcador) **· DRIFT** (huérfanos) **· NO GESTIONADO**.
+4. **Dry-run por defecto** (solo imprime el plan); aplica los cambios únicamente
+   con `--apply`. Nunca cierra, borra ni reabre issues.
+
+### `task-runner` — implementa una tarea
+
+[`.claude/agents/task-runner.md`](.claude/agents/task-runner.md) resuelve una
+tarea a partir de su número de issue:
+
+1. **Lee la tarea** (`gh issue view <N>`): *Problema*, *Definition of Done* y
+   *Dependencias* ("Bloqueada por: #X").
+2. **Verifica dependencias**: si alguna está abierta, se detiene y avisa.
+3. **Carga contexto**: spec/ADR referenciados y archivos implicados.
+4. **Implementa** en una rama `feat|fix|sec|docs|chore/…` (nunca en `develop`).
+5. **Verifica** (`pytest`, `npm run build`) como parte del DoD.
+6. **Escribe la bitácora** datada en [`docs/bitacora/`](docs/bitacora/) (una
+   entrada por ejecución exitosa).
+7. **Sube la rama y abre la PR** a `develop` con `Closes #<N>`. No mergea la PR ni
+   cierra el issue a mano (el `Closes` lo hace al mergear).
+8. **Reporta** el cumplimiento de cada punto del DoD, la bitácora y el enlace de PR.
+
+### Guardarraíles y CI (harness)
+
+Refuerzan la gobernanza a dos niveles:
+
+- **Guardarraíles de sesión** ([`.claude/hooks/`](.claude/hooks/), hooks
+  `PreToolUse`): bloquean commit/push directo a ramas protegidas, force-push,
+  `--no-verify`, `git add -f` de secretos y `rm -rf` catastrófico; piden
+  confirmación en operaciones destructivas. Avisan **antes** de actuar.
+- **CI** ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)): en cada PR a
+  `develop` corre tests de backend, build de frontend, validación de specs
+  ([`scripts/validate_specs.py`](scripts/validate_specs.py)) y escaneo de secretos.
+
+### Usar los agentes desde la terminal
+
+```bash
+# Implementar una tarea por su número de issue (una o varias)
+bash scripts/run-task.sh 119
+bash scripts/run-task.sh 119 120 121
+```
+
+O dentro de una sesión interactiva de Claude Code:
+
+```text
+/sdd-sync            # plan de reconciliación (dry-run)
+/sdd-sync --apply    # aplica los cambios al GitHub Project
+/resolve-task 119    # implementa la tarea #119
+```
+
+Requisitos: la CLI `claude` instalada y `gh` autenticado (scope `repo`; y
+`project` si gestionas el tablero/épicas).
+
+---
+
+## Spec-Driven Development (SDD)
+
+El proyecto trabaja con **Spec-Driven Development**: la especificación va *antes*
+que el código. Decisión y proceso en
+[ADR-0002](docs/adr/0002-adopt-spec-driven-development.md).
+
+### Flujo
+
+```
+Idea ─▶ Spec (docs/specs) ─▶ ADR si hay decisión arquitectónica
+     ─▶ Bloque sdd-sync en la spec ─▶ /sdd-sync --apply ─▶ Épica + Tareas (GitHub Project)
+     ─▶ /resolve-task <#> ─▶ Rama feat/… ─▶ PR contra develop
+     ─▶ CI verde + revisión ─▶ Verificación de criterios de aceptación ─▶ Merge
+```
+
+La **fuente de verdad** de la definición es `docs/specs` + `docs/adr`; el
+**estado de ejecución** vive en el GitHub Project. El agente
+[`sdd-sync`](.claude/agents/sdd-sync.md) reconcilia una con otra (ver
+[GOVERNANCE §7](docs/governance/GOVERNANCE.md)).
+
+### Cómo añadir una especificación (y crear tareas nuevas)
+
+1. **Crea la spec** desde [`docs/specs/TEMPLATE.md`](docs/specs/TEMPLATE.md) como
+   `SPEC-NNN-titulo.md` (ID incremental, no se reutiliza). Rellena problema,
+   objetivos, **criterios de aceptación** (Given/When/Then) y el resto.
+2. **Declara épica y tareas** en el bloque `sdd-sync` (sección 8) con `id`
+   estables, `sev`, `depends_on` y `acceptance`. Cambia el **Estado** a `Ready`.
+3. **Regístrala** en el índice de [`docs/specs/README.md`](docs/specs/README.md) y,
+   si hay decisión arquitectónica, añade el **ADR** correspondiente.
+4. Abre la PR `docs/…` a `develop`. La CI valida el formato del bloque con
+   [`scripts/validate_specs.py`](scripts/validate_specs.py).
+5. Tras el merge, ejecuta **`/sdd-sync --apply`** para crear/actualizar la épica y
+   las tareas en el GitHub Project. Luego **`/resolve-task <#>`** por cada tarea.
+
+#### En un área existente vs. un área nueva
+
+Las áreas registradas son: `area/security`, `area/infra`, `area/backend`,
+`area/observability`, `area/governance`, `area/ux`, `area/evaluation`.
+
+- **Área existente (p. ej. Observabilidad `area/observability` E5, o UX/diseño
+  `area/ux` E7 — ver [SPEC-003](docs/specs/SPEC-003-ux-design-system-accessibility.md)):**
+  basta con los pasos de arriba; en el bloque `sdd-sync` pon el `epic.area`
+  correspondiente y un `epic.id` de esa área o uno nuevo si abres otra épica.
+- **Área nueva (la que no esté en la lista de arriba):** primero **da de alta el
+  área** (es un cambio de gobernanza, no solo una spec). Tomando `area/<nueva>`:
+  1. Añade la label `area/<nueva>` en [`scripts/seed_github_project.py`](scripts/seed_github_project.py) (lista `LABELS`)
+     y créala en GitHub (`gh label create area/<nueva>`).
+  2. Añádela al conjunto `ALLOWED_AREAS` de
+     [`scripts/validate_specs.py`](scripts/validate_specs.py) para que la CI la acepte.
+  3. Refléjala en [GOVERNANCE §7](docs/governance/GOVERNANCE.md) y en el
+     [backlog](docs/backlog/).
+  4. Ya puedes crear la spec con `epic.area: area/<nueva>` y un `epic.id` nuevo, y
+     seguir el flujo normal (`/sdd-sync --apply` → `/resolve-task`).
+
+### Documentación
+
+| Documento | Contenido |
+|-----------|-----------|
+| [docs/specs/](docs/specs/) | Especificaciones + plantilla y ciclo de vida (Draft→Ready→Done). |
+| [docs/adr/](docs/adr/) | Architecture Decision Records. |
+| [docs/governance/GOVERNANCE.md](docs/governance/GOVERNANCE.md) | Roles, **Definition of Ready/Done**, política de revisión, fuente de verdad. |
+| [CONTRIBUTING.md](CONTRIBUTING.md) | Flujo de contribución (SDD) y estándares. |
+| [SECURITY.md](SECURITY.md) | Política y modelo de amenazas. |
+| [docs/backlog/](docs/backlog/) | Épicas y tareas de hardening (overview). |
+| [docs/bitacora/](docs/bitacora/) | Bitácora de tareas resueltas (una entrada por ejecución). |
+
+### Backlog y GitHub Project
+
+El **bootstrap inicial** del GitHub Project (jerárquico: campo `Epic`,
+sub-issues épica→tareas, DoD y dependencias) se hace una sola vez:
+
+```bash
+# Bootstrap del Project con todo el backlog (requiere gh con scope project)
+python scripts/seed_github_project.py
+
+# Eliminar el Project y sus issues (destructivo)
+python scripts/delete_github_project.py --yes
+```
+
+`seed_github_project.py` es un **script de un solo uso**, no un sync incremental.
+A partir del bootstrap, las épicas/tareas se mantienen al día desde las specs con
+**`/sdd-sync --apply`** (agente [`sdd-sync`](.claude/agents/sdd-sync.md)).
+
+Luego, en la UI del proyecto: **View ▸ Group by ▸ Epic**. Para implementar una
+tarea, usa el agente: `bash scripts/run-task.sh <#issue>` o `/resolve-task <#>`.
+
+---
+
 ## Licencia
 
 Consulta el archivo [LICENSE](LICENSE) para más información.
 
-
-```
-backend/
-├── app/
-│   ├── main.py                  # Entrada FastAPI, lifespan, routers
-│   ├── database.py              # Engine SQLAlchemy, get_session, init_db
-│   ├── models.py                # Modelos ORM (SQLAlchemy) + DTOs (Pydantic)
-│   │
-│   ├── core/
-│   │   ├── config.py            # Settings (config.yaml + env vars)
-│   │   └── security.py          # JWT, bcrypt, hash_password, verify_token
-│   │
-│   ├── shared/
-│   │   └── database.py          # AsyncSessionLocal (para agentes)
-│   │
-│   ├── agents/                  # Pipeline multi-agente con LangGraph
-│   │   ├── investigador.py      # Busca contexto en Qdrant RAG + APIs científicas
-│   │   ├── redactor.py          # Genera borrador científico con Ollama
-│   │   ├── revisor.py           # Evalúa el borrador (score 0-100) con Ollama
-│   │   ├── formateador.py       # Aplica formato APA / IEEE / Vancouver
-│   │   ├── publicador.py        # Actualiza artículo a PUBLISHED en DB
-│   │   └── orquestador.py       # StateGraph LangGraph + logging a DB
-│   │
-│   └── routers/
-│       ├── auth.py              # Registro, login, /me, promote-reviewer
-│       ├── articles.py          # CRUD artículos + submit / approve / reject
-│       ├── ai.py                # RAG ingest, AI assist, listar modelos Ollama
-│       └── agents.py            # Ejecutar pipeline, historial de runs
-│
-├── tests/
-│   └── test_auth_end_to_end.py  # Test E2E de autenticación
-│
-├── requirements.txt
-├── Dockerfile
-└── .env.example
-```
-
----
-
-## Pipeline de agentes IA (LangGraph)
-
-El pipeline se orquesta dinámicamente según la `flow_sequence` solicitada. El flujo estándar completo es:
-
-```
-START → Investigador → Redactor → Revisor → Formateador → Publicador → END
-```
-
-### Diagrama de flujo
-
-```mermaid
-flowchart TD
-    START([START]) --> Investigador
-
-    subgraph RAG["RAG & Context"]
-        Investigador["🔍 Investigador Agent"]
-        BusquedaCientifica["Búsqueda Científica\nAPIs: PubMed, OpenAlex, PMC"]
-        Qdrant["Qdrant Vector DB"]
-        Investigador --> BusquedaCientifica
-        BusquedaCientifica -->|Indexar en| Qdrant
-    end
-
-    Investigador --> Redactor["☁️ Redactor Agent"]
-
-    Redactor --> Revisor["👁️ Revisor Agent"]
-
-    Revisor -->|"¿Puntuación < 80?"| Redactor
-    Revisor -->|"¿Aprobado >= 80?"| Formateador["📄 Formateador Agent"]
-
-    Formateador --> Publicador["✏️ Publicador Agent"]
-    Publicador --> END([END])
-```
-
-### Descripción de cada agente
-
-| Agente | Responsabilidad |
-|---|---|
-| **Investigador** | Consulta Qdrant (RAG local) y APIs científicas públicas (EuropePMC, OpenAlex) para obtener contexto y fuentes reales |
-| **Redactor** | Genera un borrador académico en Markdown usando Ollama (`llama3.2`), incorporando el contexto de investigación y el feedback previo del Revisor |
-| **Revisor** | Evalúa el borrador con Ollama, devuelve una puntuación (0-100) y comentarios. Si `score < 80` y `loops < 3`, reenvía al Redactor |
-| **Formateador** | Reformatea las citas y referencias según el estilo solicitado: **APA**, **IEEE** o **Vancouver** |
-| **Publicador** | Escribe el texto final en la DB, cambia el estado del artículo a `PUBLISHED` y genera la URL de publicación |
-
-### Estado compartido entre agentes (`AgentState`)
-
-```python
-class AgentState(TypedDict):
-    article_id: UUID
-    author_id: UUID
-    title: str
-    keywords: list[str]
-    research_data: str       # Contexto del Investigador
-    sources: list[dict]      # Fuentes científicas encontradas
-    draft_text: str          # Borrador generado por el Redactor
-    feedback: list[str]      # Comentarios del Revisor
-    approval_score: float    # Puntuación del Revisor (0-100)
-    formatted_text: str      # Texto formateado por el Formateador
-    scientific_format: str   # "apa" | "ieee" | "vancouver"
-    published_url: str       # URL final de publicación
-    flow_sequence: list[str] # Secuencia de nodos a ejecutar
-    loop_count: int          # Iteraciones del bucle Revisor → Redactor
-```
-
-Cada ejecución de agente se registra en la tabla `agent_runs` para trazabilidad completa.
-
----
-
-## Endpoints
-
-### Auth
-| Método | Ruta | Descripción |
-|---|---|---|
-| `POST` | `/api/v1/auth/register` | Registro de nuevo usuario |
-| `POST` | `/api/v1/auth/login` | Login, devuelve JWT |
-| `GET` | `/api/v1/auth/me` | Datos del usuario autenticado |
-| `POST` | `/api/v1/auth/dev/promote-reviewer` | Promocionar a reviewer (solo DEBUG) |
-
-### Articles
-| Método | Ruta | Descripción |
-|---|---|---|
-| `GET` | `/api/v1/articles` | Listar artículos del autor autenticado |
-| `POST` | `/api/v1/articles` | Crear borrador |
-| `GET` | `/api/v1/articles/{id}` | Obtener artículo por ID |
-| `PUT` | `/api/v1/articles/{id}` | Actualizar artículo |
-| `POST` | `/api/v1/articles/{id}/submit` | Enviar a revisión |
-| `POST` | `/api/v1/articles/{id}/approve` | Aprobar artículo (reviewer) |
-| `POST` | `/api/v1/articles/{id}/reject` | Rechazar artículo (reviewer) |
-
-### AI / RAG
-| Método | Ruta | Descripción |
-|---|---|---|
-| `POST` | `/api/v1/ai/ingest` | Indexar texto en Qdrant (RAG) |
-| `POST` | `/api/v1/ai/assist` | Asistencia IA sobre un artículo |
-| `GET` | `/api/v1/ai/models` | Listar modelos disponibles en Ollama |
-
-### Agentes IA
-| Método | Ruta | Descripción |
-|---|---|---|
-| `POST` | `/api/v1/agents/{article_id}/run` | Ejecutar pipeline de agentes |
-| `GET` | `/api/v1/agents/{article_id}/runs` | Historial de ejecuciones del artículo |
-
-#### Ejemplo de llamada al pipeline
-
-```bash
-curl -X POST http://localhost:8000/api/v1/agents/{article_id}/run \
-  -H "Authorization: Bearer <token>" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "flow_sequence": ["investigador", "redactor", "revisor", "formateador", "publicador"]
-  }'
-```
-
-#### Respuesta
-
-```json
-{
-  "status": "completed",
-  "published_url": "http://localhost:8080/articles/{id}/view",
-  "feedback": [],
-  "approval_score": 92.0,
-  "word_count": 1450
-}
-```
-
-### Health
-| Método | Ruta | Descripción |
-|---|---|---|
-| `GET` | `/health` | Estado del servicio |
-
----
-
-## Ejecutar en local (sin Docker)
-
-```bash
-cd backend
-python -m venv .venv
-.venv\Scripts\activate        # Windows
-# source .venv/bin/activate   # Linux / macOS
-pip install -r requirements.txt
-uvicorn app.main:app --reload --port 8000
-```
-
-Documentación interactiva disponible en: **http://localhost:8000/docs**
-
-## Ejecutar con Docker Compose
-
-Desde la raíz del proyecto:
-
-```bash
-docker compose up --build
-```
-
----
-
-## Configuración
-
-El backend carga configuración desde `config.yaml` (raíz del repo). En Docker se monta en `/app/config.yaml`.
-
-**Prioridad:**
-1. Variables de entorno (`ENV`)
-2. `config.yaml`
-3. Defaults en `app/core/config.py`
-
-### Variables principales
-
-| Variable | Default | Descripción |
-|---|---|---|
-| `DATABASE_URL` | `postgresql+asyncpg://...` | URL de la base de datos |
-| `SECRET_KEY` | `your-secret-key` | Clave para firmar JWT |
-| `OLLAMA_BASE_URL` | `http://localhost:11434` | URL de Ollama |
-| `OLLAMA_MODEL` | `llama3.2` | Modelo LLM a usar |
-| `QDRANT_URL` | `http://localhost:6333` | URL de Qdrant |
-| `QDRANT_COLLECTION` | `rag_docs` | Colección vectorial RAG |
-
----
-
-## Tests
-
-```bash
-cd backend
-python -m pytest tests/ -v
-```
-
-El test E2E de autenticación cubre: registro → obtener usuario autenticado → login → verificar nuevo token.
-
----
-
-## Servicios del stack completo
-
-| Servicio | URL |
-|---|---|
-| API FastAPI | http://localhost:8000 |
-| Docs OpenAPI | http://localhost:8000/docs |
-| Frontend | http://localhost:8080 |
-| Ollama | http://localhost:11434 |
-| Qdrant Dashboard | http://localhost:6333/dashboard |

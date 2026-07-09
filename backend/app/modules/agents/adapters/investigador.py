@@ -1,10 +1,31 @@
 import logging
+import re
 from typing import Dict, Any, List
 
 from app.core.config import settings
-from app.modules.agents.adapters.rag import semantic_search_context
+from app.platform.capabilities.rag import semantic_search_results, get_rag_backend, fetch_doc_head, LIBRARY_AGENT
+from app.modules.agents.adapters.doc_metadata import extract_doc_metadata
 
 logger = logging.getLogger(__name__)
+
+
+def _clean_doc_title(filename: str) -> str:
+    """Derive a human-readable document title from a stored filename.
+
+    Strips the scraper prefix, file extension and arXiv id, and normalises
+    separators — e.g. '[Scrape] [2404.00027v1] LLMs as Writing Assistants.txt'
+    becomes 'LLMs as Writing Assistants'.
+    """
+    name = (filename or "").strip()
+    name = re.sub(r"^\[Scrape\]\s*", "", name, flags=re.I)
+    name = re.sub(r"\.(pdf|txt|md|docx?)$", "", name, flags=re.I)
+    name = re.sub(r"^\[\d{4}\.\d{4,5}(v\d+)?\]\s*", "", name)  # arXiv id prefix
+    name = re.sub(r"[_\-]+", " ", name).strip(" —|")
+    name = re.sub(r"\s{2,}", " ", name)
+    # Title-case slug-style names ("bienvenida alejandria magazine" -> "Bienvenida ...")
+    if name and name == name.lower():
+        name = name.title()
+    return name
 
 
 
@@ -58,35 +79,95 @@ async def run_investigador(state: Dict[str, Any]) -> Dict[str, Any]:
         rag_doc_ids = None
 
     # ── Stage 1: Local RAG ───────────────────────────────────────────────────
-    log(f"🔎 Etapa 1/2 — Buscando en base de conocimiento local (colección: {rag_collection})...")
+    # Search the investigador's own bucket AND the shared library, so documents
+    # uploaded to either are found. Explicit doc_ids (selected by the user) take
+    # precedence and bypass the agent-bucket filter entirely.
+    search_agents = ["investigador", LIBRARY_AGENT]
+    backend = await get_rag_backend(settings.QDRANT_URL, settings.QDRANT_API_KEY)
+    if rag_doc_ids:
+        log(f"🔎 Etapa 1/2 — Buscando en documentos seleccionados ({len(rag_doc_ids)}) "
+            f"[backend: {backend}, colección: {rag_collection}]...")
+    else:
+        log(f"🔎 Etapa 1/2 — Buscando fuentes [backend: {backend}, colección: {rag_collection}, "
+            f"buckets: {', '.join(search_agents)}]...")
     try:
-        rag_context = await semantic_search_context(
+        rag_results = await semantic_search_results(
             query=query_str,
             qdrant_url=settings.QDRANT_URL,
             collection=rag_collection,
-            agent_name="investigador",
+            agent_name=search_agents,
             ollama_base_url=settings.OLLAMA_BASE_URL,
             embedding_model=settings.OLLAMA_EMBED_MODEL,
             limit=rag_top_k,
             api_key=settings.QDRANT_API_KEY,
             doc_ids=rag_doc_ids,
         )
-        if rag_context:
-            rag_parts = [p for p in rag_context.split("\n\n---\n\n") if p]
-            for index, text in enumerate(rag_parts):
-                research_chunks.append(f"[RAG Source: local-{index}] {text}")
-                sources.append({
-                    "title": f"Local Document Chunk ({index + 1})",
-                    "authors": "Biblioteca Local",
-                    "journal": "Base de Conocimiento",
-                    "year": "N/A",
-                    "doi": "",
-                    "url": f"local://investigador/{index + 1}",
-                    "snippet": text[:200],
-                })
-            log(f"✅ RAG local: {len(rag_parts)} fragmento(s) encontrado(s).")
+        # Guard: when the user selected specific documents, never build citations
+        # from anything else — even if an upstream fallback ignored the filter.
+        if rag_doc_ids:
+            allowed = set(rag_doc_ids)
+            before = len(rag_results)
+            rag_results = [r for r in rag_results if r.get("doc_id") in allowed]
+            dropped = before - len(rag_results)
+            if dropped:
+                log(f"🛡️ Descartados {dropped} fragmento(s) de documentos no seleccionados.")
+        if rag_results:
+            # Build one citation per unique source document (by doc_id), using the
+            # real filename as the title instead of a generic placeholder.
+            seen_docs: Dict[str, Dict[str, Any]] = {}
+            for index, item in enumerate(rag_results):
+                text = item.get("text", "")
+                filename = item.get("filename", "")
+                doc_id = item.get("doc_id") or f"local-{index}"
+                if doc_id not in seen_docs:
+                    seen_docs[doc_id] = {
+                        "doc_title": (item.get("doc_title") or "").strip(),
+                        "doc_authors": (item.get("doc_authors") or "").strip(),
+                        "journal": "",
+                        "year": "",
+                        "doi": "",
+                        "url": "",
+                        "filename": filename,
+                        "snippet": text[:200],
+                    }
+                label = seen_docs[doc_id]["doc_title"] or _clean_doc_title(filename) or filename
+                research_chunks.append(f"[Fuente: {label}] {text}")
+
+            # For documents missing extracted metadata, parse the title/authors
+            # from the document's opening text at runtime (no manual backfill).
+            for doc_id, src in seen_docs.items():
+                if src["doc_title"] and src["doc_authors"]:
+                    continue
+                try:
+                    head = await fetch_doc_head(
+                        settings.QDRANT_URL, rag_collection, doc_id, settings.QDRANT_API_KEY
+                    )
+                    if head:
+                        meta = extract_doc_metadata(src["filename"], b"", head)
+                        src["doc_title"] = src["doc_title"] or meta.get("title", "")
+                        src["doc_authors"] = src["doc_authors"] or meta.get("authors", "")
+                except Exception as meta_exc:
+                    logger.warning("Runtime metadata extraction failed for %s: %s", doc_id, meta_exc)
+
+            # Finalise the citation fields per document.
+            for src in seen_docs.values():
+                src["title"] = src.pop("doc_title") or _clean_doc_title(src["filename"]) \
+                    or src["filename"] or "Documento"
+                src["authors"] = src.pop("doc_authors")
+
+            sources.extend(seen_docs.values())
+            with_authors = sum(1 for s in seen_docs.values() if s["authors"])
+            log(f"📚 {len(seen_docs)} fuente(s) citables — con autores extraídos: {with_authors}.")
+            log(
+                f"✅ RAG: {len(rag_results)} fragmento(s) de {len(seen_docs)} documento(s) "
+                f"en la colección '{rag_collection}'."
+            )
         else:
-            log("ℹ️ RAG local sin resultados para esta consulta.")
+            log(
+                f"ℹ️ Sin resultados RAG en '{rag_collection}'. Verifica que los documentos estén "
+                f"subidos al investigador o a la biblioteca compartida, en esa misma colección.",
+                "warning",
+            )
     except Exception as exc:
         logger.warning("Could not search Qdrant: %s", exc)
         log(f"⚠️ RAG local no disponible: {exc}", "warning")
@@ -95,7 +176,7 @@ async def run_investigador(state: Dict[str, Any]) -> Dict[str, Any]:
     # Always run synthesis — with or without external sources.
     # If no external content was found, the LLM uses its parametric knowledge.
     try:
-        from app.shared.llm import call_llm, get_default_model
+        from app.platform.llm import call_llm, get_default_model
         model = (agent_cfg.get("model") or "").strip() or get_default_model()
 
         # When there are no external sources, use a lightweight model for

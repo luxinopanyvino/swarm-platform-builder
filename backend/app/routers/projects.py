@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.database import get_session
+from app.core.database import get_session
 from app.models import (
     ProjectModel,
     ProjectCreateDTO,
