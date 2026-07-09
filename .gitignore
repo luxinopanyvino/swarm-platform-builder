@@ -65,6 +65,9 @@ storage/
 backend/app/.rag_local/
 docs/.vitepress/cache/
 
+# Graphify knowledge-graph build artifacts (local only)
+graphify-out/
+
 # Local SQLite databases (no versionar datos de desarrollo/tests)
 backend/data/*.db
 backend/tests/*.db
