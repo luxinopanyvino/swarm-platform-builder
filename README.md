@@ -22,6 +22,7 @@ El proyecto de referencia incluido es **AlejandrIA Magazine**: un pipeline de ci
 9. [Configuración](#configuración)
 10. [Estructura de carpetas](#estructura-de-carpetas)
 11. [Desarrollo asistido por agentes (Claude Code)](#desarrollo-asistido-por-agentes-claude-code)
+    - [graphify (grafo de conocimiento del código)](#graphify-grafo-de-conocimiento-del-código)
 12. [Spec-Driven Development (SDD)](#spec-driven-development-sdd)
 
 ---
@@ -826,6 +827,32 @@ O dentro de una sesión interactiva de Claude Code:
 
 Requisitos: la CLI `claude` instalada y `gh` autenticado (scope `repo`; y
 `project` si gestionas el tablero/épicas).
+
+### graphify (grafo de conocimiento del código)
+
+Herramienta **de desarrollo** (no es funcionalidad del producto) que convierte el
+backend en un grafo de conocimiento navegable: *god nodes*, comunidades y
+relaciones entre archivos extraídas por AST. Útil para orientarse en el código y
+para que Claude Code responda preguntas de arquitectura con un subgrafo acotado en
+lugar de un grep completo. Skill de Claude Code: `/graphify`.
+
+```bash
+pip install -r requirements-dev.txt   # instala graphifyy (separado del runtime)
+
+# Construir / actualizar el grafo del backend (solo AST, sin coste de API)
+graphify update backend
+
+# Consultar el grafo ya construido
+graphify explain "call_llm()" --graph backend/graphify-out/graph.json
+graphify path "UserModel" "ArticleModel" --graph backend/graphify-out/graph.json
+```
+
+El grafo se genera en `backend/graphify-out/` (`graph.json`, `graph.html`,
+`GRAPH_REPORT.md`) y está **ignorado por git** — es un artefacto local por máquina.
+Los hooks del guardián de graphify viven en `.claude/settings.local.json` (local,
+no versionado) para no afectar a otras máquinas ni al CI. Opcionalmente,
+`graphify hook install` añade un hook `post-commit` que reconstruye el grafo tras
+cada commit. Web del proyecto: <https://graphify.net>.
 
 ---
 
