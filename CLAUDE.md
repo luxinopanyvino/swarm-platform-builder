@@ -108,3 +108,24 @@ hook: crea una rama con prefijo y abre PR.
 frontend, validación de specs (`scripts/validate_specs.py`) y escaneo de secretos
 (gitleaks). Hay además review automática de Claude y un digest diario
 (`.github/workflows/claude-*.yml`).
+
+## graphify (grafo de conocimiento — tooling local)
+
+Herramienta de desarrollo, no funcionalidad del producto. Construye un grafo de
+conocimiento navegable del backend (god nodes, comunidades, relaciones entre
+archivos) en `backend/graphify-out/` — **ignorado por git** (`.gitignore`), es un
+artefacto local por máquina. Skill de Claude Code: `/graphify`. Dep de dev en
+`requirements-dev.txt` (`graphifyy`); los hooks del guardián viven en
+`.claude/settings.local.json` (local, no versionado).
+
+Cómo usarlo al responder sobre el código:
+- Si existe `backend/graphify-out/graph.json`, para preguntas sobre el código usa
+  el grafo antes que grep crudo:
+  `graphify path "<A>" "<B>" --graph backend/graphify-out/graph.json` para
+  relaciones y `graphify explain "<concepto>" --graph backend/graphify-out/graph.json`
+  para un nodo concreto. Devuelven un subgrafo acotado, mucho menor que el reporte
+  o un grep completo.
+- `backend/graphify-out/GRAPH_REPORT.md` solo para revisión amplia de arquitectura
+  cuando path/explain no dan contexto suficiente.
+- Tras modificar código, `graphify update backend` mantiene el grafo al día (solo
+  AST, sin coste de API). El hook post-commit local ya lo reconstruye tras commit.
