@@ -1,0 +1,9 @@
+# Herramientas de desarrollo (NO son dependencias de runtime del backend).
+# El runtime vive en backend/requirements.txt; CI no instala este archivo.
+#
+# Instalación:  pip install -r requirements-dev.txt
+
+# graphify — convierte el repo en un grafo de conocimiento navegable
+# (grafo en graphify-out/, ignorado por git). Skill de Claude Code: /graphify.
+# CLI/import: `graphify`.  Web: https://graphify.net
+graphifyy>=0.9.11
