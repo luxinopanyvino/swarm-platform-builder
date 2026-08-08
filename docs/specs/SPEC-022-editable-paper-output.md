@@ -40,6 +40,7 @@ a 2 columnas** (estilo ACL) frecuente en publicaciones científicas.
 
 - Q: ¿Cómo se renderiza la vista previa del paper (AC3)? → A: **Server-side** — endpoint que reutiliza `paper_layout.py`; el frontend hace *debounce* y repinta el `<iframe>`. Única fuente de verdad; previa == PDF.
 - Q: ¿Dónde se almacenan las imágenes/figuras (AC5)? → A: **Store de assets por proyecto** — almacén de objetos con `project_id`, separado del RAG (Qdrant es solo para embeddings); respeta el aislamiento por tenant (E8).
+- Q: ¿De dónde salen los valores por defecto del tema (AC2)? → A: **Hereda del proyecto/tenant** — cada proyecto define un tema por defecto; el artículo lo hereda y puede sobreescribirlo (cadena: proyecto → artículo, con el preset del formato como base).
 
 ## 3. Criterios de aceptación
 
@@ -52,8 +53,9 @@ a 2 columnas** (estilo ACL) frecuente en publicaciones científicas.
   artículo, *When* se genera la maqueta, *Then* esos valores **sobreescriben**
   los del preset y quedan **persistidos con el artículo**; un valor no permitido
   (fuera de la allowlist de fuentes o color inválido) **cae al valor por
-  defecto** sin romper la maqueta. [NEEDS CLARIFICATION: ¿el tema por defecto se
-  hereda del proyecto/tenant o siempre parte del preset del formato?]
+  defecto** sin romper la maqueta. Los defaults del tema se **heredan del
+  proyecto/tenant** (cadena de resolución: preset del formato → tema del
+  proyecto → tema del artículo).
 - [ ] **AC3** — *Given* la pantalla de edición de un artículo en borrador,
   *When* el usuario cambia texto o cualquier control del tema, *Then* la **vista
   previa se re-renderiza** mostrando el cambio **sin publicar**, en ≤ 1 s tras
@@ -81,8 +83,7 @@ a 2 columnas** (estilo ACL) frecuente en publicaciones científicas.
   sangría francesa. Base ya prototipada.
 - **Tema parametrizado** (AC2): `build_paper_html` acepta un `theme` opcional
   (`font`, `accent_color`, `columns`) con **allowlist** y saneo; se guarda en el
-  artículo (`article.theme` JSON). El preset del formato define los defaults; el
-  tema los sobreescribe. Nada de CSS libre del usuario (evita inyección).
+  artículo (`article.theme` JSON). Resolución en cascada: **preset del formato → tema del proyecto → tema del artículo** (el más específico gana). Nada de CSS libre del usuario (evita inyección).
 - **Preview server-side** (AC3): endpoint `POST /articles/{id}/preview` que toma
   `body + metadata + theme` (sin persistir) y devuelve el HTML de `paper_layout`
   para el `<iframe srcdoc>`; el frontend hace *debounce* y repinta. Única fuente
