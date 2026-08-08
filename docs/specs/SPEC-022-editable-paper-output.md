@@ -7,9 +7,9 @@
 - **ADR relacionado:** — (posible ADR nuevo sobre "personalizar parametrizando el preset, no editando el HTML final")
 - **Severidad:** 🟡
 
-> **Draft** (pipeline ADR-0007): contiene marcadores `[NEEDS CLARIFICATION]` a
-> resolver con `/speckit-clarify` y debe pasar `/speckit-checklist` antes de
-> Ready. Mientras esté en Draft, `/sdd-sync` **no** siembra su épica/tareas.
+> **Draft** (pipeline ADR-0007): ambigüedades **resueltas** con `/speckit-clarify`
+> (ver `## Clarifications`, sesión 2026-07-04); pendiente `/speckit-checklist`
+> antes de pasar a Ready. Mientras esté en Draft, `/sdd-sync` **no** siembra su épica/tareas.
 
 ## 1. Problema
 
@@ -42,6 +42,7 @@ a 2 columnas** (estilo ACL) frecuente en publicaciones científicas.
 - Q: ¿Dónde se almacenan las imágenes/figuras (AC5)? → A: **Store de assets por proyecto** — almacén de objetos con `project_id`, separado del RAG (Qdrant es solo para embeddings); respeta el aislamiento por tenant (E8).
 - Q: ¿De dónde salen los valores por defecto del tema (AC2)? → A: **Hereda del proyecto/tenant** — cada proyecto define un tema por defecto; el artículo lo hereda y puede sobreescribirlo (cadena: proyecto → artículo, con el preset del formato como base).
 - Q: ¿Qué tipo de allowlist de fuentes (AC2)? → A: **Curada web-safe** — lista fija de familias del sistema (serif: Times/Georgia; sans: Helvetica/Arial; +alguna más), sin embeber webfonts; renderiza igual al imprimir a PDF. Ampliable después.
+- Q: ¿Cómo se elige el color de acento (AC2)? → A: **Paleta de tokens (E7)** — set curado del design system (no color libre); coherencia visual, identidad por tenant y menor superficie de saneo.
 
 ## 3. Criterios de aceptación
 
@@ -53,7 +54,7 @@ a 2 columnas** (estilo ACL) frecuente en publicaciones científicas.
 - [ ] **AC2** — *Given* un tema `{font, accent_color, columns}` asociado al
   artículo, *When* se genera la maqueta, *Then* esos valores **sobreescriben**
   los del preset y quedan **persistidos con el artículo**; un valor no permitido
-  (fuera de la **allowlist curada de fuentes web-safe** o color inválido) **cae al valor por
+  (fuera de la **allowlist curada de fuentes web-safe** o color fuera de la **paleta de tokens del design system**) **cae al valor por
   defecto** sin romper la maqueta. Los defaults del tema se **heredan del
   proyecto/tenant** (cadena de resolución: preset del formato → tema del
   proyecto → tema del artículo).
@@ -90,7 +91,7 @@ a 2 columnas** (estilo ACL) frecuente en publicaciones científicas.
   para el `<iframe srcdoc>`; el frontend hace *debounce* y repinta. Única fuente
   de verdad de la maqueta = `paper_layout.py`.
 - **Panel de personalización** (AC3/AC4): en `ArticleDetailPage` (o vista nueva),
-  controles de fuente/acento/columnas (tokens de E7) + edición de texto ya
+  controles de fuente (allowlist web-safe), acento (paleta de tokens E7) y columnas + edición de texto ya
   existente, con la previa al lado. Publicar usa lo editado.
 - **Imágenes** (AC5): subida validada por *magic bytes* (T2.3/#161), almacenada
   en un **store de assets por proyecto** (separado del RAG) y referenciable; el conversor markdown de `paper_layout` añade soporte de
