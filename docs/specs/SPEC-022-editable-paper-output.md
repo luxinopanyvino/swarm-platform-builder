@@ -41,6 +41,7 @@ a 2 columnas** (estilo ACL) frecuente en publicaciones científicas.
 - Q: ¿Cómo se renderiza la vista previa del paper (AC3)? → A: **Server-side** — endpoint que reutiliza `paper_layout.py`; el frontend hace *debounce* y repinta el `<iframe>`. Única fuente de verdad; previa == PDF.
 - Q: ¿Dónde se almacenan las imágenes/figuras (AC5)? → A: **Store de assets por proyecto** — almacén de objetos con `project_id`, separado del RAG (Qdrant es solo para embeddings); respeta el aislamiento por tenant (E8).
 - Q: ¿De dónde salen los valores por defecto del tema (AC2)? → A: **Hereda del proyecto/tenant** — cada proyecto define un tema por defecto; el artículo lo hereda y puede sobreescribirlo (cadena: proyecto → artículo, con el preset del formato como base).
+- Q: ¿Qué tipo de allowlist de fuentes (AC2)? → A: **Curada web-safe** — lista fija de familias del sistema (serif: Times/Georgia; sans: Helvetica/Arial; +alguna más), sin embeber webfonts; renderiza igual al imprimir a PDF. Ampliable después.
 
 ## 3. Criterios de aceptación
 
@@ -52,7 +53,7 @@ a 2 columnas** (estilo ACL) frecuente en publicaciones científicas.
 - [ ] **AC2** — *Given* un tema `{font, accent_color, columns}` asociado al
   artículo, *When* se genera la maqueta, *Then* esos valores **sobreescriben**
   los del preset y quedan **persistidos con el artículo**; un valor no permitido
-  (fuera de la allowlist de fuentes o color inválido) **cae al valor por
+  (fuera de la **allowlist curada de fuentes web-safe** o color inválido) **cae al valor por
   defecto** sin romper la maqueta. Los defaults del tema se **heredan del
   proyecto/tenant** (cadena de resolución: preset del formato → tema del
   proyecto → tema del artículo).
