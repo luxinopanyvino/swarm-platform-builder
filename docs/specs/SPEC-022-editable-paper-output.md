@@ -34,6 +34,12 @@ a 2 columnas** (estilo ACL) frecuente en publicaciones científicas.
   (choca con la generación determinista y con el `sandbox` de T2.2); diseño
   libre de plantillas sin restricciones; edición colaborativa en tiempo real.
 
+## Clarifications
+
+### Session 2026-07-04
+
+- Q: ¿Cómo se renderiza la vista previa del paper (AC3)? → A: **Server-side** — endpoint que reutiliza `paper_layout.py`; el frontend hace *debounce* y repinta el `<iframe>`. Única fuente de verdad; previa == PDF.
+
 ## 3. Criterios de aceptación
 
 - [ ] **AC1** — *Given* `scientific_format = "acl"`, *When* se genera el paper
@@ -50,9 +56,8 @@ a 2 columnas** (estilo ACL) frecuente en publicaciones científicas.
 - [ ] **AC3** — *Given* la pantalla de edición de un artículo en borrador,
   *When* el usuario cambia texto o cualquier control del tema, *Then* la **vista
   previa se re-renderiza** mostrando el cambio **sin publicar**, en ≤ 1 s tras
-  el último cambio (debounce). [NEEDS CLARIFICATION: ¿la previa se renderiza en
-  un endpoint server-side que reutiliza `paper_layout.py`, o se porta el layout
-  al cliente? — el diseño propone server-side para una única fuente de verdad.]
+  el último cambio (debounce). La previa se genera **server-side** en un
+  endpoint que reutiliza `paper_layout.py` (única fuente de verdad: previa == PDF).
 - [ ] **AC4** — *Given* un artículo en borrador, *When* el usuario edita
   cuerpo/autores/abstract y guarda, *Then* `updateArticle` persiste los cambios
   y **la publicación usa la versión editada** (extiende el flujo actual de
