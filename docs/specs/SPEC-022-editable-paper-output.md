@@ -1,15 +1,15 @@
 # SPEC-022: Maquetación editable del paper y personalización antes de publicar
 
-- **Estado:** Draft
+- **Estado:** Ready
 - **Autor:** Equipo de plataforma
 - **Fecha:** 2026-07-04
 - **Épica:** E11 (Publicación y maquetación editable)
 - **ADR relacionado:** — (posible ADR nuevo sobre "personalizar parametrizando el preset, no editando el HTML final")
 - **Severidad:** 🟡
 
-> **Draft** (pipeline ADR-0007): ambigüedades **resueltas** con `/speckit-clarify`
-> (ver `## Clarifications`, sesión 2026-07-04); pendiente `/speckit-checklist`
-> antes de pasar a Ready. Mientras esté en Draft, `/sdd-sync` **no** siembra su épica/tareas.
+> **Ready** (pipeline ADR-0007): ambigüedades **resueltas** con `/speckit-clarify`
+> (ver `## Clarifications`, sesión 2026-07-04). `/speckit-checklist` queda como
+> mejora opcional (no bloqueante). Al estar Ready, `/sdd-sync` siembra su épica E11 y tareas.
 
 ## 1. Problema
 
