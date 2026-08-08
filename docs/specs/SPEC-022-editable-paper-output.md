@@ -39,6 +39,7 @@ a 2 columnas** (estilo ACL) frecuente en publicaciones científicas.
 ### Session 2026-07-04
 
 - Q: ¿Cómo se renderiza la vista previa del paper (AC3)? → A: **Server-side** — endpoint que reutiliza `paper_layout.py`; el frontend hace *debounce* y repinta el `<iframe>`. Única fuente de verdad; previa == PDF.
+- Q: ¿Dónde se almacenan las imágenes/figuras (AC5)? → A: **Store de assets por proyecto** — almacén de objetos con `project_id`, separado del RAG (Qdrant es solo para embeddings); respeta el aislamiento por tenant (E8).
 
 ## 3. Criterios de aceptación
 
@@ -65,10 +66,9 @@ a 2 columnas** (estilo ACL) frecuente en publicaciones científicas.
 - [ ] **AC5** — *Given* una subida de imagen, *When* su contenido real (magic
   bytes) **no** corresponde a un tipo permitido, *Then* se **rechaza con `400`**
   (reutiliza la validación de T2.3, #161); *When* es válida, *Then* se
-  **almacena**, puede **insertarse** en el cuerpo (`![alt](ref)`) y **aparece**
-  en la maqueta generada y en el PDF. [NEEDS CLARIFICATION: ¿almacenamiento de
-  imágenes en el bucket del proyecto (Qdrant/objeto) o un store de assets
-  aparte?]
+  **almacena** en un **store de assets por proyecto** (con `project_id`, separado
+  del RAG), puede **insertarse** en el cuerpo (`![alt](ref)`) y **aparece** en la
+  maqueta generada y en el PDF.
 - [ ] **AC6** — Existen **tests** que cubren AC1–AC5: layout determinista
   (AC1/AC2), validación de tema (AC2), preview (AC3), publicación con edición
   (AC4) y rechazo/aceptación de imágenes (AC5).
@@ -91,7 +91,7 @@ a 2 columnas** (estilo ACL) frecuente en publicaciones científicas.
   controles de fuente/acento/columnas (tokens de E7) + edición de texto ya
   existente, con la previa al lado. Publicar usa lo editado.
 - **Imágenes** (AC5): subida validada por *magic bytes* (T2.3/#161), almacenada
-  y referenciable; el conversor markdown de `paper_layout` añade soporte de
+  en un **store de assets por proyecto** (separado del RAG) y referenciable; el conversor markdown de `paper_layout` añade soporte de
   `![alt](ref)` y estilo de figura/caption (ya prototipado a doble columna).
 
 ## 5. Riesgos y mitigaciones
