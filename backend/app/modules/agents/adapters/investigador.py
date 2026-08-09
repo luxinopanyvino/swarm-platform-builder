@@ -176,13 +176,16 @@ async def run_investigador(state: Dict[str, Any]) -> Dict[str, Any]:
     # Always run synthesis — with or without external sources.
     # If no external content was found, the LLM uses its parametric knowledge.
     try:
-        from app.platform.llm import call_llm, get_default_model
-        model = (agent_cfg.get("model") or "").strip() or get_default_model()
+        from app.platform.llm import call_llm, resolve_agent_model
+        from app.core.config import settings as _settings
+        model = resolve_agent_model("investigador", state.get("agent_settings"))
 
         # When there are no external sources, use a lightweight model for
         # parametric synthesis to avoid OOM when the next agent loads.
         # The investigador model (often mistral:7b) would stay in VRAM
-        # and crash the redactor's KV-cache allocation.
+        # and crash the redactor's KV-cache allocation. This is an on-prem
+        # (Ollama) concern only — cloud providers have no local VRAM, and the
+        # fallback string is an Ollama model, so it must not be sent elsewhere.
         _SYNTHESIS_FALLBACK_MODEL = "llama3.2:1b"
 
         if research_chunks:
@@ -197,7 +200,13 @@ async def run_investigador(state: Dict[str, Any]) -> Dict[str, Any]:
                 "RESUMEN DE INVESTIGACIÓN:"
             )
         else:
-            synthesis_model = _SYNTHESIS_FALLBACK_MODEL
+            # Only swap to the lightweight Ollama model on-prem; on cloud
+            # providers keep the resolved (provider-native) model.
+            synthesis_model = (
+                _SYNTHESIS_FALLBACK_MODEL
+                if _settings.LLM_PROVIDER.lower() == "ollama"
+                else model
+            )
             log(f"🧠 Etapa 2/2 — Sin fuentes locales. Síntesis desde conocimiento paramétrico ({synthesis_model})...")
             kw_str = ", ".join(keywords[:8]) if keywords else query_str
             synthesis_prompt = (

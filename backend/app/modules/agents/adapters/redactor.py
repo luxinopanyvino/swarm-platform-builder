@@ -4,7 +4,7 @@ from typing import Dict, Any
 
 from app.core.config import settings
 from app.platform.capabilities.rag import semantic_search_context, LIBRARY_AGENT
-from app.platform.llm import call_llm, call_llm_stream, get_default_model
+from app.platform.llm import call_llm, call_llm_stream, resolve_agent_model
 
 logger = logging.getLogger(__name__)
 
@@ -92,9 +92,9 @@ async def run_redactor(state: Dict[str, Any]) -> Dict[str, Any]:
     article_outline = (state.get("article_outline") or "").strip()
     log = state.get("_log") or (lambda msg, level="info": None)
 
-    # Resolve per-agent config: agent_settings overrides → settings default
+    # Resolve per-agent config; model is provider-aware (SPEC-023/T12.3)
     agent_cfg = (state.get("agent_settings") or {}).get("redactor", {})
-    model = agent_cfg.get("model") or get_default_model()
+    model = resolve_agent_model("redactor", state.get("agent_settings"))
     language = (agent_cfg.get("output_language") or "es").lower()
     custom_template = (agent_cfg.get("prompt_template") or "").strip()
     target_word_count = int(agent_cfg.get("target_word_count") or 0)

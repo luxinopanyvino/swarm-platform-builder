@@ -4,7 +4,7 @@ import re
 from typing import Dict, Any
 
 from app.core.config import settings
-from app.platform.llm import call_llm, get_default_model
+from app.platform.llm import call_llm, resolve_agent_model
 
 logger = logging.getLogger(__name__)
 
@@ -20,9 +20,9 @@ async def run_revisor(state: Dict[str, Any]) -> Dict[str, Any]:
     loop_count = state.get("loop_count") or 0
     log = state.get("_log") or (lambda msg, level="info": None)
 
-    # Resolve model: per-agent override → settings default
+    # Resolve model: provider-aware per-agent resolution (SPEC-023/T12.3)
     agent_cfg = (state.get("agent_settings") or {}).get("revisor", {})
-    model = agent_cfg.get("model") or get_default_model()
+    model = resolve_agent_model("revisor", state.get("agent_settings"))
 
     logger.info(f"Running Revisor Agent with model: {model}")
     log(f"👁️ Evaluando borrador — modelo: {model} | iteración: {loop_count + 1} | {len(draft_text.split())} palabras")
