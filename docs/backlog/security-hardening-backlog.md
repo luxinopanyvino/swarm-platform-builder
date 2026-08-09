@@ -34,6 +34,7 @@ Labels: `epic`, `task`, `area/*`, `sev/{high,medium,low}`.
 | E8 Plataforma no-code | SPEC-013 |
 | E9 Explicabilidad y EDD | SPEC-014 |
 | E10 Memoria y contexto de agentes | SPEC-021 (Draft) |
+| E11 Publicación y maquetación editable | SPEC-022 (Draft) |
 
 > E8 y E10 no tienen sección propia en este overview histórico; su definición
 > completa vive en sus specs.
