@@ -80,6 +80,15 @@ class Settings(BaseModel):
     # Leave empty to use the official OpenAI endpoint.
     OPENAI_BASE_URL: Optional[str] = None
 
+    # Anthropic (Claude) — motor agéntico (SPEC-023 / ADR-0009). El proveedor se
+    # selecciona con LLM_PROVIDER="anthropic". La API key nunca se registra ni se
+    # expone en errores; su ausencia con el proveedor activo NO aborta el arranque:
+    # la primera llamada al LLM falla con un error permanente (error perezoso).
+    ANTHROPIC_API_KEY: str = ""
+    ANTHROPIC_MODEL: str = "claude-opus-5"
+    ANTHROPIC_BASE_URL: Optional[str] = None  # gateway/proxy opcional; vacío = endpoint oficial
+    ANTHROPIC_MAX_TOKENS: int = 4096          # Anthropic exige max_tokens; sobreescribible por agente
+
     # Investigador scraper
     SCRAPER_SEMANTIC_RERANK: bool = True
 
@@ -172,6 +181,11 @@ def _build_settings() -> Settings:
         "OPENAI_MODEL": yaml_config.get("openai", {}).get("model", "gpt-4o-mini"),
         "OPENAI_EMBED_MODEL": yaml_config.get("openai", {}).get("embed_model", "text-embedding-3-small"),
         "OPENAI_BASE_URL": yaml_config.get("openai", {}).get("base_url") or None,
+        # Anthropic (Claude)
+        "ANTHROPIC_API_KEY": yaml_config.get("anthropic", {}).get("api_key", ""),
+        "ANTHROPIC_MODEL": yaml_config.get("anthropic", {}).get("model", "claude-opus-5"),
+        "ANTHROPIC_BASE_URL": yaml_config.get("anthropic", {}).get("base_url") or None,
+        "ANTHROPIC_MAX_TOKENS": yaml_config.get("anthropic", {}).get("max_tokens", 4096),
         # Investigador scraper — reads from agents.investigador first, then legacy investigador key
         "SCRAPER_SEMANTIC_RERANK": (
             yaml_config.get("agents", {}).get("investigador", {}).get("semantic_rerank")
