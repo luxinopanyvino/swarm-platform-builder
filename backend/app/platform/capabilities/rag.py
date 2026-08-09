@@ -165,12 +165,14 @@ def chunk_text(text: str, chunk_size: int = 500, overlap: int = 50) -> List[str]
 
 async def get_embedding(text: str, ollama_base_url: str, model: str) -> Optional[List[float]]:
     """
-    Request an embedding vector from the configured provider.
+    Request an embedding vector from the embeddings provider.
 
-    When ``settings.LLM_PROVIDER == "openai"`` the OpenAI Embeddings API is
-    used (``settings.OPENAI_EMBED_MODEL``); otherwise falls back to Ollama.
-    The ``ollama_base_url`` and ``model`` parameters are kept for backwards
-    compatibility and are used only when provider is "ollama".
+    Embeddings are **independent of the generation provider** (SPEC-023/AC6):
+    when ``settings.LLM_PROVIDER == "openai"`` the OpenAI Embeddings API is used
+    (``settings.OPENAI_EMBED_MODEL``); otherwise — including when the generation
+    provider is ``anthropic`` — Ollama is used, because Anthropic offers **no**
+    embeddings API. So switching the agentic engine to Claude never routes an
+    embedding to Anthropic nor breaks the RAG.
     """
     from app.core.config import settings  # lazy to avoid circular imports
 
