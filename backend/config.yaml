@@ -3,7 +3,10 @@ app:
   version: 0.2.0
   debug: true
 llm:
-  provider: ollama
+  # Motor agéntico por defecto: Claude (Anthropic) — SPEC-023 / ADR-0009.
+  # Cambia a 'ollama' (on-prem local) o 'openai' (compatible: vLLM/LM Studio) para
+  # soberanía de datos. La variable de entorno LLM_PROVIDER tiene mayor prioridad.
+  provider: anthropic
 ollama:
   base_url: http://localhost:11434
   default_model: mistral:7b
@@ -13,6 +16,15 @@ openai:
   model: gpt-4o-mini
   embed_model: text-embedding-3-small
   base_url: null
+anthropic:
+  # Motor por defecto. La API key NO se versiona: inyéctala con ANTHROPIC_API_KEY
+  # (env, mayor prioridad). Su ausencia no aborta el arranque; la primera llamada
+  # al LLM falla (error perezoso). Anthropic no ofrece embeddings: el RAG sigue
+  # en ollama/openai aunque la generación sea Claude.
+  api_key: ''
+  model: claude-opus-5        # default global; el modelo por agente llega en T12.3
+  base_url: null              # gateway/proxy opcional; null = endpoint oficial
+  max_tokens: 4096
 database:
   url: sqlite+aiosqlite:///./data/dev.db
 security:

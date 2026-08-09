@@ -57,8 +57,11 @@ class Settings(BaseModel):
     QDRANT_COLLECTION: str = "rag_docs"
     RAG_VECTOR_SIZE: int = 768
 
-    # LLM Provider — "ollama" (default, on-prem) | "openai" (OpenAI-compatible API)
-    LLM_PROVIDER: str = "ollama"
+    # LLM Provider — "anthropic" (default, Claude via official SDK) |
+    # "ollama" (on-prem) | "openai" (OpenAI-compatible API, incl. vLLM/LM Studio).
+    # Claude is the default agentic engine (SPEC-023/ADR-0009); switch to on-prem
+    # by configuration (env var or config.yaml), no code change required.
+    LLM_PROVIDER: str = "anthropic"
 
     # LLM resilience — automatic retry of transient failures (connection refused,
     # timeouts, 5xx, empty responses) with exponential backoff + jitter.
@@ -171,7 +174,7 @@ def _build_settings() -> Settings:
         "MINIO_ROOT_USER": minio.get("root_user", "minioadmin"),
         "MINIO_ROOT_PASSWORD": minio.get("root_password", "minioadmin"),
         # LLM provider
-        "LLM_PROVIDER": yaml_config.get("llm", {}).get("provider", "ollama"),
+        "LLM_PROVIDER": yaml_config.get("llm", {}).get("provider", "anthropic"),
         "LLM_MAX_RETRIES": yaml_config.get("llm", {}).get("max_retries", 3),
         "LLM_RETRY_BASE_DELAY": yaml_config.get("llm", {}).get("retry_base_delay", 1.0),
         "LLM_RETRY_MAX_DELAY": yaml_config.get("llm", {}).get("retry_max_delay", 10.0),
