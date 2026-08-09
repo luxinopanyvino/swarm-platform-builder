@@ -1,6 +1,10 @@
 ---
 name: revisor
+# Modelo por agente consciente del proveedor (SPEC-023/T12.3).
 model: llama3.2:3b
+models:
+  anthropic: claude-sonnet-5
+  ollama: llama3.2:3b
 temperature: 0.2
 rag_enabled: false
 output_type: review_json

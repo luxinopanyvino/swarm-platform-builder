@@ -3,7 +3,7 @@ import re
 from typing import Dict, Any
 
 from app.core.config import settings
-from app.platform.llm import call_llm, get_default_model
+from app.platform.llm import call_llm, resolve_agent_model
 
 logger = logging.getLogger(__name__)
 
@@ -171,8 +171,8 @@ async def run_formateador(state: Dict[str, Any]) -> Dict[str, Any]:
         or "apa"
     ).lower()
 
-    # Resolve model: per-agent override → settings default
-    model = agent_cfg.get("model") or get_default_model()
+    # Resolve model: provider-aware per-agent resolution (SPEC-023/T12.3)
+    model = resolve_agent_model("formateador", state.get("agent_settings"))
 
     format_label = _FORMAT_LABELS.get(scientific_format, scientific_format.upper())
     instruction = _FORMAT_INSTRUCTIONS.get(

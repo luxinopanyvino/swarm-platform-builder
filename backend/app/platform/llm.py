@@ -17,6 +17,7 @@ Supported providers
 import asyncio
 import logging
 import random
+from pathlib import Path
 from typing import Optional, AsyncGenerator, Awaitable, Callable, TypeVar
 
 import httpx
@@ -132,6 +133,100 @@ def get_default_model() -> str:
     if provider == "openai":
         return settings.OPENAI_MODEL
     return settings.OLLAMA_MODEL
+
+
+# ---------------------------------------------------------------------------
+# Per-agent, provider-aware model resolution (SPEC-023 / T12.3)
+# ---------------------------------------------------------------------------
+
+_AGENTS_DIRS = [Path("app/agents"), Path("../app/agents")]
+
+# Prefix → provider namespace. Used to decide whether a model id "belongs" to the
+# active provider, so a legacy Ollama value (e.g. seeded in the DB) never gets sent
+# to Anthropic/OpenAI as if it were one of their models.
+_NAMESPACE_PREFIXES = (
+    ("anthropic", ("claude",)),
+    ("openai", ("gpt", "o1", "o3", "o4", "chatgpt", "text-")),
+)
+
+
+def _model_namespace(model: str) -> str:
+    """Best-effort provider namespace of a model id (defaults to ``ollama``)."""
+    m = (model or "").strip().lower()
+    for provider, prefixes in _NAMESPACE_PREFIXES:
+        if m.startswith(prefixes):
+            return provider
+    # On-prem tags (mistral:7b, llama3.2:3b, qwen2.5, gemma, phi, …) live here.
+    return "ollama"
+
+
+def _namespace_matches(model: str, provider: str) -> bool:
+    return _model_namespace(model) == provider
+
+
+def _load_agent_frontmatter(agent_name: str) -> dict:
+    """Parse the YAML frontmatter of ``<agent_name>.agent.md`` (empty dict if absent)."""
+    for base in _AGENTS_DIRS:
+        filepath = base / f"{agent_name}.agent.md"
+        if not filepath.exists():
+            continue
+        try:
+            raw = filepath.read_text(encoding="utf-8")
+        except Exception:
+            return {}
+        if raw.startswith("---"):
+            parts = raw.split("---", 2)
+            if len(parts) >= 3:
+                try:
+                    import yaml
+                    return yaml.safe_load(parts[1]) or {}
+                except Exception:
+                    return {}
+        return {}
+    return {}
+
+
+def resolve_agent_model(agent_name: str, agent_settings: Optional[dict] = None) -> str:
+    """Resolve the model for ``agent_name`` under the active provider (SPEC-023/AC3).
+
+    Cascade, most specific first:
+
+    1. ``agent_settings[agent].model`` — explicit per-run/UI override, honored only
+       if its namespace matches the active provider (so a legacy Ollama value
+       seeded in the DB doesn't hijack a Claude/OpenAI deployment).
+    2. ``.agent.md`` ``models[<provider>]`` — provider-aware per-agent default.
+    3. ``.agent.md`` legacy ``model`` — only if its namespace matches the provider.
+    4. :func:`get_default_model` — the provider's global default.
+
+    This keeps the per-agent tiering working for Claude *and* Ollama without a
+    provider switch silently falling back to a single default for every agent.
+    """
+    from app.core.config import settings
+
+    provider = settings.LLM_PROVIDER.lower()
+    cfg = (agent_settings or {}).get(agent_name, {}) or {}
+
+    # 1. Explicit override (namespace-guarded against stale/legacy values).
+    override = cfg.get("model")
+    if isinstance(override, str) and override.strip() and _namespace_matches(override, provider):
+        return override.strip()
+
+    frontmatter = _load_agent_frontmatter(agent_name)
+
+    # 2. Provider-keyed map from the .agent.md.
+    models_map = frontmatter.get("models")
+    if isinstance(models_map, dict):
+        mapped = models_map.get(provider)
+        if isinstance(mapped, str) and mapped.strip():
+            return mapped.strip()
+
+    # 3. Legacy single model, only if it belongs to the active provider.
+    legacy = frontmatter.get("model")
+    if isinstance(legacy, str) and legacy.strip() and _namespace_matches(legacy, provider):
+        return legacy.strip()
+
+    # 4. Provider default.
+    return get_default_model()
 
 
 async def call_llm(

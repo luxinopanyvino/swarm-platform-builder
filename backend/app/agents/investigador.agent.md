@@ -1,6 +1,11 @@
 ---
 name: investigador
+# Modelo por agente consciente del proveedor (SPEC-023/T12.3). 'model' es el
+# legado (namespace Ollama); 'models' mapea por proveedor activo.
 model: mistral:7b
+models:
+  anthropic: claude-opus-5
+  ollama: mistral:7b
 temperature: 0.3
 rag_enabled: true
 rag_collection: rag_docs
