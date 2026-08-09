@@ -1,17 +1,17 @@
 # SPEC-023: Claude por defecto como motor agéntico, multi-proveedor y multi-modelo por agente
 
-- **Estado:** Draft
+- **Estado:** Ready
 - **Autor:** Equipo de plataforma
 - **Fecha:** 2026-08-09
 - **Épica:** E12 (Motor LLM multi-proveedor)
 - **ADR relacionado:** ADR-0009
 - **Severidad:** 🟠
 
-> **Draft** (pipeline ADR-0007): pendiente de `/speckit-clarify` (mapeo de
-> modelos por agente y modo por defecto) y, opcionalmente, `/speckit-checklist`
-> antes de pasar a Ready. Mientras esté en Draft, `/sdd-sync` **no** siembra su
-> épica/tareas. El **mapeo de modelos Claude por agente** (§4) es la decisión de
-> producto a confirmar en `clarify`.
+> **Ready** (pipeline ADR-0007): ambigüedades **resueltas** con `/speckit-clarify`
+> (ver `## Clarifications`, sesión 2026-08-09): mapeo de modelos por agente
+> confirmado, comportamiento sin API key y `max_tokens` fijados.
+> `/speckit-checklist` queda como mejora opcional (no bloqueante). Al estar Ready,
+> `/sdd-sync` siembra su épica E12 y tareas.
 
 ## 1. Problema
 
@@ -48,6 +48,14 @@ directamente** — sin tocar código.
   multi-modelo en caliente; migrar el proveedor de embeddings (posible
   `EMBED_PROVIDER` futuro, fuera de alcance).
 
+## Clarifications
+
+### Session 2026-08-09
+
+- Q: ¿Mapeo de modelos Claude por agente para el default anthropic (§4)? → A: **El propuesto** — investigador→`claude-opus-5`, redactor→`claude-sonnet-5`, revisor→`claude-sonnet-5`, formateador→`claude-haiku-4-5`; orquestador/publicador sin LLM. Default global `ANTHROPIC_MODEL=claude-opus-5`. Calibrable con EDD sin cambiar la spec.
+- Q: ¿Comportamiento si `LLM_PROVIDER=anthropic` pero falta `ANTHROPIC_API_KEY` (AC5)? → A: **Error perezoso** — arranca; la primera llamada al LLM falla con `RuntimeError` **permanente** (sin reintento, sin la key en el mensaje). No fail-fast al arranque: permite operar tareas no-LLM.
+- Q: ¿Valor por defecto de `ANTHROPIC_MAX_TOKENS` (Anthropic lo exige)? → A: **4096** — suficiente para la mayoría de pasos y acota coste; sobreescribible por agente (el redactor puede subirlo para artículos largos).
+
 ## 3. Criterios de aceptación (Given/When/Then)
 
 - [ ] **AC1** — *Given* `LLM_PROVIDER="anthropic"` y `ANTHROPIC_API_KEY` presente,
@@ -74,7 +82,10 @@ directamente** — sin tocar código.
 - [ ] **AC5** — *Given* un error de autenticación de Anthropic (401), *Then* se
   trata como **permanente** (no se reintenta) y el mensaje **no** incluye la API
   key; *Given* una 429/5xx/timeout, *Then* es **transitorio** y entra en el retry
-  con backoff existente (`_retry_async`/`_retry_stream`).
+  con backoff existente (`_retry_async`/`_retry_stream`); *Given*
+  `LLM_PROVIDER="anthropic"` **sin** `ANTHROPIC_API_KEY`, *Then* el arranque **no**
+  falla (no fail-fast) y la **primera llamada** al LLM lanza `RuntimeError`
+  permanente (sin la key en el mensaje) — error **perezoso**.
 - [ ] **AC6** — *Given* `LLM_PROVIDER="anthropic"`, *Then* el RAG/embeddings
   **sigue** usando su proveedor propio (Ollama/OpenAI) sin fallar por ausencia de
   API de embeddings en Anthropic; documentado en `.env.example` y verificable por
@@ -90,7 +101,8 @@ directamente** — sin tocar código.
   (paquete `anthropic`). Ramas nuevas en `call_llm` / `call_llm_stream` /
   `call_llm_with_tools` cuando `provider == "anthropic"`. Mapeo:
   `system_prompt` → parámetro `system`; `prompt`/mensajes → `messages`;
-  `max_tokens` = `ANTHROPIC_MAX_TOKENS`; thinking adaptativo
+  `max_tokens` = `ANTHROPIC_MAX_TOKENS` (**default 4096**, sobreescribible por
+  agente); thinking adaptativo
   (`thinking: {type: "adaptive"}`) en modelos que lo soportan; streaming con el
   helper del SDK. Clasificación de errores reutilizando `TransientLLMError`
   (401/permiso → `RuntimeError`; 429/5xx/conexión → `TransientLLMError`).
@@ -98,8 +110,9 @@ directamente** — sin tocar código.
 - **Config** ([config.py](../../backend/app/core/config.py)): `LLM_PROVIDER`
   default `"anthropic"`; bloque `anthropic` en `Settings` y en `_build_settings`
   (`ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL="claude-opus-5"`, `ANTHROPIC_BASE_URL`,
-  `ANTHROPIC_MAX_TOKENS`), con precedencia env > `config.yaml` > default. Key
-  nunca logueada.
+  `ANTHROPIC_MAX_TOKENS=4096`), con precedencia env > `config.yaml` > default. Key
+  nunca logueada. La ausencia de key con proveedor `anthropic` **no** aborta el
+  arranque (error perezoso en la primera llamada, ver AC5).
 - **Modelo por agente consciente del proveedor**: utilidad central
   `resolve_agent_model(agent_name, agent_settings)` que aplica la cascada del AC3
   leyendo el bloque `models:` del `.agent.md` (fallback al `model:` legado sólo si

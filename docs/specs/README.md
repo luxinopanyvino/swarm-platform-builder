@@ -60,7 +60,7 @@ Spec Kit).
 | [SPEC-020](SPEC-020-governance-supply-chain.md) | Gobernanza, CI y cadena de suministro | In progress | E6 |
 | [SPEC-021](SPEC-021-agent-memory-context-budget.md) | Memoria a largo plazo y presupuesto de contexto de los agentes | Draft | E10 |
 | [SPEC-022](SPEC-022-editable-paper-output.md) | Maquetación editable del paper y personalización antes de publicar | Ready | E11 |
-| [SPEC-023](SPEC-023-claude-default-engine.md) | Claude por defecto como motor agéntico, multi-proveedor y multi-modelo por agente | Draft | E12 |
+| [SPEC-023](SPEC-023-claude-default-engine.md) | Claude por defecto como motor agéntico, multi-proveedor y multi-modelo por agente | Ready | E12 |
 
 > Con SPEC-015…020 **todas las épicas del backlog (E1–E9) están respaldadas por
 > una spec**: las tareas sembradas por el bootstrap
