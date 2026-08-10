@@ -8,7 +8,12 @@ from app.core.database import init_db
 # Import models to ensure they are registered on Base.metadata
 from app import models
 from app.core.config import settings
+from app.core.logging_config import configure_logging, request_id_middleware
 from app.core.security import hash_password
+
+# Structured logging (JSON in prod, human-readable in debug) + correlation ids.
+# Configure as early as possible so runtime logs use the central handler (SPEC-019/T5.1).
+configure_logging()
 from app.routers import auth, articles, ai, agents, flows, config, notifications, checkpoints, projects
 from app.routers.magazine import router as magazine_router
 from app.core.database import AsyncSessionLocal
@@ -255,6 +260,10 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="AlejandrIA Magazine API", version="0.1.0", lifespan=lifespan)
+
+# Correlation id per request (X-Request-ID → logs + response header). Added before
+# CORS so every request — including those short-circuited later — gets an id.
+app.middleware("http")(request_id_middleware)
 
 # CORS: restrict origins in production via ALLOWED_ORIGINS env var
 # Development default allows the local Vite dev server on ports 5173 and 5174.
