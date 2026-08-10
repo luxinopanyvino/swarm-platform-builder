@@ -1,10 +1,11 @@
 ---
 name: revisor
 # Modelo por agente consciente del proveedor (SPEC-023/T12.3).
-model: llama3.2:3b
+model: llama3.2:1b
+# ollama: llama3.2:1b (SPEC-025/T13.4 — benchmark de modelos on-prem, sustituye llama3.2:3b: mismo score y mucho más barato; llama3.2:3b falló el esquema JSON en la corrida del benchmark, señal a repetir antes de reconsiderarlo)
 models:
   anthropic: claude-sonnet-5
-  ollama: llama3.2:3b
+  ollama: llama3.2:1b
 temperature: 0.2
 rag_enabled: false
 output_type: review_json
