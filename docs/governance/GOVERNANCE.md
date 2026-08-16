@@ -132,6 +132,16 @@ Una tarea/épica está *Ready* cuando:
 - [`scripts/seed_github_project.py`](../../scripts/seed_github_project.py) es un
   **bootstrap de un solo uso** (creación inicial del Project), **no** un sync
   incremental. Para mantener el backlog al día tras el bootstrap se usa `/sdd-sync`.
+- ⚠️ **La pertenencia al tablero depende del entorno de ejecución.** `/sdd-sync`
+  crea los issues (labels, DoD, dependencias, sub-issues) vía API, pero añadirlos
+  como *items* del Project exige el **CLI `gh` con scope `project`**. En entornos
+  **sin `gh`** (Claude Code on the web, contenedores remotos: solo hay servidor MCP
+  de GitHub, que **no expone Projects v2**) ese paso **no puede ejecutarse**: los
+  issues existen en el repo pero **no aparecen en el tablero**. El agente debe
+  reportarlo de forma destacada y entregar la lista de issues pendientes; el
+  arreglo es `gh project item-add …` desde una máquina con `gh` autenticado.
+  **Recomendado**: activar en el Project la workflow **«Auto-add to project»**
+  (filtro `label:epic,task`) para que la pertenencia deje de depender del entorno.
 - Prioridad: primero 🔴, luego 🟠 de bajo esfuerzo, según
   [ADR-0003](../adr/0003-security-baseline-and-threat-model.md).
 - **Áreas registradas** (`area/*`): `security`, `infra`, `backend`,
