@@ -21,4 +21,9 @@ export const articlesApi = {
   // Fetch the printable paper-layout HTML (string) for the article
   getPaper: (id) =>
     api.get(`/api/v1/articles/${id}/paper`, { responseType: 'text' }).then(r => r.data),
+
+  // Render the paper layout for *unsaved* edits. Persists nothing; the server
+  // uses the same layout function as the published paper, so preview == PDF.
+  previewPaper: (id, payload) =>
+    api.post(`/api/v1/articles/${id}/preview`, payload, { responseType: 'text' }).then(r => r.data),
 };

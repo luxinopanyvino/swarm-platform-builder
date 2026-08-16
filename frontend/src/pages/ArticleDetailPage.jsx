@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
-import { ArrowLeft, CheckCircle, XCircle, UserPlus, Clock, AlertCircle, Pencil, Save, X, GitBranch, FileText, Plus, Trash2 } from 'lucide-react';
+import { ArrowLeft, CheckCircle, XCircle, UserPlus, Clock, AlertCircle, Pencil, Save, X, GitBranch, FileText, Plus, Trash2, Palette } from 'lucide-react';
 import { useArticleStore } from '../store/articleStore';
 import { useAuthStore } from '../store/authStore';
 import { agentsApi } from '../api/agents';
@@ -221,6 +221,7 @@ export default function ArticleDetailPage() {
   };
 
   const handleViewPaper = () => navigate(`/articles/${id}/paper`);
+  const handleDesignPaper = () => navigate(`/articles/${id}/design`);
 
   if (loading) return <div className="page-body"><div className="empty-state"><div className="spinner spinner-lg" /></div></div>;
   if (!article) return <div className="page-body"><div className="empty-state"><h3>Artículo no encontrado</h3></div></div>;
@@ -405,6 +406,13 @@ export default function ArticleDetailPage() {
                 aria-label="Ver el artículo maquetado como paper"
               >
                 <FileText size={13} /> Ver maquetación
+              </button>
+              <button
+                className="btn btn-ghost btn-sm w-full"
+                onClick={handleDesignPaper}
+                aria-label="Editar el diseño del paper con vista previa en vivo"
+              >
+                <Palette size={13} /> Diseñar paper
               </button>
               <button
                 className="btn btn-ghost btn-sm w-full"
