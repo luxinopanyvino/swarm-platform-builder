@@ -54,6 +54,10 @@ async def init_db():
         "ALTER TABLE articles ADD COLUMN authors JSON",
         "ALTER TABLE articles ADD COLUMN abstract TEXT",
         "ALTER TABLE articles ADD COLUMN paper_html TEXT",
+        # Editable paper theme (SPEC-022/T11.2). Ad-hoc ALTER following the
+        # existing pattern; converges with Alembic when T4.1 (#168) lands.
+        "ALTER TABLE articles ADD COLUMN theme JSON",
+        "ALTER TABLE projects ADD COLUMN theme JSON",
         # Postgres native enum: register the citation formats added to ScientificFormat.
         # (No-op on SQLite, where the enum is stored as VARCHAR — caught below.)
         "ALTER TYPE scientificformat ADD VALUE IF NOT EXISTS 'chicago'",

@@ -26,6 +26,10 @@ class ArticleModel(Base):
     abstract = Column(Text, default="", nullable=False)
     # Self-contained printable HTML produced by the Publicador (paper layout).
     paper_html = Column(Text, default="", nullable=False)
+    # Per-article paper theme: {"font", "accent_color", "columns"}. Values come
+    # from the allowlists in paper_layout; it overrides the format preset and the
+    # project theme (SPEC-022/T11.2). Empty dict = inherit everything.
+    theme = Column(JSON, default=dict, nullable=False)
     author_id = Column(SA_UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     reviewer_id = Column(SA_UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"))
     cover_url = Column(String(1024))
@@ -51,6 +55,15 @@ class AuthorDTO(BaseModel):
     email: str = Field(default="", max_length=255)
 
 
+class ThemeDTO(BaseModel):
+    """User-chosen paper theme. Values are validated against the allowlists in
+    paper_layout (unknown ones are dropped there), so this stays permissive and
+    the layout module remains the single source of truth for what is allowed."""
+    font: str | None = None
+    accent_color: str | None = None
+    columns: int | None = None
+
+
 class UpdateArticleDTO(BaseModel):
     """Update article request."""
     title: str | None = None
@@ -58,6 +71,7 @@ class UpdateArticleDTO(BaseModel):
     scientific_format: ScientificFormat | None = None
     authors: list[AuthorDTO] | None = None
     abstract: str | None = None
+    theme: ThemeDTO | None = None
 
 
 class ArticleResponse(BaseModel):
@@ -72,6 +86,7 @@ class ArticleResponse(BaseModel):
     scientific_format: ScientificFormat
     authors: list = []
     abstract: str | None = None
+    theme: dict = {}
     author_id: UUID
     author_name: str | None = None
     reviewer_id: UUID | None
@@ -86,6 +101,12 @@ class ArticleResponse(BaseModel):
     def _coerce_authors(cls, v):
         """Legacy rows store NULL for authors; coerce to an empty list."""
         return v if isinstance(v, list) else []
+
+    @field_validator('theme', mode='before')
+    @classmethod
+    def _coerce_theme(cls, v):
+        """Rows created before the theme column store NULL; coerce to {}."""
+        return v if isinstance(v, dict) else {}
 
 
 class ArticleListResponse(BaseModel):
