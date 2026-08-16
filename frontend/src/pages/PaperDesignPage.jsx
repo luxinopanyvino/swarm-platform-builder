@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Save, Loader, AlertCircle, Columns2, Columns3 } from 'lucide-react';
+import { ArrowLeft, Save, Loader, AlertCircle, Columns2, Columns3, ImagePlus } from 'lucide-react';
 import { articlesApi } from '../api/articles';
 import toast from 'react-hot-toast';
 
@@ -105,6 +105,20 @@ export default function PaperDesignPage() {
   const updateTheme = (patch) => {
     setDraft(d => ({ ...d, theme: { ...d.theme, ...patch } }));
     setDirty(true);
+  };
+
+  const handleInsertImage = async (file) => {
+    if (!file) return;
+    try {
+      const asset = await articlesApi.uploadAsset(id, file);
+      // Append the reference at the end of the body; the preview picks it up on
+      // the next debounce tick, so the figure shows up without a manual step.
+      update({ body: `${draft.body}\n\n${asset.markdown}\n` });
+      toast.success('Figura insertada');
+    } catch (e) {
+      const detail = e?.response?.data?.detail;
+      toast.error(detail || 'No se pudo subir la figura');
+    }
   };
 
   const handleSave = async () => {
@@ -252,6 +266,24 @@ export default function PaperDesignPage() {
             </div>
             <p style={{ fontSize: 'var(--font-size-xs)', color: 'var(--text-muted)', marginTop: 6 }}>
               «Auto» usa las columnas propias del formato de cita.
+            </p>
+          </section>
+
+          <section>
+            <h4 style={{ margin: '0 0 var(--space-3)' }}>Figuras</h4>
+            <label className="btn btn-ghost btn-sm" style={{ cursor: 'pointer' }}>
+              <ImagePlus size={14} /> Insertar imagen
+              <input
+                type="file"
+                accept=".png,.jpg,.jpeg,.gif,.webp"
+                style={{ display: 'none' }}
+                onChange={e => { handleInsertImage(e.target.files?.[0]); e.target.value = ''; }}
+                aria-label="Insertar imagen en el artículo"
+              />
+            </label>
+            <p style={{ fontSize: 'var(--font-size-xs)', color: 'var(--text-muted)', marginTop: 6 }}>
+              Se valida por contenido real y se añade al cuerpo como
+              {' '}<code>![pie](asset:…)</code>. Máx. 5 MB.
             </p>
           </section>
 

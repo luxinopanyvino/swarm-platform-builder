@@ -246,14 +246,14 @@ async def upload_to_rag_library(
     """Upload a document to the global RAG library (not tied to any agent)."""
     from app.core.config import settings
 
-    allowed = {".txt", ".md", ".pdf"}
-    ext = Path(file.filename or "").suffix.lower()
-    if ext not in allowed:
-        raise HTTPException(status_code=415, detail=f"Tipo de archivo no soportado '{ext}'. Use: {', '.join(allowed)}")
+    from app.platform.uploads import validate_upload
 
     raw = await file.read()
     if len(raw) > 10 * 1024 * 1024:
         raise HTTPException(status_code=413, detail="Archivo demasiado grande (máx. 10 MB)")
+
+    # Extension + real content (magic bytes), before any parsing or indexing.
+    validate_upload(file.filename, raw, {".txt", ".md", ".pdf"})
 
     text = extract_text(file.filename, raw)
     if not text.strip():
@@ -500,14 +500,14 @@ async def upload_rag_document(
     """Upload a file, chunk it, embed via Ollama and store in Qdrant for an agent."""
     from app.core.config import settings
 
-    allowed = {".txt", ".md", ".pdf"}
-    ext = Path(file.filename or "").suffix.lower()
-    if ext not in allowed:
-        raise HTTPException(status_code=415, detail=f"Unsupported file type '{ext}'. Use: {', '.join(allowed)}")
+    from app.platform.uploads import validate_upload
 
     raw = await file.read()
     if len(raw) > 10 * 1024 * 1024:  # 10 MB guard
         raise HTTPException(status_code=413, detail="File too large (max 10 MB)")
+
+    # Extension + real content (magic bytes), before any parsing or indexing.
+    validate_upload(file.filename, raw, {".txt", ".md", ".pdf"})
 
     text = extract_text(file.filename, raw)
     if not text.strip():

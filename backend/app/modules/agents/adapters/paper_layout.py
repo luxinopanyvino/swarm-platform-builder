@@ -156,10 +156,49 @@ def resolve_theme(*layers: Dict[str, Any] | None) -> Dict[str, Any]:
 # Supports the subset emitted by the Redactor/Formateador: headings, bold,
 # italic, inline code, links, ordered/unordered lists and paragraphs.
 # ---------------------------------------------------------------------------
-def _inline(text: str) -> str:
+def _safe_img_src(url: str, asset_resolver=None) -> str | None:
+    """Resolve an image reference to a src the paper may safely embed.
+
+    Only three shapes are accepted, and everything else (notably ``javascript:``
+    and ``data:text/html``) is dropped:
+
+    * ``asset:<id>`` → inlined as a data URI by the project-scoped resolver;
+    * an existing ``data:image/...`` URI;
+    * ``https://`` — kept, though it will not appear in an offline print.
+    """
+    ref = (url or "").strip()
+    if asset_resolver is not None:
+        resolved = asset_resolver(ref)
+        if resolved:
+            return resolved
+    lowered = ref.lower()
+    if lowered.startswith("data:image/"):
+        return ref
+    if lowered.startswith("https://"):
+        return ref
+    return None
+
+
+def _inline(text: str, asset_resolver=None) -> str:
     """Apply inline markdown formatting to already plain (un-escaped) text."""
     # Protect nothing fancy — escape first, then re-introduce safe tags.
     out = html.escape(text, quote=False)
+
+    # images ![alt](ref) — handled BEFORE links so the leading '!' is not lost.
+    def _image(match: "re.Match") -> str:
+        alt, ref = match.group(1), match.group(2)
+        src = _safe_img_src(ref, asset_resolver)
+        if not src:
+            return ""            # unresolvable/unsafe reference: drop it silently
+        caption = f'<figcaption>{alt}</figcaption>' if alt.strip() else ""
+        return (
+            f'<figure class="paper-figure">'
+            f'<img src="{html.escape(src, quote=True)}" alt="{html.escape(alt, quote=True)}" />'
+            f"{caption}</figure>"
+        )
+
+    out = re.sub(r"!\[([^\]]*)\]\(([^)\s]+)\)", _image, out)
+
     # links [text](url)  (escape already turned & into &amp;, urls are simple)
     out = re.sub(
         r"\[([^\]]+)\]\(([^)\s]+)\)",
@@ -173,7 +212,7 @@ def _inline(text: str) -> str:
     return out
 
 
-def markdown_to_html(md: str) -> str:
+def markdown_to_html(md: str, asset_resolver=None) -> str:
     """Convert a markdown string to an HTML fragment (block-level)."""
     if not md:
         return ""
@@ -186,13 +225,13 @@ def markdown_to_html(md: str) -> str:
 
     def flush_paragraph() -> None:
         if paragraph:
-            html_parts.append(f"<p>{_inline(' '.join(paragraph))}</p>")
+            html_parts.append(f"<p>{_inline(' '.join(paragraph), asset_resolver)}</p>")
             paragraph.clear()
 
     def flush_list() -> None:
         nonlocal list_type
         if list_buffer:
-            items = "".join(f"<li>{_inline(it)}</li>" for it in list_buffer)
+            items = "".join(f"<li>{_inline(it, asset_resolver)}</li>" for it in list_buffer)
             html_parts.append(f"<{list_type}>{items}</{list_type}>")
             list_buffer.clear()
             list_type = None
@@ -211,7 +250,7 @@ def markdown_to_html(md: str) -> str:
             flush_paragraph()
             flush_list()
             level = len(heading.group(1))
-            html_parts.append(f"<h{level}>{_inline(heading.group(2))}</h{level}>")
+            html_parts.append(f"<h{level}>{_inline(heading.group(2), asset_resolver)}</h{level}>")
             continue
 
         ul = re.match(r"^[-*+]\s+(.*)$", stripped)
@@ -416,6 +455,13 @@ def _stylesheet(scientific_format: str, theme: Dict[str, Any] | None = None) -> 
     .paper-body p {{ margin: 0 0 8px; orphans: 2; widows: 2; }}
     .paper-body ul, .paper-body ol {{ margin: 0 0 8px 1.1em; padding: 0; }}
     .paper-body code {{ font-family: 'Courier New', monospace; font-size: 0.92em; }}
+    .paper-figure {{
+      margin: 10px 0; text-align: center; break-inside: avoid;
+    }}
+    .paper-figure img {{ max-width: 100%; height: auto; }}
+    .paper-figure figcaption {{
+      font-size: 0.88em; color: #333; margin-top: 4px; text-align: center;
+    }}
     .paper-body a {{ color: {accent}; text-decoration: none; word-break: break-word; }}
     .paper-body h2:last-of-type ~ p {{ font-size: 0.95em; }}
     {extra_css}
@@ -434,6 +480,7 @@ def build_paper_html(
     body_markdown: str,
     scientific_format: str,
     theme: Dict[str, Any] | None = None,
+    asset_resolver=None,
 ) -> str:
     """Assemble a complete, self-contained printable HTML document.
 
@@ -455,9 +502,9 @@ def build_paper_html(
     if abstract and abstract.strip():
         abstract_html = (
             f'<section class="abstract"><h2>Abstract</h2>'
-            f"<p>{_inline(abstract.strip())}</p></section>"
+            f"<p>{_inline(abstract.strip(), asset_resolver)}</p></section>"
         )
-    body_html = markdown_to_html(body_markdown)
+    body_html = markdown_to_html(body_markdown, asset_resolver)
     # Only formats that opt in are decorated, so every other format's output
     # stays byte-identical to before this preset existed.
     if style.get("numbered_sections") or style.get("hanging_references"):

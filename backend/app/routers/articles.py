@@ -1,7 +1,7 @@
 """Articles router: CRUD and workflow for articles."""
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from fastapi.responses import HTMLResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -481,6 +481,7 @@ async def get_article_paper(
     paper_html = article.paper_html or ""
     if not paper_html.strip():
         from app.modules.agents.adapters.paper_layout import build_paper_html
+        from app.platform.assets import make_project_resolver
 
         fmt = (article.scientific_format.value if article.scientific_format else None) or "apa"
         paper_html = build_paper_html(
@@ -490,6 +491,7 @@ async def get_article_paper(
             body_markdown=article.body or "",
             scientific_format=fmt,
             theme=await resolve_article_theme(session, article),
+            asset_resolver=make_project_resolver(str(article.project_id or "")),
         )
 
     return HTMLResponse(content=paper_html)
@@ -505,6 +507,51 @@ class PaperPreviewDTO(BaseModel):
     authors: list[AuthorDTO] | None = None
     scientific_format: ScientificFormat | None = None
     theme: ThemeDTO | None = None
+
+
+@router.post("/{article_id}/assets", status_code=201)
+async def upload_article_asset(
+    article_id: UUID,
+    file: UploadFile = File(...),
+    token_data=Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+):
+    """Upload a figure for an article, stored in its **project's** asset store.
+
+    Validated by real content (magic bytes, T2.3) before anything is written, so
+    a renamed payload never lands on disk. Returns the ``asset:<id>`` reference
+    to paste into the body as ``![pie de figura](asset:<id>)``.
+    """
+    from app.platform.assets import ALLOWED_IMAGE_EXTENSIONS, MAX_IMAGE_BYTES, save_image
+    from app.platform.uploads import validate_upload
+
+    role = token_data.get("role", "redactor")
+    if role not in (UserRole.ADMIN, UserRole.REDACTOR):
+        raise HTTPException(status_code=403, detail="Sin permisos para subir figuras")
+
+    stmt = select(ArticleModel).where(ArticleModel.id == article_id)
+    result = await session.execute(stmt)
+    article = result.scalars().first()
+    if not article:
+        raise HTTPException(status_code=404, detail="Article not found")
+    if role != UserRole.ADMIN and str(article.author_id) != token_data["user_id"]:
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    raw = await file.read()
+    if len(raw) > MAX_IMAGE_BYTES:
+        raise HTTPException(
+            status_code=413,
+            detail=f"Imagen demasiado grande (máx. {MAX_IMAGE_BYTES // (1024 * 1024)} MB)",
+        )
+    detected = validate_upload(file.filename, raw, ALLOWED_IMAGE_EXTENSIONS)
+
+    asset_id = save_image(str(article.project_id or ""), raw, detected)
+    return {
+        "id": asset_id,
+        "ref": f"asset:{asset_id}",
+        "markdown": f"![{file.filename or 'figura'}](asset:{asset_id})",
+        "type": detected,
+    }
 
 
 @router.post("/{article_id}/preview", response_class=HTMLResponse)
@@ -525,6 +572,7 @@ async def preview_article_paper(
     the caller could not already read.
     """
     from app.modules.agents.adapters.paper_layout import build_paper_html, resolve_theme
+    from app.platform.assets import make_project_resolver
 
     stmt = select(ArticleModel).where(ArticleModel.id == article_id)
     result = await session.execute(stmt)
@@ -562,6 +610,7 @@ async def preview_article_paper(
         body_markdown=req.body if req.body is not None else (article.body or ""),
         scientific_format=fmt_value,
         theme=theme,
+        asset_resolver=make_project_resolver(str(article.project_id or "")),
     )
     return HTMLResponse(content=html)
 

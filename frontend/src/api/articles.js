@@ -26,4 +26,11 @@ export const articlesApi = {
   // uses the same layout function as the published paper, so preview == PDF.
   previewPaper: (id, payload) =>
     api.post(`/api/v1/articles/${id}/preview`, payload, { responseType: 'text' }).then(r => r.data),
+
+  // Upload a figure for the article; returns {id, ref, markdown} to paste in the body
+  uploadAsset: (id, file) => {
+    const form = new FormData();
+    form.append('file', file);
+    return api.post(`/api/v1/articles/${id}/assets`, form).then(r => r.data);
+  },
 };
