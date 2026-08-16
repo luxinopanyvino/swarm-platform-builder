@@ -63,6 +63,8 @@ htmlcov/
 # Local cache and DB storage
 storage/
 backend/app/.rag_local/
+# Per-project paper figures (SPEC-022/T11.5): binarios locales, nunca versionados
+backend/app/.assets/
 docs/.vitepress/cache/
 
 # Graphify knowledge-graph build artifacts (local only)
