@@ -18,6 +18,7 @@ import UsersPage         from './pages/UsersPage';
 import MagazinePage      from './pages/MagazinePage';
 import LectorPage        from './pages/LectorPage';
 import PaperViewPage     from './pages/PaperViewPage';
+import PaperDesignPage   from './pages/PaperDesignPage';
 
 function RouteTitleHandler() {
   const location = useLocation();
@@ -132,6 +133,9 @@ export default function App() {
           } />
 
           {/* Paper-layout printable view (full screen) */}
+          <Route path="/articles/:id/design" element={
+            <ProtectedRoute><PaperDesignPage /></ProtectedRoute>
+          } />
           <Route path="/articles/:id/paper" element={
             <ProtectedRoute><PaperViewPage /></ProtectedRoute>
           } />
