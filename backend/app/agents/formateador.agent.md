@@ -1,10 +1,11 @@
 ---
 name: formateador
 # Modelo por agente consciente del proveedor (SPEC-023/T12.3).
-model: llama3.2:1b
+model: llama3.2:3b
+# ollama: llama3.2:3b (SPEC-025/T13.4 — benchmark de modelos on-prem, sustituye llama3.2:1b: mejor preservación del cuerpo del artículo)
 models:
   anthropic: claude-haiku-4-5
-  ollama: llama3.2:1b
+  ollama: llama3.2:3b
 temperature: 0.1
 rag_enabled: false
 output_type: formatted_markdown
