@@ -83,6 +83,28 @@ async def update_config(data: dict, token_data=Depends(require_admin)):
                 with open(p, "w", encoding="utf-8") as f:
                     yaml.safe_dump(data, f, default_flow_style=False, sort_keys=False)
 
-        return {"status": "success", "message": "Configuration updated successfully"}
+        # Apply the saved file to the running process. Without this the YAML is
+        # updated but every request keeps using the configuration read at
+        # start-up, so the screen would silently promise a change it never made.
+        from app.core.config import reload_settings
+
+        try:
+            reload_settings()
+        except Exception as exc:
+            # The file is already written; surface that the live config did not
+            # take effect instead of failing the save or leaving it half-applied.
+            return {
+                "status": "saved_not_applied",
+                "message": (
+                    "Configuración guardada, pero no se pudo aplicar en caliente: "
+                    f"{exc}. Revísala y reinicia el backend."
+                ),
+            }
+
+        return {
+            "status": "success",
+            "message": "Configuration updated successfully",
+            "applied": True,
+        }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to update config: {str(e)}")

@@ -267,3 +267,26 @@ def _validate_settings(s: Settings) -> None:
 
 settings = _build_settings()
 _validate_settings(settings)
+
+
+def reload_settings() -> Settings:
+    """Re-read configuration (env > config.yaml > defaults) into the live object.
+
+    Without this, editing ``config.yaml`` — including saving from the Config
+    screen — has no effect until the process restarts, because ``settings`` is
+    built once at import time.
+
+    **Mutates the existing instance in place instead of rebinding this module's
+    global.** Modules bind the object at import (``from app.core.config import
+    settings``), so rebinding the name here would leave those references
+    pointing at the stale object while others saw the new one.
+
+    The fresh configuration is validated *before* anything is applied, so an
+    invalid file (e.g. an insecure production ``SECRET_KEY``) raises and leaves
+    the running configuration untouched rather than half-updated.
+    """
+    fresh = _build_settings()
+    _validate_settings(fresh)
+    for field, value in fresh.model_dump().items():
+        setattr(settings, field, value)
+    return settings
