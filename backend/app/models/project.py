@@ -3,7 +3,7 @@ from datetime import datetime
 from uuid import UUID, uuid4
 
 from pydantic import BaseModel, ConfigDict, Field
-from sqlalchemy import Column, String, DateTime, Boolean, UUID as SA_UUID, ForeignKey, Text, Enum as SA_Enum, UniqueConstraint
+from sqlalchemy import Column, String, DateTime, Boolean, UUID as SA_UUID, ForeignKey, Text, Enum as SA_Enum, UniqueConstraint, JSON
 
 from app.core.database import Base
 from app.models.enums import ProjectUseCaseType
@@ -19,6 +19,9 @@ class ProjectModel(Base):
     use_case_type = Column(SA_Enum(ProjectUseCaseType), nullable=False, default=ProjectUseCaseType.CUSTOM)
     owner_id = Column(SA_UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=True, index=True)
     is_system = Column(Boolean, default=False, nullable=False)
+    # Default paper theme for the project's articles; each article may override
+    # it (cascade: format preset -> project theme -> article theme).
+    theme = Column(JSON, default=dict, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 

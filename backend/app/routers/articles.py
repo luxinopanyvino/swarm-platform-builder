@@ -19,6 +19,27 @@ from pydantic import BaseModel
 router = APIRouter(prefix="/api/v1/articles", tags=["articles"])
 
 
+async def resolve_article_theme(session: AsyncSession, article: ArticleModel) -> dict:
+    """Resolve the paper theme for an article: project theme → article theme.
+
+    The format preset is the third (widest) layer and is applied inside
+    ``build_paper_html``; here we only merge the two stored layers, most
+    specific last (SPEC-022/AC2).
+    """
+    from app.models import ProjectModel
+    from app.modules.agents.adapters.paper_layout import resolve_theme
+
+    project_theme = None
+    if article.project_id:
+        result = await session.execute(
+            select(ProjectModel).where(ProjectModel.id == article.project_id)
+        )
+        project = result.scalars().first()
+        project_theme = getattr(project, "theme", None) if project else None
+
+    return resolve_theme(project_theme, getattr(article, "theme", None))
+
+
 @router.get("", response_model=ArticleListResponse)
 async def list_articles(
     status: ArticleStatus | None = None,
@@ -158,6 +179,12 @@ async def update_article(
         article.authors = [a.model_dump() for a in req.authors]
     if req.abstract is not None:
         article.abstract = req.abstract
+    if req.theme is not None:
+        # Sanitised on the way in so the stored theme only ever holds allowlisted
+        # values — the layout sanitises again on render (defence in depth).
+        from app.modules.agents.adapters.paper_layout import sanitize_theme
+
+        article.theme = sanitize_theme(req.theme.model_dump(exclude_none=True))
 
     session.add(article)
     await session.commit()
@@ -461,6 +488,7 @@ async def get_article_paper(
             abstract=article.abstract or "",
             body_markdown=article.body or "",
             scientific_format=fmt,
+            theme=await resolve_article_theme(session, article),
         )
 
     return HTMLResponse(content=paper_html)

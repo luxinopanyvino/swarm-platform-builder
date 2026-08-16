@@ -78,6 +78,80 @@ def _style_for(scientific_format: str) -> Dict[str, Any]:
 
 
 # ---------------------------------------------------------------------------
+# Editable theme (SPEC-022 / T11.2)
+# The user never writes CSS: they pick values from these allowlists, which the
+# layout applies on top of the format preset. Anything unknown falls back to the
+# preset, so a bad value can never break the page (nor inject styles).
+# ---------------------------------------------------------------------------
+# Curated web-safe families only — no embedded webfonts, so the PDF prints the
+# same everywhere (clarify SPEC-022, 2026-07-04).
+_THEME_FONTS: Dict[str, str] = {
+    "times": "'Times New Roman', Times, serif",
+    "georgia": "Georgia, 'Times New Roman', serif",
+    "palatino": "'Palatino Linotype', Palatino, 'Book Antiqua', serif",
+    "helvetica": "Helvetica, Arial, sans-serif",
+    "arial": "Arial, Helvetica, sans-serif",
+    "verdana": "Verdana, Geneva, sans-serif",
+}
+
+# Accent tokens from the design system (frontend/ds/zeroheight/tokens.dtcg.json,
+# épica E7) — a closed set keeps tenant identity coherent and the sanitising
+# surface tiny.
+_THEME_ACCENTS: Dict[str, str] = {
+    "ink": "#0b1b33",      # default: near-black, neutral for print
+    "blue": "#0176d3",
+    "violet": "#6b4fe3",
+    "green": "#2e844a",
+    "amber": "#c47d04",
+    "red": "#ba0517",
+    "teal": "#06a59a",
+}
+
+_THEME_COLUMNS = (1, 2)
+_DEFAULT_ACCENT = "ink"
+
+
+def sanitize_theme(theme: Dict[str, Any] | None) -> Dict[str, Any]:
+    """Keep only recognised theme values; silently drop anything else.
+
+    Dropping (rather than erroring) is what makes AC2's "falls back to the
+    default without breaking the layout" true for stored themes that predate a
+    palette change or arrive from an older client.
+    """
+    if not isinstance(theme, dict):
+        return {}
+    clean: Dict[str, Any] = {}
+
+    font = theme.get("font")
+    if isinstance(font, str) and font.lower() in _THEME_FONTS:
+        clean["font"] = font.lower()
+
+    accent = theme.get("accent_color")
+    if isinstance(accent, str) and accent.lower() in _THEME_ACCENTS:
+        clean["accent_color"] = accent.lower()
+
+    columns = theme.get("columns")
+    if isinstance(columns, bool):  # bool is an int subclass — reject explicitly
+        columns = None
+    if isinstance(columns, int) and columns in _THEME_COLUMNS:
+        clean["columns"] = columns
+
+    return clean
+
+
+def resolve_theme(*layers: Dict[str, Any] | None) -> Dict[str, Any]:
+    """Merge theme layers, most specific last (project theme → article theme).
+
+    Each layer is sanitised independently so one bad layer cannot poison the
+    result; later layers override earlier ones key by key.
+    """
+    resolved: Dict[str, Any] = {}
+    for layer in layers:
+        resolved.update(sanitize_theme(layer))
+    return resolved
+
+
+# ---------------------------------------------------------------------------
 # Minimal markdown -> HTML conversion
 # Supports the subset emitted by the Redactor/Formateador: headings, bold,
 # italic, inline code, links, ordered/unordered lists and paragraphs.
@@ -266,9 +340,14 @@ def _numbering_css(s: Dict[str, Any]) -> str:
     return css
 
 
-def _stylesheet(scientific_format: str) -> str:
+def _stylesheet(scientific_format: str, theme: Dict[str, Any] | None = None) -> str:
     s = _style_for(scientific_format)
-    columns = s["columns"]
+    theme = sanitize_theme(theme)
+    # Theme values override the preset; absent ones keep the format's default.
+    if "font" in theme:
+        s = {**s, "font": _THEME_FONTS[theme["font"]]}
+    columns = theme.get("columns", s["columns"])
+    accent = _THEME_ACCENTS[theme.get("accent_color", _DEFAULT_ACCENT)]
     content_columns = (
         f"column-count: {columns}; column-gap: 28px; column-fill: balance;"
         if columns > 1
@@ -329,13 +408,15 @@ def _stylesheet(scientific_format: str) -> str:
     .paper-body {{ {content_columns} text-align: justify; hyphens: auto; }}
     .paper-body h1, .paper-body h2 {{
       font-size: 11.5pt; font-weight: 700; margin: 14px 0 6px;
-      break-after: avoid;
+      break-after: avoid; color: {accent};
     }}
-    .paper-body h3, .paper-body h4 {{ font-size: 10.5pt; font-weight: 700; margin: 10px 0 4px; }}
+    .paper-body h3, .paper-body h4 {{
+      font-size: 10.5pt; font-weight: 700; margin: 10px 0 4px; color: {accent};
+    }}
     .paper-body p {{ margin: 0 0 8px; orphans: 2; widows: 2; }}
     .paper-body ul, .paper-body ol {{ margin: 0 0 8px 1.1em; padding: 0; }}
     .paper-body code {{ font-family: 'Courier New', monospace; font-size: 0.92em; }}
-    .paper-body a {{ color: #1a4f8b; text-decoration: none; word-break: break-word; }}
+    .paper-body a {{ color: {accent}; text-decoration: none; word-break: break-word; }}
     .paper-body h2:last-of-type ~ p {{ font-size: 0.95em; }}
     {extra_css}
     @media print {{
@@ -352,12 +433,18 @@ def build_paper_html(
     abstract: str,
     body_markdown: str,
     scientific_format: str,
+    theme: Dict[str, Any] | None = None,
 ) -> str:
     """Assemble a complete, self-contained printable HTML document.
 
     The body markdown is expected to already carry the reformatted in-text
     citations and the deterministic references section produced by the
     Formateador; this function only lays it out.
+
+    ``theme`` optionally overrides the format preset with user-chosen values
+    (``font``, ``accent_color``, ``columns``) taken from the allowlists above.
+    It is *parameterisation*, never user CSS: unknown values are dropped and the
+    preset's own value is used, so the layout cannot be broken or injected into.
     """
     fmt = (scientific_format or _DEFAULT_FORMAT).lower()
     style = _style_for(fmt)
@@ -383,7 +470,7 @@ def build_paper_html(
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>{safe_title}</title>
 <meta name="citation-format" content="{html.escape(style['label'])}" />
-<style>{_stylesheet(fmt)}</style>
+<style>{_stylesheet(fmt, theme)}</style>
 </head>
 <body>
 <main class="sheet" data-format="{html.escape(fmt)}">
