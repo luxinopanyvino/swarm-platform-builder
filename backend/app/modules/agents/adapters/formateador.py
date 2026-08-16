@@ -13,6 +13,7 @@ _FORMAT_LABELS = {
     "vancouver": "Vancouver",
     "chicago": "Chicago 17th edition",
     "nature": "Nature / NLM numbered",
+    "acl": "ACL (conference)",
 }
 
 _FORMAT_INSTRUCTIONS = {
@@ -21,6 +22,7 @@ _FORMAT_INSTRUCTIONS = {
     "vancouver": "Use Vancouver style for in-text citations: sequential numbers. Do NOT generate the References list.",
     "chicago": "Use Chicago 17th edition style for in-text citations: (Author Year). Do NOT generate the References list.",
     "nature": "Use Nature numbered style for in-text citations: superscript sequential numbers. Do NOT generate the References list.",
+    "acl": "Use ACL conference style for in-text citations: author-year, (Author et al., Year) or Author et al. (Year). Do NOT generate the References list.",
 }
 
 

@@ -23,6 +23,19 @@ _FORMAT_STYLE: Dict[str, Dict[str, Any]] = {
         "size": "9.5pt",
         "title_size": "20pt",
     },
+    # Conference style (ACL/*ACL family): two columns, Times ~10pt, sections
+    # numbered by CSS counters and a hanging indent on the reference list.
+    "acl": {
+        "label": "ACL (conference)",
+        "columns": 2,
+        "line_height": 1.18,
+        "font": "'Times New Roman', Times, serif",
+        "size": "10pt",
+        "title_size": "17pt",
+        # Opt-in typographic conventions (see _stylesheet / _decorate_headings).
+        "numbered_sections": True,
+        "hanging_references": True,
+    },
     "apa": {
         "label": "APA 7th edition",
         "columns": 1,
@@ -148,6 +161,50 @@ def markdown_to_html(md: str) -> str:
 
 
 # ---------------------------------------------------------------------------
+# Heading decoration for auto-numbered formats (ACL and friends)
+# ---------------------------------------------------------------------------
+# Section labels that must never be auto-numbered and that introduce the
+# reference list (matched case-insensitively, accent-tolerant on the stem).
+_REFERENCES_RE = re.compile(
+    r"^\s*(referencias?|references|bibliograf[íi]a|bibliography|works\s+cited|"
+    r"literatura\s+citada)\b",
+    re.IGNORECASE,
+)
+_H2_RE = re.compile(r"<h2>(.*?)</h2>", re.DOTALL)
+_H3_RE = re.compile(r"<h3>(.*?)</h3>", re.DOTALL)
+# Manual numbering the Redactor/Formateador may already have written into the
+# heading text ("## 3. Arquitectura", "### 3.1 Motor"). Stripped when the layout
+# numbers sections itself, so the output never reads "3. 3. Arquitectura".
+_MANUAL_NUMBER_RE = re.compile(r"^\s*\d+(?:\.\d+)*\.?\s+")
+
+
+def _strip_tags(fragment: str) -> str:
+    return re.sub(r"<[^>]+>", "", fragment).strip()
+
+
+def _decorate_headings(body_html: str) -> str:
+    """Tag headings so CSS can number sections and lay out the reference list.
+
+    ``h2`` becomes either ``section-heading`` (numbered by a CSS counter) or
+    ``references-heading`` (never numbered; its following paragraphs get the
+    hanging indent). Manual numbering already present in the text is removed so
+    it is not duplicated by the counter. Applied only for formats that opt in,
+    leaving every other format's output byte-identical.
+    """
+    def h2(match: re.Match) -> str:
+        inner = match.group(1)
+        if _REFERENCES_RE.match(_strip_tags(inner)):
+            return f'<h2 class="references-heading">{inner}</h2>'
+        return f'<h2 class="section-heading">{_MANUAL_NUMBER_RE.sub("", inner)}</h2>'
+
+    def h3(match: re.Match) -> str:
+        inner = match.group(1)
+        return f'<h3 class="subsection-heading">{_MANUAL_NUMBER_RE.sub("", inner)}</h3>'
+
+    return _H3_RE.sub(h3, _H2_RE.sub(h2, body_html))
+
+
+# ---------------------------------------------------------------------------
 # Title block (authors + affiliations + abstract)
 # ---------------------------------------------------------------------------
 def _authors_block(authors: List[Dict[str, Any]]) -> str:
@@ -179,6 +236,36 @@ def _authors_block(authors: List[Dict[str, Any]]) -> str:
 # ---------------------------------------------------------------------------
 # Per-format stylesheet
 # ---------------------------------------------------------------------------
+def _numbering_css(s: Dict[str, Any]) -> str:
+    """Extra rules for formats that number their own sections / indent references."""
+    css = ""
+    if s.get("numbered_sections"):
+        # Counters live on the body container so the numbering restarts per paper
+        # and survives the multi-column flow.
+        css += """
+    .paper-body { counter-reset: section; }
+    .paper-body h2.section-heading { counter-increment: section; counter-reset: subsection; }
+    .paper-body h2.section-heading::before { content: counter(section) "\\00a0\\00a0"; }
+    .paper-body h3.subsection-heading { counter-increment: subsection; }
+    .paper-body h3.subsection-heading::before {
+      content: counter(section) "." counter(subsection) "\\00a0\\00a0";
+    }
+    /* The reference list is a section, but an unnumbered one. */
+    .paper-body h2.references-heading::before { content: none; }
+    """
+    if s.get("hanging_references"):
+        # Hanging indent: first line flush left, continuation lines indented.
+        css += """
+    .paper-body h2.references-heading ~ p {
+      padding-left: 1.2em;
+      text-indent: -1.2em;
+      text-align: left;
+      hyphens: none;
+    }
+    """
+    return css
+
+
 def _stylesheet(scientific_format: str) -> str:
     s = _style_for(scientific_format)
     columns = s["columns"]
@@ -187,6 +274,7 @@ def _stylesheet(scientific_format: str) -> str:
         if columns > 1
         else "max-width: 720px; margin: 0 auto;"
     )
+    extra_css = _numbering_css(s)
     return f"""
     :root {{ color-scheme: light; }}
     @page {{ size: A4; margin: 18mm 16mm; }}
@@ -249,6 +337,7 @@ def _stylesheet(scientific_format: str) -> str:
     .paper-body code {{ font-family: 'Courier New', monospace; font-size: 0.92em; }}
     .paper-body a {{ color: #1a4f8b; text-decoration: none; word-break: break-word; }}
     .paper-body h2:last-of-type ~ p {{ font-size: 0.95em; }}
+    {extra_css}
     @media print {{
       body {{ background: #fff; padding: 0; }}
       .sheet {{ box-shadow: none; max-width: none; padding: 0; }}
@@ -282,6 +371,10 @@ def build_paper_html(
             f"<p>{_inline(abstract.strip())}</p></section>"
         )
     body_html = markdown_to_html(body_markdown)
+    # Only formats that opt in are decorated, so every other format's output
+    # stays byte-identical to before this preset existed.
+    if style.get("numbered_sections") or style.get("hanging_references"):
+        body_html = _decorate_headings(body_html)
 
     return f"""<!DOCTYPE html>
 <html lang="es">

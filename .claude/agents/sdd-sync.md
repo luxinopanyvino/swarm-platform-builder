@@ -109,11 +109,37 @@ Con `--apply`, en dos pasadas para resolver dependencias por número real de iss
      `Hardening & Platform Backlog` (su `number`).
    - Añade cada issue: `gh project item-add <number> --owner <owner> --url <url-del-issue>`.
    - Es idempotente: si el issue ya es item del Project, `item-add` no duplica.
-   - Requiere scope `project` en `gh`. Si **falta** (`gh auth status` no lista
-     `project`), **no falla la sincronización**: omite este paso y avisa al usuario
-     de que ejecute `gh auth refresh -s project` y vuelva a correr `/sdd-sync --apply`
-     (o añada los issues a mano). Todo lo demás (issues, labels, sub-issues) ya
-     quedó aplicado.
+
+   > ⚠️ **Este paso es el único que puede quedar sin aplicar, y es fácil que pase
+   > inadvertido: el issue existe en el repo pero NO aparece en el tablero.**
+   >
+   > Requiere el **CLI `gh` con scope `project`**. Falla —y debe omitirse sin
+   > abortar la sincronización— en dos escenarios distintos:
+   >
+   > 1. **`gh` instalado pero sin scope `project`** (`gh auth status` no lo lista):
+   >    pide al usuario `gh auth refresh -s project` y reejecutar `/sdd-sync --apply`.
+   > 2. **`gh` no instalado** (p. ej. Claude Code on the web / contenedores remotos,
+   >    donde solo hay servidor MCP de GitHub). **El MCP de GitHub no expone
+   >    Projects v2**: puede crear issues, sub-issues y labels, pero **no** añadir
+   >    items al tablero. Aquí el paso es **imposible** desde el agente.
+   >
+   > En ambos casos: los issues, labels, DoD, dependencias y sub-issues **sí**
+   > quedan aplicados; solo falta la pertenencia al tablero. Repórtalo de forma
+   > **destacada** (ver Paso 5) y entrega al usuario la lista exacta de issues a
+   > añadir, o el comando listo para copiar:
+   >
+   > ```bash
+   > gh auth refresh -s project   # solo si falta el scope
+   > for N in <números>; do
+   >   gh project item-add <project-number> --owner <owner> \
+   >      --url https://github.com/<owner>/<repo>/issues/$N
+   > done
+   > ```
+   >
+   > **Solución durable recomendada** (elimina la dependencia del entorno): activar
+   > en el Project la *built-in workflow* **«Auto-add to project»** filtrando por
+   > `label:epic,task`. Así cualquier issue que cree `/sdd-sync` entra solo al
+   > tablero, se ejecute desde donde se ejecute.
 
 Restricciones absolutas en apply: **solo** `issue create`, `issue edit` (título,
 body, labels), `addSubIssue` y `project item-add` (pertenencia al board).
@@ -128,6 +154,13 @@ Imprime un resumen claro:
 - En dry-run, deja explícito: *"Plan en dry-run; nada aplicado. Ejecuta con
   `--apply` para realizar los cambios."*
 - En apply, los números de issue creados/editados y el árbol épica→tareas.
+- **Estado del Project board (obligatorio en `--apply`)**: una línea explícita que
+  diga si los issues quedaron **añadidos al tablero** o **solo creados en el repo**.
+  Si el paso 4.3 se omitió, dilo como **aviso destacado** (no enterrado en un
+  párrafo): *«⚠️ N issues creados pero NO añadidos al Project “Hardening &
+  Platform Backlog” — falta `gh` con scope `project` en este entorno»*, seguido de
+  la lista de números y el comando de arreglo. Sin esta línea el usuario cree que
+  el backlog está al día cuando el tablero está desactualizado.
 
 ## Reglas
 
