@@ -9,7 +9,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 from app.models import (
     ArticleModel, ArticleStatus, CreateArticleDTO, UpdateArticleDTO,
-    ArticleResponse, ArticleListResponse, UserModel, NotificationModel, UserRole
+    ArticleResponse, ArticleListResponse, UserModel, NotificationModel, UserRole,
+    AuthorDTO, ThemeDTO, ScientificFormat
 )
 from app.core.database import get_session
 from app.routers.auth import get_current_user
@@ -492,6 +493,77 @@ async def get_article_paper(
         )
 
     return HTMLResponse(content=paper_html)
+
+
+class PaperPreviewDTO(BaseModel):
+    """Unsaved edits to preview. Every field is optional: what is not sent falls
+    back to what the article already has, so the panel can preview a single
+    changed control without resending the whole document."""
+    title: str | None = None
+    body: str | None = None
+    abstract: str | None = None
+    authors: list[AuthorDTO] | None = None
+    scientific_format: ScientificFormat | None = None
+    theme: ThemeDTO | None = None
+
+
+@router.post("/{article_id}/preview", response_class=HTMLResponse)
+async def preview_article_paper(
+    article_id: UUID,
+    req: PaperPreviewDTO,
+    token_data=Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+):
+    """Render the paper layout for *unsaved* edits. Nothing is persisted.
+
+    Uses the very same ``build_paper_html`` as the published paper, so the
+    preview is byte-identical to what printing to PDF will produce — that is the
+    point of doing this server-side instead of re-implementing the layout in the
+    browser (SPEC-022/AC3).
+
+    Visibility matches ``get_article_paper``; a preview never reveals an article
+    the caller could not already read.
+    """
+    from app.modules.agents.adapters.paper_layout import build_paper_html, resolve_theme
+
+    stmt = select(ArticleModel).where(ArticleModel.id == article_id)
+    result = await session.execute(stmt)
+    article = result.scalars().first()
+    if not article:
+        raise HTTPException(status_code=404, detail="Article not found")
+
+    role = token_data.get("role", "redactor")
+    user_id = token_data.get("user_id")
+    is_admin = role == UserRole.ADMIN
+    is_redactor = role == UserRole.REDACTOR
+    is_owner = str(article.author_id) == user_id
+    is_published = article.status == ArticleStatus.PUBLISHED
+    is_assigned_reviewer = article.reviewer_id and str(article.reviewer_id) == user_id
+    if not is_admin and not is_redactor and not is_owner and not is_published and not is_assigned_reviewer:
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    # Stored values are the base; the request overrides only what it sends.
+    fmt = req.scientific_format or article.scientific_format
+    fmt_value = (fmt.value if fmt else None) or "apa"
+    authors = (
+        [a.model_dump() for a in req.authors] if req.authors is not None
+        else (article.authors or [])
+    )
+    # Theme cascade with the unsaved theme as the most specific layer.
+    theme = resolve_theme(
+        await resolve_article_theme(session, article),
+        req.theme.model_dump(exclude_none=True) if req.theme else None,
+    )
+
+    html = build_paper_html(
+        title=req.title if req.title is not None else (article.title or ""),
+        authors=authors,
+        abstract=req.abstract if req.abstract is not None else (article.abstract or ""),
+        body_markdown=req.body if req.body is not None else (article.body or ""),
+        scientific_format=fmt_value,
+        theme=theme,
+    )
+    return HTMLResponse(content=html)
 
 
 @router.post("/{article_id}/format-body", response_model=ArticleResponse)

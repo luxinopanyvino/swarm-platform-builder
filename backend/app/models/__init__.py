@@ -28,6 +28,7 @@ from app.models.article import (
     ArticleModel,
     ArticleResponse,
     AuthorDTO,
+    ThemeDTO,
     CreateArticleDTO,
     UpdateArticleDTO,
 )
@@ -87,6 +88,7 @@ __all__ = [
     "ArticleModel",
     "CreateArticleDTO",
     "AuthorDTO",
+    "ThemeDTO",
     "UpdateArticleDTO",
     "ArticleResponse",
     "ArticleListResponse",
