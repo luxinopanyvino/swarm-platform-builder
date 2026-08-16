@@ -39,6 +39,31 @@ async def get_config(token_data=Depends(get_current_user)):
         raise HTTPException(status_code=500, detail=f"Failed to read config: {str(e)}")
 
 
+@router.get("/llm-status")
+async def get_llm_status(token_data=Depends(get_current_user)):
+    """Effective LLM engine status, resolved through the full config precedence.
+
+    Deliberately returns **no key material** — only whether each provider's
+    credential is present. The UI uses this to *report* that ANTHROPIC_API_KEY
+    is set instead of offering a field that would write the secret into
+    config.yaml, which is tracked in git (SPEC-023).
+
+    Kept out of ``GET /config`` on purpose: that payload is echoed back to
+    ``PUT /config`` and written verbatim to the YAML, so injecting computed
+    fields there would persist them into the file.
+    """
+    from app.core.config import settings
+
+    return {
+        "provider": settings.LLM_PROVIDER,
+        "anthropic": {
+            "api_key_set": bool(settings.ANTHROPIC_API_KEY),
+            "model": settings.ANTHROPIC_MODEL,
+        },
+        "openai": {"api_key_set": bool(settings.OPENAI_API_KEY)},
+    }
+
+
 @router.put("")
 async def update_config(data: dict, token_data=Depends(require_admin)):
     """Overwrite YAML configuration with new JSON values."""

@@ -4,6 +4,8 @@ export const configApi = {
   get: () => api.get('/api/v1/config').then(r => r.data),
   update: (data) => api.put('/api/v1/config', data).then(r => r.data),
   listModels: () => api.get('/api/v1/ai/models').then(r => r.data),
+  // Effective engine status (never returns key material) — see routers/config.py
+  llmStatus: () => api.get('/api/v1/config/llm-status').then(r => r.data),
 };
 
 export const notificationsApi = {

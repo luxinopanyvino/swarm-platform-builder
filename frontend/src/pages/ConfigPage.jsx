@@ -3,7 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Database, Bot, Box, Shield, Save, LogOut, RefreshCw,
-  Search, Cpu, ChevronDown, ChevronRight, Layers,
+  Search, Cpu, ChevronDown, ChevronRight, Layers, Sparkles,
 } from 'lucide-react';
 import { configApi } from '../api/config';
 import { useAuthStore } from '../store/authStore';
@@ -51,16 +51,39 @@ const SECTIONS = [
     fields: [
       {
         path: 'llm.provider', label: 'Proveedor', type: 'select',
-        desc: 'Motor LLM activo: ollama (local) o openai (API)',
-        options: [{ value: 'ollama', label: 'Ollama (local)' }, { value: 'openai', label: 'OpenAI API' }],
+        desc: 'Motor LLM activo: anthropic (Claude, por defecto), ollama (local) u openai (API o servidor compatible)',
+        options: [
+          { value: 'anthropic', label: 'Claude (Anthropic)' },
+          { value: 'ollama', label: 'Ollama (local)' },
+          { value: 'openai', label: 'OpenAI API' },
+        ],
       },
+    ],
+  },
+  {
+    id: 'anthropic',
+    label: 'Claude (Anthropic)',
+    icon: <Sparkles size={15} />,
+    visibleWhen: cfg => (getPath(cfg, 'llm.provider') || 'anthropic') === 'anthropic',
+    fields: [
+      {
+        // Read-only on purpose: config.yaml is tracked in git, so the key is
+        // never writable from the UI — only its presence is reported (SPEC-023).
+        path: 'anthropic.api_key', label: 'API Key', type: 'env-status',
+        desc: 'Solo por variable de entorno: ANTHROPIC_API_KEY=sk-ant-… (nunca se guarda en config.yaml, que está versionado)',
+      },
+      { path: 'anthropic.model', label: 'Modelo por defecto', type: 'text', desc: 'Default global del proveedor (ej: claude-opus-5). El modelo por agente se define en su .agent.md' },
+      { path: 'anthropic.max_tokens', label: 'Max tokens', type: 'number', desc: 'Anthropic exige max_tokens en cada llamada (por defecto 4096)' },
+      { path: 'anthropic.base_url', label: 'Base URL (opcional)', type: 'text', desc: 'Dejar vacío para usar el endpoint oficial de Anthropic' },
     ],
   },
   {
     id: 'ollama',
     label: 'Ollama',
     icon: <Bot size={15} />,
-    visibleWhen: cfg => (getPath(cfg, 'llm.provider') || 'ollama') === 'ollama',
+    // Strict match: the default provider is anthropic, so an absent value must
+    // not fall back to showing the Ollama section.
+    visibleWhen: cfg => getPath(cfg, 'llm.provider') === 'ollama',
     fields: [
       { path: 'ollama.base_url', label: 'URL base', type: 'text', desc: 'http://localhost:11434' },
       { path: 'ollama.default_model', label: 'Modelo generación', type: 'model-select', desc: 'Modelo por defecto para todos los agentes' },
@@ -194,9 +217,30 @@ const SECTIONS = [
  * Renders the appropriate input control for a field definition.
  * Handles: toggle, select, model-select, model-select-nullable, number, number-float, text, password.
  */
-function FieldControl({ field, config, onChange, ollamaModels, modelsLoading, onReloadModels }) {
+function FieldControl({ field, config, onChange, ollamaModels, modelsLoading, onReloadModels, llmStatus }) {
   const value = getPath(config, field.path);
   const isNullable = field.type === 'model-select-nullable';
+
+  // Read-only indicator for secrets that live in the environment, never in
+  // config.yaml (tracked in git). Reports presence only — never the value.
+  if (field.type === 'env-status') {
+    const isSet = !!llmStatus?.anthropic?.api_key_set;
+    return (
+      <span
+        role="status"
+        style={{
+          display: 'inline-flex', alignItems: 'center', gap: 6,
+          padding: '5px 10px', borderRadius: 6,
+          fontSize: 'var(--font-size-xs)', fontFamily: 'var(--font-mono)',
+          border: '1px solid var(--border-color, #d0d7de)',
+          color: isSet ? 'var(--color-success, #1a7f37)' : 'var(--color-danger, #b42318)',
+        }}
+      >
+        <span aria-hidden="true">{isSet ? '●' : '○'}</span>
+        {isSet ? 'Configurada por entorno' : 'No configurada'}
+      </span>
+    );
+  }
 
   if (field.type === 'toggle') {
     return (
@@ -319,7 +363,7 @@ function FieldControl({ field, config, onChange, ollamaModels, modelsLoading, on
 /**
  * Collapsible section card. Renders a header with chevron toggle and a list of field rows.
  */
-function ConfigSection({ section, config, onChange, ollamaModels, modelsLoading, onReloadModels, defaultOpen = true }) {
+function ConfigSection({ section, config, onChange, ollamaModels, modelsLoading, onReloadModels, llmStatus, defaultOpen = true }) {
   const [open, setOpen] = useState(defaultOpen);
   const isAgent = !!section.group;
 
@@ -355,6 +399,7 @@ function ConfigSection({ section, config, onChange, ollamaModels, modelsLoading,
                 ollamaModels={ollamaModels}
                 modelsLoading={modelsLoading}
                 onReloadModels={onReloadModels}
+                llmStatus={llmStatus}
               />
             </div>
           ))}
@@ -379,6 +424,7 @@ export default function ConfigPage() {
   const [saving, setSaving] = useState(false);
   const [ollamaModels, setOllamaModels] = useState([]);
   const [modelsLoading, setModelsLoading] = useState(false);
+  const [llmStatus, setLlmStatus] = useState(null);
 
   const loadModels = () => {
     setModelsLoading(true);
@@ -392,10 +438,12 @@ export default function ConfigPage() {
     Promise.all([
       configApi.get(),
       configApi.listModels().catch(() => ({ models: [] })),
+      configApi.llmStatus().catch(() => null),
     ])
-      .then(([data, modelsData]) => {
+      .then(([data, modelsData, status]) => {
         setConfig(data || {});
         setOllamaModels(modelsData.models || []);
+        setLlmStatus(status);
         setLoading(false);
       })
       .catch(() => {
@@ -439,6 +487,7 @@ export default function ConfigPage() {
     ollamaModels,
     modelsLoading,
     onReloadModels: loadModels,
+    llmStatus,
   };
 
   const mainSections = SECTIONS.filter(s => !s.group && (!s.visibleWhen || s.visibleWhen(config)));
