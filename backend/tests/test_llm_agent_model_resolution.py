@@ -37,15 +37,22 @@ def test_anthropic_ignores_legacy_ollama_override(monkeypatch):
 
 
 def test_same_agent_resolves_differently_per_provider(monkeypatch):
-    """AC3 — provider switch yields a different model for the same agent."""
+    """AC3 — provider switch yields a provider-native model for the same agent.
+
+    Asserts the **invariant**, not literal model ids: *which* Ollama model an
+    agent uses is a tuning decision (benchmarks re-tune it), while "the same
+    agent resolves to a model of the active provider" is what AC3 pins down.
+    The concrete Claude mapping is AC4 and is covered by
+    ``test_anthropic_mapping_per_agent``.
+    """
     monkeypatch.setattr(config.settings, "LLM_PROVIDER", "anthropic", raising=False)
     anthropic_model = llm.resolve_agent_model("investigador", {})
 
     monkeypatch.setattr(config.settings, "LLM_PROVIDER", "ollama", raising=False)
     ollama_model = llm.resolve_agent_model("investigador", {})
 
-    assert anthropic_model == "claude-opus-5"
-    assert ollama_model == "mistral:7b"
+    assert llm._model_namespace(anthropic_model) == "anthropic"
+    assert llm._model_namespace(ollama_model) == "ollama"
     assert anthropic_model != ollama_model
 
 
