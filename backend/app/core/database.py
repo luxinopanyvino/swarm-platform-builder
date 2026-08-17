@@ -62,6 +62,7 @@ async def init_db():
         # (No-op on SQLite, where the enum is stored as VARCHAR — caught below.)
         "ALTER TYPE scientificformat ADD VALUE IF NOT EXISTS 'chicago'",
         "ALTER TYPE scientificformat ADD VALUE IF NOT EXISTS 'nature'",
+        "ALTER TYPE scientificformat ADD VALUE IF NOT EXISTS 'acl'",
         "ALTER TABLE users ADD COLUMN assigned_project_id CHAR(32) REFERENCES projects(id) ON DELETE SET NULL",
         """CREATE TABLE IF NOT EXISTS user_project_access (
             id CHAR(32) PRIMARY KEY,

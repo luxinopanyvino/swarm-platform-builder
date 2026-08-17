@@ -18,7 +18,7 @@ focus: citation_formatting
 Agente de maquetación científica. Reescribe las citas y referencias del borrador según el estilo bibliográfico solicitado, sin alterar el contenido principal.
 
 ## Dominio
-- Estilos soportados: `apa` (APA 7ª edición), `ieee`, `vancouver`
+- Estilos soportados: `apa` (APA 7ª edición), `ieee`, `acl` (conferencia, autor-año), `vancouver`, `chicago`, `nature`
 - Reformateo de citas en texto y sección de referencias
 - Preservación íntegra del cuerpo del artículo
 

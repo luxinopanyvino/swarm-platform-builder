@@ -39,6 +39,7 @@ class ScientificFormat(str, Enum):
     """Supported scientific formats (must stay in sync with the formateador adapter)."""
     APA = "apa"
     IEEE = "ieee"
+    ACL = "acl"
     VANCOUVER = "vancouver"
     CHICAGO = "chicago"
     NATURE = "nature"
