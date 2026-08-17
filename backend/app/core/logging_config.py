@@ -136,6 +136,9 @@ async def request_id_middleware(request, call_next):
     """
     incoming = request.headers.get("X-Request-ID")
     rid = incoming.strip() if incoming and incoming.strip() else uuid4().hex
+    # También en ``state``: sobrevive al reset del ContextVar, así que capas
+    # exteriores (p. ej. el manejador global de excepciones) pueden recuperarlo.
+    request.state.request_id = rid
     token = request_id_ctx.set(rid)
     try:
         response = await call_next(request)
