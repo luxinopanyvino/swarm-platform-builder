@@ -1,0 +1,38 @@
+Migraciones Alembic del backend (SPEC-018 / T4.1).
+
+Configuración de una sola base de datos con DBAPI async.
+
+La URL de conexión NO está en `alembic.ini`: `env.py` la toma de
+`settings.DATABASE_URL`, la misma que usa la aplicación. Así no hay dos fuentes de
+verdad de la conexión ni credenciales versionadas. Para apuntar a otra base, se
+exporta `DATABASE_URL` como para el backend.
+
+Comandos (desde `backend/`, con las env vars del backend):
+
+    alembic current                          # revisión aplicada
+    alembic history --verbose                # árbol de revisiones
+    alembic upgrade head                     # aplicar pendientes
+    alembic downgrade -1                     # revertir la última
+    alembic check                            # ¿los modelos van por delante?
+    alembic revision --autogenerate -m "..."  # nueva migración desde los modelos
+
+`alembic upgrade head` no hace falta en el arranque normal: `init_db` lo ejecuta
+al levantar la aplicación (`app/core/database.py`), tomando un advisory lock en
+Postgres para que varios workers no compitan por el mismo DDL.
+
+Notas al escribir migraciones:
+
+* Revisa siempre lo que genera `--autogenerate`. En este esquema `users` y
+  `projects` se referencian mutuamente, y autogenerate no sabe ordenar el ciclo:
+  la FK que lo cierra se añade a mano al final de `0001_baseline`.
+* `render_as_batch` está activo porque SQLite (el entorno de desarrollo) apenas
+  soporta `ALTER TABLE`. Sin modo batch, una migración que altere una columna
+  funcionaría en Postgres y fallaría en local.
+* Los enums de `models/enums.py` sin `values_callable` se almacenan por **nombre**
+  de miembro (`CHICAGO`, no `chicago`). Añadir un miembro a uno de ellos exige una
+  migración que registre la etiqueta en el tipo nativo de Postgres — ver
+  `0002_native_enum_labels.py` y el test que lo vigila
+  (`tests/test_migrations.py::test_native_enum_labels_cover_the_model_labels`).
+* Una base creada antes de adoptar Alembic no tiene `alembic_version`: `init_db`
+  la **sella** en `0001_baseline` en lugar de reejecutarla, y avisa por log si su
+  esquema no coincide con los modelos.

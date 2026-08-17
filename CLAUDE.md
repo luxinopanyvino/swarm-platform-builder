@@ -27,9 +27,23 @@ python -m pytest tests/test_auth_rate_limit_lockout.py -v          # un archivo
 python -m pytest -k lockout -v                                      # por nombre
 uvicorn app.main:app --reload --port 8000                           # servidor dev
 pip install -r requirements.txt
+
+# Esquema — Alembic (SPEC-018/T4.1). init_db ya aplica `upgrade head` al arrancar;
+# estos comandos son para trabajar el esquema a mano:
+alembic current                            # revisión aplicada
+alembic check                              # ¿los modelos van por delante?
+alembic revision --autogenerate -m "..."   # nueva migración desde los modelos
+alembic upgrade head / downgrade -1
 ```
 No hay `pytest.ini`/`pyproject.toml`: los tests se invocan con `python -m pytest`
 desde `backend/` y fijan su propio `DATABASE_URL` (SQLite) en tiempo de import.
+
+**Nunca cambies el esquema con SQL a mano.** `app/core/database.py` tenía 15
+`ALTER TABLE` dentro de un `try/except: pass` que se tragaba los fallos; ya no.
+Todo cambio de modelo va por una migración en `backend/alembic/versions/`, y
+`tests/test_migrations.py` compara el esquema migrado con `create_all` para que no
+divergan. Revisa siempre lo que genera `--autogenerate`: hay un ciclo de FKs
+`users` ↔ `projects` que no sabe ordenar. Ver `backend/alembic/README`.
 
 Frontend (dir `frontend/`):
 ```bash
