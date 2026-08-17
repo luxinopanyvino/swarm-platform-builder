@@ -88,9 +88,14 @@ def test_human_formatter_is_emoji_free_at_info():
 # Correlation-id middleware (framework-agnostic)
 # --------------------------------------------------------------------------- #
 
+class _FakeState:
+    """Stand-in for Starlette's ``request.state`` (a plain attribute bag)."""
+
+
 class _FakeRequest:
     def __init__(self, headers=None):
         self.headers = headers or {}
+        self.state = _FakeState()
 
 
 class _FakeResponse:
@@ -119,8 +124,12 @@ async def test_middleware_reuses_inbound_request_id():
         assert lc.request_id_ctx.get() == "abc-123"
         return _FakeResponse()
 
-    resp = await lc.request_id_middleware(_FakeRequest({"X-Request-ID": "abc-123"}), call_next)
+    request = _FakeRequest({"X-Request-ID": "abc-123"})
+    resp = await lc.request_id_middleware(request, call_next)
     assert resp.headers["X-Request-ID"] == "abc-123"
+    # También queda en ``state``, que sobrevive al reset del ContextVar y es de
+    # donde lo lee el manejador global de excepciones (SPEC-016/T2.4).
+    assert request.state.request_id == "abc-123"
 
 
 @pytest.mark.asyncio

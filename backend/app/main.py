@@ -8,6 +8,7 @@ from app.core.database import init_db
 # Import models to ensure they are registered on Base.metadata
 from app import models
 from app.core.config import settings
+from app.core.errors import install_error_handling
 from app.core.logging_config import configure_logging, request_id_middleware
 from app.core.security import hash_password
 
@@ -260,6 +261,15 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="AlejandrIA Magazine API", version="0.1.0", lifespan=lifespan)
+
+# Middleware order note: in Starlette the middleware added *last* ends up
+# outermost. The three below are therefore added inner-to-outer.
+
+# Global exception handling (SPEC-016/T2.4): opaque 500 + structured log with the
+# correlation id. Added first so it sits inside the correlation middleware (the
+# request id is bound) and inside CORS (the 500 carries CORS headers, so the
+# browser can actually read the id instead of seeing an opaque network error).
+install_error_handling(app)
 
 # Correlation id per request (X-Request-ID → logs + response header). Added before
 # CORS so every request — including those short-circuited later — gets an id.
