@@ -70,6 +70,14 @@ export default function PaperViewPage() {
             ref={iframeRef}
             title="Maquetación del artículo"
             srcDoc={html}
+            // Sandboxed without `allow-scripts` (SPEC-016/AC1): the paper is
+            // static HTML+CSS, so no script in it can ever run — including one
+            // smuggled in through article content. `allow-same-origin` is kept
+            // because the Print button reaches into contentWindow, and
+            // `allow-modals` because print() opens a modal; neither grants
+            // script execution on its own, and the dangerous pair
+            // (same-origin + scripts) is never combined.
+            sandbox="allow-same-origin allow-modals"
             style={{ flex: 1, border: 'none', width: '100%', height: '100%', background: '#fff' }}
           />
         )}

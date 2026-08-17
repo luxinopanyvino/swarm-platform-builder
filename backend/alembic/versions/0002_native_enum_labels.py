@@ -31,10 +31,9 @@ depends_on: Union[str, Sequence[str], None] = None
 # Etiquetas que deben existir en el tipo nativo. Congeladas a propósito: una
 # migración es una foto del esquema, no una consulta a los modelos de hoy.
 #
-# `ACL` va incluida aunque `ScientificFormat` todavía no la declare en esta rama:
-# la añade #281, y una etiqueta de enum sin usar es inerte. Al revés —el ORM con un
-# miembro que el tipo nativo no conoce— es un error en tiempo de escritura, que es
-# exactamente el fallo que esta revisión repara.
+# `ACL` está aquí y no en `0001_baseline` porque llegó después (#281), cuando la
+# base ya estaba escrita. Una base Postgres nueva la recibe en este paso; el
+# resultado tras `upgrade head` es el mismo.
 _SCIENTIFIC_FORMAT_LABELS = ("APA", "IEEE", "ACL", "VANCOUVER", "CHICAGO", "NATURE", "NONE")
 
 # Minúsculas que dejaron los ALTER ad-hoc. Postgres no permite quitar etiquetas de

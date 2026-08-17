@@ -627,6 +627,7 @@ export function AgentEditorModal({ agent, isBuiltin, models, onClose, onSaved, o
                     >
                       <option value="apa">APA 7th edition — (Autor, Año)</option>
                       <option value="ieee">IEEE — [1], [2] numerados</option>
+                      <option value="acl">ACL (conferencia) — (Autor et al., Año)</option>
                       <option value="vancouver">Vancouver — numeración secuencial</option>
                       <option value="chicago">Chicago 17th edition — (Autor Año)</option>
                       <option value="nature">Nature / NLM — superíndices numerados</option>

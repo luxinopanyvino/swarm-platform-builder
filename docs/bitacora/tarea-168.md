@@ -67,10 +67,12 @@ base nueva ya nace bien desde la base), y hay un test que impide la reincidencia
   más congelaría esa divergencia, así que se compara el esquema real con los
   modelos y se registra un `WARNING` con lo que falta. Es honesto sobre lo que la
   adopción de Alembic **no** puede arreglar retroactivamente.
-- **`0002` lleva la etiqueta `ACL` aunque el enum de esta rama no la declare.** La
-  añade #281 y una etiqueta sin usar es inerte; al revés —el ORM con un miembro que
-  el tipo nativo no conoce— es un error al escribir. Por eso el test compara con
-  `⊆` y no con `==`.
+- **`ACL` va en `0002` y no en la base.** Llegó con #281, cuando `0001_baseline` ya
+  estaba escrita, así que se registra en el paso siguiente en lugar de reescribir la
+  foto inicial. El resultado tras `upgrade head` es el mismo. El test compara con
+  `⊆` y no con `==` justamente para que la migración pueda ir por delante del ORM:
+  una etiqueta sin usar es inerte, mientras que un miembro del ORM que el tipo
+  nativo no conoce es un error al escribir.
 - **No se toca `dev.db`**: es T4.2 (#169), tarea aparte de la misma épica.
 
 ### Test nuevo
