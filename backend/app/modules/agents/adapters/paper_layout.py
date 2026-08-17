@@ -179,6 +179,30 @@ def _safe_img_src(url: str, asset_resolver=None) -> str | None:
     return None
 
 
+# Schemes a link in a paper may legitimately use. Everything else — notably
+# ``javascript:`` and ``data:`` — is dropped: the layout is rendered in an iframe
+# and printed, so a hostile href is a stored-XSS vector for every reader of the
+# published article (SPEC-016/AC1).
+_SAFE_LINK_SCHEMES = ("http://", "https://", "mailto:")
+
+
+def _safe_href(url: str) -> str | None:
+    """Return the URL if its scheme is allowed, else ``None``.
+
+    Relative and anchor links are allowed (they cannot carry a scheme). The check
+    strips leading control/whitespace characters first, because
+    ``java\\tscript:`` and ``  javascript:`` are both parsed as the scheme by
+    browsers.
+    """
+    ref = re.sub(r"[\x00-\x20]", "", (url or ""))
+    lowered = ref.lower()
+    if lowered.startswith(_SAFE_LINK_SCHEMES):
+        return ref
+    if ":" not in lowered.split("/")[0]:      # no scheme at all → relative/anchor
+        return ref or None
+    return None
+
+
 def _inline(text: str, asset_resolver=None) -> str:
     """Apply inline markdown formatting to already plain (un-escaped) text."""
     # Protect nothing fancy — escape first, then re-introduce safe tags.
@@ -199,12 +223,16 @@ def _inline(text: str, asset_resolver=None) -> str:
 
     out = re.sub(r"!\[([^\]]*)\]\(([^)\s]+)\)", _image, out)
 
-    # links [text](url)  (escape already turned & into &amp;, urls are simple)
-    out = re.sub(
-        r"\[([^\]]+)\]\(([^)\s]+)\)",
-        lambda m: f'<a href="{m.group(2)}">{m.group(1)}</a>',
-        out,
-    )
+    # links [text](url) — scheme-checked and quote-escaped. A rejected link keeps
+    # its text (the reader still sees the words) but loses the anchor.
+    def _link(match: "re.Match") -> str:
+        label, url = match.group(1), match.group(2)
+        href = _safe_href(url)
+        if not href:
+            return label
+        return f'<a href="{html.escape(href, quote=True)}">{label}</a>'
+
+    out = re.sub(r"\[([^\]]+)\]\(([^)\s]+)\)", _link, out)
     out = re.sub(r"\*\*([^*]+)\*\*", r"<strong>\1</strong>", out)
     out = re.sub(r"__([^_]+)__", r"<strong>\1</strong>", out)
     out = re.sub(r"(?<!\*)\*([^*]+)\*(?!\*)", r"<em>\1</em>", out)
