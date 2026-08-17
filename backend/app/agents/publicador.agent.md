@@ -16,7 +16,7 @@ Agente de publicación. Persiste el texto final en la base de datos, marca el ar
 - Escritura en DB (PostgreSQL vía SQLAlchemy async)
 - Generación de URL pública del artículo
 - Cálculo de metadatos: word count, reading time, timestamp, licencia
-- Maquetación determinista a HTML autocontenido (`paper_html`) con una plantilla por formato de cita (`apa`, `ieee`, `vancouver`, `chicago`, `nature`). IEEE se renderiza a 2 columnas; el resto a 1 columna con su convención visual. Ver `adapters/paper_layout.py`.
+- Maquetación determinista a HTML autocontenido (`paper_html`) con una plantilla por formato de cita (`apa`, `ieee`, `acl`, `vancouver`, `chicago`, `nature`). IEEE y ACL se renderizan a 2 columnas; el resto a 1 columna con su convención visual. Ver `adapters/paper_layout.py`.
 
 ## Sesgo
 Determinismo total. No usa LLM. Opera directamente sobre la base de datos. La maquetación se construye con un conversor markdown→HTML propio (sin dependencias). Si el artículo no existe en DB, lo registra en logs pero no lanza excepción. Si la maquetación falla, se registra y la publicación continúa.

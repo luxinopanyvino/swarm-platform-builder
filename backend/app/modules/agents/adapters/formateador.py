@@ -115,6 +115,20 @@ def format_source_deterministic(s: dict, style: str, index: int) -> str:
         else:
             lead = ""
         return _finalize([lead, f"\"{title}.\"", (f"*{journal}*." if journal else "")], link)
+    elif style == "acl":
+        # ACL Anthology: autor-año sin numerar ("Autores. Año. *Título*. Journal.").
+        # Sin esta rama caía al `else` numerado, contradiciendo su propia
+        # instrucción de cita en texto —(Autor et al., Año)— y dejando el paper
+        # con citas autor-año y una bibliografía [1], [2].
+        parts = []
+        if authors:
+            parts.append(f"{authors}.")
+        if year:
+            parts.append(f"{year}.")
+        parts.append(f"*{title}*.")
+        if journal:
+            parts.append(f"In {journal}.")
+        return _finalize(parts, link)
     elif style == "nature":
         parts = [f"{index}."]
         if authors:
