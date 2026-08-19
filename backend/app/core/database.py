@@ -6,6 +6,7 @@ from alembic.config import Config
 from alembic.runtime.migration import MigrationContext
 from alembic.script import ScriptDirectory
 from sqlalchemy import inspect, text
+from sqlalchemy.engine import make_url
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy.orm import declarative_base
 
@@ -22,6 +23,27 @@ _engine_kwargs = (
     {"connect_args": {"check_same_thread": False}} if _is_sqlite
     else {"pool_size": 5, "max_overflow": 10, "pool_pre_ping": True}
 )
+
+
+def _ensure_sqlite_directory(url: str) -> None:
+    """Crear el directorio del fichero SQLite si no existe (SPEC-018 / T4.2 / AC2).
+
+    SQLite **no** crea el directorio padre: abrir `./data/dev.db` en un clon recién
+    hecho falla con `unable to open database file`. Como los `.db` no se versionan,
+    el directorio puede no existir, así que el arranque lo prepara y «la base de
+    desarrollo se recrea sola» vale para cualquier ruta configurada, no solo para
+    la que lleva un `.gitkeep`.
+    """
+    database = make_url(url).database
+    if not database or database == ":memory:":
+        return  # base en memoria: no hay fichero que respaldar
+    parent = Path(database).expanduser().parent
+    if parent and not parent.exists():
+        parent.mkdir(parents=True, exist_ok=True)
+
+
+if _is_sqlite:
+    _ensure_sqlite_directory(settings.DATABASE_URL)
 
 # Motor async
 engine = create_async_engine(
