@@ -1,0 +1,8 @@
+Directorio de las bases SQLite de desarrollo (`config.yaml` apunta aquí:
+`sqlite+aiosqlite:///./data/dev.db`). Los `.db` están en .gitignore, pero el
+directorio sí se versiona: git no guarda directorios vacíos y SQLite **no crea el
+directorio padre** — sin este fichero, un clon nuevo arrancaba con
+`unable to open database file`.
+
+`init_db` también lo crea por su cuenta, así que esto es el cinturón y aquello los
+tirantes: el clon queda listo aunque nadie haya arrancado el backend todavía.

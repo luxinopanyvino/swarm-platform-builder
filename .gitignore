@@ -70,9 +70,17 @@ docs/.vitepress/cache/
 # Graphify knowledge-graph build artifacts (local only)
 graphify-out/
 
-# Local SQLite databases (no versionar datos de desarrollo/tests)
-backend/data/*.db
-backend/tests/*.db
+# Bases SQLite locales (datos de desarrollo y de tests: nunca versionados).
+# Regla general y no por directorio: `backend/dev.db` estaba trackeado precisamente
+# porque las reglas anteriores solo cubrían `backend/data/` y `backend/tests/`, y
+# un arranque desde otro cwd deja el fichero en cualquier otro sitio.
+*.db
+*.sqlite
+*.sqlite3
+# Ficheros auxiliares que SQLite crea junto a la base (journal / WAL).
+*.db-journal
+*.db-wal
+*.db-shm
 
 # Claude Code: configuración personal (puede contener secretos/credenciales).
 # La configuración compartida del equipo va en .claude/settings.json (versionada).
