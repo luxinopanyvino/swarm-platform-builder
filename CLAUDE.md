@@ -106,6 +106,9 @@ de cambiar código lee [GOVERNANCE.md](docs/governance/GOVERNANCE.md). Lo esenci
   `docs/bitacora/tarea-<N>.md` por ejecución exitosa.
 - **Definition of Done** (§6): criterios de aceptación cumplidos, tests que cubren
   el cambio en verde, docs/spec/ADR actualizados, sin secretos en el diff.
+- **Datos y retención**: [docs/governance/data-retention.md](docs/governance/data-retention.md)
+  fija qué se guarda y cuánto. Si tocas una ventana `RETENTION_*` o añades una tabla
+  que acumule rastro, actualiza ese documento — hay un test que lo comprueba.
 - **Autoría de specs (Spec Kit, ADR-0007)**: las specs nacen con
   `/speckit-specify` (Draft desde TEMPLATE) y maduran con `/speckit-clarify`,
   `/speckit-checklist` y `/speckit-analyze` antes de pasar a Ready — paso
