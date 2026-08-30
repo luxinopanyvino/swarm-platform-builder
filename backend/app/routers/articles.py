@@ -1,7 +1,7 @@
 """Articles router: CRUD and workflow for articles."""
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, File
 from fastapi.responses import HTMLResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -13,6 +13,7 @@ from app.models import (
     AuthorDTO, ThemeDTO, ScientificFormat
 )
 from app.core.database import get_session
+from app.platform.audit import AuditAction, record_audit
 from app.routers.auth import get_current_user
 from pydantic import BaseModel
 
@@ -281,6 +282,7 @@ async def approve_article(
 @router.post("/{article_id}/publish", response_model=ArticleResponse)
 async def publish_article_direct(
     article_id: UUID,
+    request: Request,
     token_data=Depends(get_current_user),
     session: AsyncSession = Depends(get_session),
 ):
@@ -313,6 +315,17 @@ async def publish_article_direct(
         )
         session.add(notification)
 
+    # En la misma transacción que la publicación: si el commit falla, no queda
+    # constancia de una publicación que no ocurrió.
+    await record_audit(
+        session,
+        action=AuditAction.ARTICLE_PUBLISHED,
+        actor=token_data,
+        target_type="article",
+        target_id=article.id,
+        request=request,
+        detail={"title": article.title, "author_id": str(article.author_id)},
+    )
     await session.commit()
     await session.refresh(article)
     return ArticleResponse.model_validate(article)

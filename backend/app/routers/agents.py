@@ -20,7 +20,7 @@ _PROTECTED_SLUGS: frozenset[str] = frozenset({
 
 import httpx
 
-from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, UploadFile, File, Form
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, Request, UploadFile, File, Form
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from sqlalchemy import select
@@ -32,6 +32,7 @@ from app.models import (
     AgentProfileModel, AgentProfileResponse,
 )
 from app.core.database import get_session
+from app.platform.audit import AuditAction, record_audit
 from app.routers.auth import get_current_user, require_redactor
 from app.core.config import settings
 from app.core.stream_auth import issue_ticket, consume_ticket
@@ -581,7 +582,13 @@ async def list_rag_documents(agent_name: str, token_data=Depends(get_current_use
 
 
 @router.delete("/{agent_name}/rag/documents/{doc_id}")
-async def delete_rag_document(agent_name: str, doc_id: str, token_data=Depends(get_current_user)):
+async def delete_rag_document(
+    agent_name: str,
+    doc_id: str,
+    request: Request,
+    token_data=Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+):
     """Remove all Qdrant points belonging to a RAG document."""
     from app.core.config import settings
 
@@ -591,6 +598,20 @@ async def delete_rag_document(agent_name: str, doc_id: str, token_data=Depends(g
     ok = await delete_document(settings.QDRANT_URL, collection, doc_id, settings.QDRANT_API_KEY)
     if not ok:
         raise HTTPException(status_code=500, detail="Failed to delete document from the configured RAG store")
+
+    # El borrado ya ocurrió en Qdrant y no es reversible desde aquí, así que la
+    # auditoría se persiste por su cuenta: sin commit propio, un fallo posterior de
+    # la petición dejaría el documento borrado y sin rastro de quién lo hizo.
+    await record_audit(
+        session,
+        action=AuditAction.RAG_DOCUMENT_DELETED,
+        actor=token_data,
+        target_type="rag_document",
+        target_id=doc_id,
+        request=request,
+        commit=True,
+        detail={"agent": agent_name, "collection": collection},
+    )
     return {"status": "deleted", "doc_id": doc_id}
 
 

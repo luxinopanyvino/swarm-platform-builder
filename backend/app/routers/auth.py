@@ -10,6 +10,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.rate_limit import account_lockout, login_ip_limiter, register_ip_limiter
+from app.platform.audit import AuditAction, record_audit
+from app.platform.audit import client_ip as audit_client_ip
+from app.platform.audit import mask_email as audit_mask_email
 from app.core.security import hash_password, verify_password, create_access_token, verify_token
 from app.models import UserModel, UserRegisterDTO, UserLoginDTO, TokenResponse, UserResponse, UserRole, ProjectModel
 from app.core.database import get_session
@@ -21,21 +24,12 @@ router = APIRouter(prefix="/api/v1/auth", tags=["auth"])
 
 def _client_ip(request: Request) -> str:
     """Best-effort client IP for throttling (first X-Forwarded-For hop)."""
-    forwarded = request.headers.get("x-forwarded-for")
-    if forwarded:
-        return forwarded.split(",")[0].strip()
-    if request.client and request.client.host:
-        return request.client.host
-    return "unknown"
+    return audit_client_ip(request) or "unknown"
 
 
 def _mask_email(email: str) -> str:
     """Mask the local part of an email so logs carry no raw PII."""
-    local, _, domain = email.partition("@")
-    if not domain:
-        return "***"
-    head = local[0] if local else ""
-    return f"{head}***@{domain}"
+    return audit_mask_email(email) or "***"
 
 
 def _enforce_ip_rate_limit(limiter, client_ip: str, action: str) -> None:
@@ -159,6 +153,19 @@ async def login(
             logger.info(
                 "auth.login_failed account=%s ip=%s", _mask_email(account_key), client_ip
             )
+        # commit=True: este camino termina en un 401 y nunca llega a un commit del
+        # llamante. El actor no está autenticado, así que lo único identificable es
+        # el correo tecleado, que se guarda enmascarado.
+        await record_audit(
+            session,
+            action=AuditAction.ACCOUNT_LOCKED if locked else AuditAction.LOGIN_FAILED,
+            email=account_key,
+            target_type="account",
+            target_id=_mask_email(account_key),
+            request=request,
+            commit=True,
+            detail={"user_exists": bool(user)},
+        )
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
     # Successful login clears the failure counter for this account.
@@ -259,6 +266,7 @@ async def list_users(
 async def assign_role(
     user_id: UUID,
     req: AssignRoleDTO,
+    request: Request,
     token_data=Depends(require_admin),
     session: AsyncSession = Depends(get_session),
 ):
@@ -271,8 +279,20 @@ async def assign_role(
     if not user:
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
 
+    previous_role = user.role.value if user.role else None
     user.role = req.role
     session.add(user)
+    # Sin commit: la auditoría viaja en la misma transacción que el cambio de rol,
+    # así que no puede quedar registrado un cambio que acabó revertido.
+    await record_audit(
+        session,
+        action=AuditAction.ROLE_CHANGED,
+        actor=token_data,
+        target_type="user",
+        target_id=user_id,
+        request=request,
+        detail={"from": previous_role, "to": req.role.value},
+    )
     await session.commit()
     await session.refresh(user)
     return UserResponse.model_validate(user)

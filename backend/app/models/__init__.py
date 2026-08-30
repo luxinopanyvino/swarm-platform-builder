@@ -32,6 +32,11 @@ from app.models.article import (
     CreateArticleDTO,
     UpdateArticleDTO,
 )
+from app.models.audit_log import (
+    AuditAction,
+    AuditLogModel,
+    AuditLogResponse,
+)
 from app.models.project import (
     ProjectCreateDTO,
     ProjectModel,
@@ -73,6 +78,10 @@ from app.models.ai import (
 
 __all__ = [
     "Base",
+    # Audit log (SPEC-020/T6.4)
+    "AuditAction",
+    "AuditLogModel",
+    "AuditLogResponse",
     # Enums
     "UserRole",
     "ArticleStatus",

@@ -206,13 +206,33 @@ async def test_init_db_is_idempotent(tmp_path, monkeypatch):
 # Bases anteriores a Alembic: sellar, no reejecutar
 # --------------------------------------------------------------------------- #
 
-@pytest.mark.asyncio
-async def test_pre_alembic_database_is_stamped_and_keeps_its_data(tmp_path, monkeypatch):
-    """Aplicar la base a una BD que ya tiene las tablas fallaría; hay que sellarla."""
+@pytest.fixture
+def pre_alembic_db(tmp_path):
+    """Base como las anteriores a Alembic: esquema del corte y sin `alembic_version`.
+
+    Se genera aplicando `0001_baseline` y borrando después el sello, en vez de con
+    `create_all`. Es lo que de verdad había en producción —el esquema congelado en el
+    momento de adoptar Alembic— mientras que `create_all` refleja los modelos de
+    **hoy**, que ya incluyen tablas creadas por migraciones posteriores; con
+    `create_all` el test se rompería al añadir cualquier migración, y por un motivo
+    falso.
+
+    Es una fixture síncrona a propósito: `command.upgrade` abre su propio bucle de
+    eventos con `asyncio.run`, que reventaría dentro de un test `async`.
+    """
     path = tmp_path / "legacy.db"
+    command.upgrade(_config(_async_url(path)), PRE_ALEMBIC_REVISION)
+    with sqlite3.connect(path) as conn:
+        conn.execute("drop table alembic_version")
+    return path
+
+
+@pytest.mark.asyncio
+async def test_pre_alembic_database_is_stamped_and_keeps_its_data(pre_alembic_db, monkeypatch):
+    """Aplicar la base a una BD que ya tiene las tablas fallaría; hay que sellarla."""
+    path = pre_alembic_db
     engine = create_engine(_sync_url(path))
     try:
-        Base.metadata.create_all(engine)
         with engine.begin() as conn:
             conn.exec_driver_sql(
                 "insert into users (id, email, hashed_password, full_name, role,"
@@ -261,16 +281,15 @@ def database_logs():
 
 
 @pytest.mark.asyncio
-async def test_stamp_warns_when_the_legacy_schema_is_incomplete(tmp_path, monkeypatch, database_logs):
+async def test_stamp_warns_when_the_legacy_schema_is_incomplete(pre_alembic_db, monkeypatch, database_logs):
     """Los ALTER ad-hoc corrían en `try/except: pass`: una base pudo quedar coja.
 
     Sellarla en silencio congelaría esa divergencia, así que se avisa de lo que
     falta en lugar de fingir que todo está en orden.
     """
-    path = tmp_path / "incomplete.db"
+    path = pre_alembic_db
     engine = create_engine(_sync_url(path))
     try:
-        Base.metadata.create_all(engine)
         with engine.begin() as conn:
             conn.exec_driver_sql("drop table notifications")
     finally:
