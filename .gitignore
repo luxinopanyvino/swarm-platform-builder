@@ -86,3 +86,9 @@ graphify-out/
 # La configuración compartida del equipo va en .claude/settings.json (versionada).
 .claude/settings.local.json
 .claude/*.local.json
+
+# Certificados TLS del compose de producción (SPEC-017/T3.4). Una clave privada
+# versionada es una clave comprometida, aunque sea de preproducción.
+certs/*.pem
+certs/*.key
+certs/*.crt
