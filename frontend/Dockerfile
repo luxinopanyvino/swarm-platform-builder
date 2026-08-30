@@ -17,22 +17,22 @@ ENV VITE_API_URL=${VITE_API_URL:-http://localhost:8000}
 # Compilar
 RUN npm run build
 
-# Etapa 2: Servidor de producción
-FROM nginx:1.25-alpine
+# Etapa 2: Servidor de producción, sin root (SPEC-017/T3.3/AC3)
+#
+# Imagen sin privilegios de NGINX Inc.: corre como el usuario `nginx` (UID 101) y
+# trae ya preparados los directorios temporales y de caché que nginx necesita
+# escribir. Hacerlo a mano sobre `nginx:alpine` obliga a repartir permisos en
+# media docena de rutas, y basta olvidar una para que el contenedor arranque y
+# falle al primer request.
+FROM nginxinc/nginx-unprivileged:1.25-alpine
 
 # Copiar archivos compilados al directorio de Nginx
 COPY --from=builder /app/dist /usr/share/nginx/html
 
-# Copiar configuración personalizada de Nginx para manejar rutas de SPA (React Router)
-RUN echo 'server { \
-    listen 80; \
-    location / { \
-        root /usr/share/nginx/html; \
-        index index.html index.htm; \
-        try_files $uri $uri/ /index.html; \
-    } \
-}' > /etc/nginx/conf.d/default.conf
+# Configuración de la SPA como fichero (ver frontend/nginx.conf).
+COPY nginx.conf /etc/nginx/conf.d/default.conf
 
-EXPOSE 80
+# 8080: un proceso sin privilegios no puede abrir el 80.
+EXPOSE 8080
 
 CMD ["nginx", "-g", "daemon off;"]

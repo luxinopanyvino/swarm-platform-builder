@@ -9,3 +9,11 @@ htmlcov/
 *.db
 *.log
 .dockerignore
+
+# Datos de runtime: se generan en el contenedor y viven en volúmenes, nunca en la
+# imagen (SPEC-017/T3.3).
+logs/
+app/.rag_local/
+app/.assets/
+data/
+tests/
