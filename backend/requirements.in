@@ -1,0 +1,58 @@
+# Dependencias de runtime del backend — FUENTE, no lockfile (SPEC-020/T6.3).
+#
+# Este fichero se edita a mano y expresa los rangos aceptables. El que se instala
+# es `requirements.txt`, generado desde aquí con versiones exactas y hashes:
+#
+#     cd backend
+#     pip-compile --generate-hashes --output-file requirements.txt requirements.in
+#
+# Se compila con Python 3.12, la misma versión que usan la CI y la imagen Docker:
+# los marcadores de entorno y la resolución dependen de la versión, y un lock hecho
+# con otra puede omitir una rueda que allí hace falta. Nunca edites requirements.txt
+# a mano — `pip install --require-hashes` rechazaría cualquier línea sin hash.
+
+# Web framework
+fastapi>=0.104.1
+uvicorn[standard]>=0.24.0
+
+# Validation & settings
+pydantic>=2.9.0
+pydantic-settings>=2.4.0
+
+# Database (relational)
+sqlalchemy>=2.0.30
+asyncpg>=0.30.0
+aiosqlite>=0.20.0
+alembic>=1.12.0
+
+# Auth
+python-jose[cryptography]>=3.3.0
+passlib[bcrypt]>=1.7.4
+
+# HTTP / file uploads
+httpx>=0.27.0
+python-multipart>=0.0.19
+
+# Utilities
+email-validator>=2.0.0
+python-dotenv>=1.0.0
+PyYAML>=6.0.1
+
+# Document parsing (RAG)
+pypdf>=4.0.0
+
+# Graph utilities (RAG)
+networkx>=3.0
+
+# AI orchestration
+langgraph>=0.2.0
+langchain-core>=0.3.0
+
+# LLM providers
+anthropic>=0.40.0
+openai>=1.0.0
+
+# Testing
+pytest>=8.0.0
+pytest-asyncio>=0.23.0
+httpx>=0.27.0

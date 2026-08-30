@@ -26,7 +26,6 @@ DEBUG=true SECRET_KEY=ci-secret-not-for-prod python -m pytest -q   # desde backe
 python -m pytest tests/test_auth_rate_limit_lockout.py -v          # un archivo
 python -m pytest -k lockout -v                                      # por nombre
 uvicorn app.main:app --reload --port 8000                           # servidor dev
-pip install -r requirements.txt
 
 # Esquema — Alembic (SPEC-018/T4.1). init_db ya aplica `upgrade head` al arrancar;
 # estos comandos son para trabajar el esquema a mano:
@@ -34,6 +33,12 @@ alembic current                            # revisión aplicada
 alembic check                              # ¿los modelos van por delante?
 alembic revision --autogenerate -m "..."   # nueva migración desde los modelos
 alembic upgrade head / downgrade -1
+
+# Dependencias — lock con hashes (SPEC-020/T6.3). NO edites requirements.txt:
+# los rangos van en requirements.in y el lock se recompila desde ahí, con 3.12.
+pip install --require-hashes -r requirements.txt          # instalar como la CI
+pip-compile --generate-hashes --no-strip-extras \
+    --output-file requirements.txt requirements.in        # tras tocar requirements.in
 ```
 No hay `pytest.ini`/`pyproject.toml`: los tests se invocan con `python -m pytest`
 desde `backend/` y fijan su propio `DATABASE_URL` (SQLite) en tiempo de import.
@@ -119,8 +124,10 @@ hook: crea una rama con prefijo y abre PR.
 ### CI (gate de PR a develop)
 
 `.github/workflows/ci.yml` corre en cada PR: `pytest` backend, `npm run build`
-frontend, validación de specs (`scripts/validate_specs.py`) y escaneo de secretos
-(gitleaks). Hay además review automática de Claude y un digest diario
+frontend, validación de specs (`scripts/validate_specs.py`), auditoría de
+dependencias (`pip-audit` + `npm audit`, job `deps-audit`) y escaneo de secretos
+(gitleaks). Dependabot (`.github/dependabot.yml`) actualiza backend, frontend y
+Actions cada semana. Hay además review automática de Claude y un digest diario
 (`.github/workflows/claude-*.yml`).
 
 ## graphify (grafo de conocimiento — tooling local)

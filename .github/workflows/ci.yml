@@ -35,8 +35,11 @@ jobs:
           python-version: "3.12"
           cache: pip
           cache-dependency-path: backend/requirements.txt
-      - name: Instalar dependencias
-        run: pip install -r requirements.txt
+      - name: Instalar dependencias desde el lock
+        # --require-hashes: pip rechaza cualquier requisito sin hash y cualquier
+        # artefacto cuyo hash no coincida, así que la CI no puede instalar una
+        # versión distinta de la fijada en requirements.txt (SPEC-020/T6.3/AC3).
+        run: pip install --require-hashes -r requirements.txt
       - name: Ejecutar tests
         run: python -m pytest -q
 
@@ -69,6 +72,56 @@ jobs:
       - run: pip install "pyyaml>=6.0.1"
       - name: Validar bloques sdd-sync
         run: python scripts/validate_specs.py
+
+  deps-audit:
+    name: Cadena de suministro · pip-audit + npm audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Instalar pip-audit
+        run: pip install "pip-audit==2.10.1"
+
+      - name: Auditar dependencias del backend
+        working-directory: backend
+        # Audita el lock, no el entorno: es lo que se despliega de verdad.
+        #
+        # PYSEC-2026-1325 (ecdsa) se ignora con motivo: es un ataque de canal
+        # lateral sobre ECDSA, la dependencia entra de forma transitiva por
+        # python-jose y **no tiene versión con arreglo**. El backend firma sus JWT
+        # con HS256 (`ALGORITHM` en app/core/config.py), que es HMAC y no toca
+        # ECDSA por ningún lado. Si algún día se pasa a ES256, hay que quitar esta
+        # excepción antes.
+        run: |
+          pip-audit --require-hashes -r requirements.txt \
+            --ignore-vuln PYSEC-2026-1325
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Instalar dependencias del frontend
+        working-directory: frontend
+        run: npm ci
+
+      - name: Auditar dependencias del frontend (bloqueante en high/critical)
+        working-directory: frontend
+        # Umbral en `high` y no en `moderate` por una razón concreta: las dos
+        # moderadas que quedan (open redirect en react-router) solo se arreglan
+        # subiendo a react-router-dom 7.x, un salto de major que necesita probar
+        # el enrutado y merece su propia tarea. Bloquear ahí dejaría la CI roja sin
+        # que nadie pueda arreglarla desde esta PR.
+        run: npm audit --omit=dev --audit-level=high
+
+      - name: Inventario completo de avisos (informativo)
+        if: always()
+        working-directory: frontend
+        # No bloquea, pero deja las moderadas a la vista en cada ejecución para que
+        # no se conviertan en deuda invisible.
+        run: npm audit --omit=dev || true
 
   secret-scan:
     name: Seguridad · gitleaks
