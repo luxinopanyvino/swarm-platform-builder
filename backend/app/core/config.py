@@ -35,6 +35,17 @@ class Settings(BaseModel):
     # clients exchange it for a single-use ticket valid for this many seconds.
     SSE_TICKET_TTL_SECONDS: int = 30
 
+    # Retención de datos (SPEC-020/T6.5). Ventanas en días; **0 desactiva** la purga
+    # de ese conjunto, que es lo que hay que poner cuando una obligación legal exige
+    # conservar. Los valores por defecto están razonados en
+    # docs/governance/data-retention.md; cambiarlos aquí sin actualizar el documento
+    # deja la política mintiendo.
+    RETENTION_AUDIT_LOG_DAYS: int = 365
+    RETENTION_AGENT_RUNS_DAYS: int = 90
+    RETENTION_CHECKPOINTS_DAYS: int = 30
+    RETENTION_NOTIFICATIONS_DAYS: int = 90
+    RETENTION_ORPHAN_ASSETS_DAYS: int = 30
+
     # Access controls — MUST be False in production
     ENABLE_DEV_ROLE_PROMOTION: bool = False
 
@@ -142,6 +153,7 @@ def _build_settings() -> Settings:
     ollama = yaml_config.get("ollama", {})
     qdrant = yaml_config.get("qdrant", {})
     minio = yaml_config.get("minio", {})
+    retention = yaml_config.get("retention", {})
 
     merged: dict[str, Any] = {
         "APP_NAME": app.get("name", "Alejandria Magazine"),
@@ -159,6 +171,12 @@ def _build_settings() -> Settings:
         "AUTH_LOCKOUT_MAX_FAILED": security.get("auth_lockout_max_failed", 5),
         "AUTH_LOCKOUT_SECONDS": security.get("auth_lockout_seconds", 900),
         "SSE_TICKET_TTL_SECONDS": security.get("sse_ticket_ttl_seconds", 30),
+        # Retención (SPEC-020/T6.5)
+        "RETENTION_AUDIT_LOG_DAYS": retention.get("audit_log_days", 365),
+        "RETENTION_AGENT_RUNS_DAYS": retention.get("agent_runs_days", 90),
+        "RETENTION_CHECKPOINTS_DAYS": retention.get("checkpoints_days", 30),
+        "RETENTION_NOTIFICATIONS_DAYS": retention.get("notifications_days", 90),
+        "RETENTION_ORPHAN_ASSETS_DAYS": retention.get("orphan_assets_days", 30),
         # Fail-safe: when the key is absent the effective value is False.
         "ENABLE_DEV_ROLE_PROMOTION": access.get("enable_dev_role_promotion", False),
         "DEFAULT_SIGNUP_ROLE": access.get("default_signup_role", "lector"),

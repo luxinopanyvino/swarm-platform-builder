@@ -170,6 +170,10 @@ Complementa al SDD para los componentes **probabilísticos** (agentes/modelos). 
 
 ## 8. Datos y cumplimiento
 
-- PII tratada (emails, contenidos) sujeta a la política de retención
-  (épica E6). No registrar secretos ni PII en logs.
+- PII tratada (emails, contenidos) sujeta a la
+  [política de retención](data-retention.md) (SPEC-020/AC5): qué se guarda, cuánto y
+  cómo se purga. Las ventanas viven en `RETENTION_*` y se aplican con
+  `python -m app.platform.retention` (simula por defecto; borra con `--apply`).
+  **Cambiar una ventana obliga a actualizar el documento**: si divergen, la política
+  miente. No registrar secretos ni PII en logs.
 - Reporte de vulnerabilidades: ver [`SECURITY.md`](../../SECURITY.md).

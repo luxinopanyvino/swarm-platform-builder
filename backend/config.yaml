@@ -79,3 +79,14 @@ agents:
   publicador:
     model: llama3.2:1b
     rag_enabled: false
+
+# Retención de datos (SPEC-020/T6.5). Ventanas en días; 0 desactiva esa purga.
+# Se aplican con: cd backend && python -m app.platform.retention [--apply]
+# Razonadas en docs/governance/data-retention.md — cambiarlas aquí obliga a
+# actualizar ese documento (hay un test que lo comprueba).
+retention:
+  audit_log_days: 365
+  agent_runs_days: 90
+  checkpoints_days: 30
+  notifications_days: 90
+  orphan_assets_days: 30
