@@ -28,6 +28,12 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    # Límite de recursos (SPEC-017/AC5). Datos relacionales: el pico real es el pool de conexiones.
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 1G
 
   # ─────────────────────────────────────────
   # Vector DB (RAG)
@@ -50,6 +56,12 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    # Límite de recursos (SPEC-017/AC5). Mantiene los vectores en memoria; el techo crece con el corpus RAG.
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 2G
 
   # ─────────────────────────────────────────
   # LLM inference (Ollama)
@@ -79,6 +91,13 @@ services:
       timeout: 10s
       retries: 5
       start_period: 300s  # allow time for model downloads on first run
+    # Límite de recursos (SPEC-017/AC5). El más goloso: un modelo de 7B no cabe por debajo de ~6G. Es el
+    # primer límite a subir si el pipeline se queda sin memoria.
+    deploy:
+      resources:
+        limits:
+          cpus: "4.0"
+          memory: 8G
 
   # ─────────────────────────────────────────
   # Backend (FastAPI + LangGraph)
@@ -118,7 +137,9 @@ services:
       postgres:
         condition: service_healthy
       qdrant:
-        condition: service_started
+        # Tenía healthcheck pero se esperaba solo a que arrancara: el backend podía
+        # empezar a atender con Qdrant todavía sin responder.
+        condition: service_healthy
       ollama:
         condition: service_healthy
     volumes:
@@ -131,6 +152,26 @@ services:
     networks:
       - alejandria_network
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    # Readiness, no liveness (SPEC-017/AC5 + SPEC-019/AC4): el contenedor solo se
+    # marca sano cuando además de vivir puede atender tráfico útil —base de datos,
+    # Qdrant y proveedor de LLM alcanzables—, así que `depends_on: service_healthy`
+    # de otros servicios significa algo de verdad.
+    #
+    # Se sondea con Python y no con wget/curl: es lo único que la imagen garantiza
+    # tener, y T3.3 (#165) va a quitar el toolchain de la imagen final.
+    healthcheck:
+      test: ["CMD", "python", "healthcheck.py"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      # Margen para migraciones y seeding en el primer arranque.
+      start_period: 60s
+    # Límite de recursos (SPEC-017/AC5). Suficiente para uvicorn y el grafo; no carga modelos en proceso.
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 1G
 
   # ─────────────────────────────────────────
   # Frontend (React + Vite → Nginx)
@@ -149,6 +190,19 @@ services:
       - "8080:80"
     networks:
       - alejandria_network
+    # Límite de recursos (SPEC-017/AC5). Solo sirve estáticos con nginx.
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
+    # Readiness: nginx responde el index. wget viene en busybox (nginx:alpine).
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost/ || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
 
 volumes:
   postgres_data:
