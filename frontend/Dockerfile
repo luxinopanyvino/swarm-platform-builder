@@ -29,8 +29,10 @@ FROM nginxinc/nginx-unprivileged:1.25-alpine
 # Copiar archivos compilados al directorio de Nginx
 COPY --from=builder /app/dist /usr/share/nginx/html
 
-# Configuración de la SPA como fichero (ver frontend/nginx.conf).
+# Configuración de la SPA como ficheros (ver frontend/nginx.conf).
+# Las cabeceras y la CSP van aparte porque las comparten dev y prod.
 COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY security-headers.inc /etc/nginx/conf.d/security-headers.inc
 
 # 8080: un proceso sin privilegios no puede abrir el 80.
 EXPOSE 8080

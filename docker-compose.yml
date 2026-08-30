@@ -187,7 +187,10 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        - VITE_API_URL=http://localhost:8000
+        # Vacío ⇒ rutas relativas: el cliente llama a /api/... y nginx hace de
+        # pasarela hacia el backend (T3.4). Sin origen cruzado no hay CORS que
+        # configurar y la CSP puede quedarse en `connect-src 'self'`.
+        - VITE_API_URL=
     container_name: alejandria_frontend
     restart: unless-stopped
     depends_on:

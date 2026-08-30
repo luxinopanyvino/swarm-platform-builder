@@ -1,0 +1,55 @@
+# Override de producción (SPEC-017 / T3.4 / AC4).
+#
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+#
+# El fichero base es el de **desarrollo**: monta el código del host, arranca uvicorn
+# con --reload y sirve por HTTP. Este override deshace esas tres cosas y añade TLS.
+#
+# Requiere Docker Compose ≥ 2.24 por las etiquetas `!override`, que **reemplazan**
+# una lista en vez de concatenarla. Sin ellas no habría forma de quitar el bind
+# mount del código: compose fusiona los volúmenes y el del host seguiría ahí,
+# anulando la imagen inmutable y devolviendo los permisos del host a un proceso que
+# desde T3.3 ya no corre como root.
+services:
+  backend:
+    environment:
+      DEBUG: "false"
+      # Sin promoción de rol y sin sembrar usuarios de desarrollo.
+      ENABLE_DEV_ROLE_PROMOTION: "false"
+      # El frontend llama por rutas relativas y nginx hace de pasarela, así que no
+      # hay origen cruzado que permitir.
+      ALLOWED_ORIGINS: ""
+    volumes: !override
+      # Solo lo que debe persistir. El código viaja **dentro de la imagen**.
+      - ./config.yaml:/app/config.yaml:ro
+      - rag_local_data:/app/app/.rag_local
+      - assets_data:/app/app/.assets
+      - backend_logs:/app/logs
+    # Sin --reload: recarga en caliente en producción es un vigilante de ficheros
+    # consumiendo CPU y un riesgo de reinicio a mitad de petición.
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+    # El backend deja de publicarse al host: solo se llega por la pasarela de nginx.
+    ports: !override []
+
+  frontend:
+    build:
+      args:
+        # Vacío ⇒ el cliente usa rutas relativas y todo va por el mismo origen.
+        - VITE_API_URL=
+    volumes:
+      - ./frontend/nginx.prod.conf:/etc/nginx/conf.d/default.conf:ro
+      # Certificado y clave los aporta el operador. Para pruebas locales, ver
+      # docs/guide/tls-local.md.
+      - ./certs:/etc/nginx/certs:ro
+    ports: !override
+      - "80:8080"    # solo redirige a HTTPS
+      - "443:8443"   # el proceso no root no puede abrir el 443 directamente
+    healthcheck:
+      # En producción el 8080 solo devuelve un 301, así que la sonda mira el TLS.
+      # --no-check-certificate porque un certificado autofirmado en preproducción
+      # no debe marcar el contenedor como enfermo.
+      test: ["CMD-SHELL", "wget -q --spider --no-check-certificate https://localhost:8443/ || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s

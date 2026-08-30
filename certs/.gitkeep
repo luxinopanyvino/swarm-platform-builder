@@ -1,0 +1,8 @@
+Certificado y clave TLS para el compose de producción (SPEC-017/T3.4).
+
+Este directorio se monta en /etc/nginx/certs dentro del contenedor del frontend.
+nginx.prod.conf espera encontrar aquí `fullchain.pem` y `privkey.pem`.
+
+**Los .pem NO se versionan** (ver .gitignore): una clave privada en git es una
+clave comprometida, aunque sea de preproducción. Los aporta el operador —de una
+CA, de Let's Encrypt o autofirmados para pruebas—; ver docs/guide/tls-local.md.
