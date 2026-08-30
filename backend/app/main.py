@@ -15,7 +15,7 @@ from app.core.security import hash_password
 # Structured logging (JSON in prod, human-readable in debug) + correlation ids.
 # Configure as early as possible so runtime logs use the central handler (SPEC-019/T5.1).
 configure_logging()
-from app.routers import auth, articles, ai, agents, flows, config, notifications, checkpoints, projects
+from app.routers import auth, articles, ai, agents, flows, config, notifications, checkpoints, projects, audit
 from app.routers.magazine import router as magazine_router
 from app.core.database import AsyncSessionLocal
 from app.shared.agents_seed import seed_agents_for_project
@@ -301,6 +301,7 @@ app.include_router(config.router)
 app.include_router(notifications.router)
 app.include_router(checkpoints.router)
 app.include_router(projects.router)
+app.include_router(audit.router)
 app.include_router(magazine_router)
 
 
