@@ -146,7 +146,13 @@ services:
       # Mount source for hot-reload in dev; remove in production image builds
       - ./backend:/app
       - ./config.yaml:/app/config.yaml:ro
+      # Rutas que la aplicación escribe. Como volúmenes nombrados y no dentro del
+      # bind mount: heredan el propietario del directorio de la imagen (usuario
+      # `app`), mientras que el bind mount trae los permisos del host y el proceso
+      # sin privilegios no podría escribir en él.
       - rag_local_data:/app/app/.rag_local
+      - assets_data:/app/app/.assets
+      - backend_logs:/app/logs
     ports:
       - "8000:8000"
     networks:
@@ -186,8 +192,9 @@ services:
     restart: unless-stopped
     depends_on:
       - backend
+    # 8080 dentro del contenedor: nginx corre sin privilegios y no puede abrir el 80.
     ports:
-      - "8080:80"
+      - "8080:8080"
     networks:
       - alejandria_network
     # Límite de recursos (SPEC-017/AC5). Solo sirve estáticos con nginx.
@@ -198,7 +205,7 @@ services:
           memory: 256M
     # Readiness: nginx responde el index. wget viene en busybox (nginx:alpine).
     healthcheck:
-      test: ["CMD-SHELL", "wget -q --spider http://localhost/ || exit 1"]
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:8080/ || exit 1"]
       interval: 15s
       timeout: 5s
       retries: 3
@@ -212,4 +219,8 @@ volumes:
   ollama_data:
     driver: local
   rag_local_data:
+    driver: local
+  assets_data:
+    driver: local
+  backend_logs:
     driver: local
