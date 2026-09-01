@@ -60,6 +60,14 @@ class Settings(BaseModel):
 
     # Redis
     REDIS_URL: str = "redis://:password@localhost:6379/0"
+    # Tracing OpenTelemetry (SPEC-019/T5.3). Apagado por defecto: exporta trazas a
+    # un colector externo y no debe encenderse sin querer. Los nombres son los
+    # estándar de OTel a propósito, para que quien ya opera un colector reconozca
+    # las variables sin traducir nada.
+    OTEL_ENABLED: bool = False
+    OTEL_SERVICE_NAME: str = "alejandria-backend"
+    OTEL_EXPORTER_OTLP_ENDPOINT: str = ""
+
     # Coordinación entre workers (SPEC-018/T4.3). Apagada por defecto: con un solo
     # worker el bus en proceso basta y no obliga a levantar Redis para desarrollar.
     #
@@ -165,6 +173,7 @@ def _build_settings() -> Settings:
     qdrant = yaml_config.get("qdrant", {})
     minio = yaml_config.get("minio", {})
     retention = yaml_config.get("retention", {})
+    otel = yaml_config.get("otel", {})
 
     merged: dict[str, Any] = {
         "APP_NAME": app.get("name", "Alejandria Magazine"),
@@ -194,6 +203,10 @@ def _build_settings() -> Settings:
         "DEFAULT_SIGNUP_ROLE": access.get("default_signup_role", "lector"),
         "REDIS_URL": redis.get("url", "redis://:password@localhost:6379/0"),
         "REDIS_ENABLED": redis.get("enabled", False),
+        # Tracing (SPEC-019/T5.3)
+        "OTEL_ENABLED": otel.get("enabled", False),
+        "OTEL_SERVICE_NAME": otel.get("service_name", "alejandria-backend"),
+        "OTEL_EXPORTER_OTLP_ENDPOINT": otel.get("endpoint", ""),
         "OLLAMA_BASE_URL": ollama.get("base_url", "http://localhost:11434"),
         "OLLAMA_MODEL": ollama.get("default_model", "llama3.2:1b"),
         "OLLAMA_EMBED_MODEL": ollama.get("embed_model", "nomic-embed-text"),

@@ -23,6 +23,7 @@ from app.modules.agents.adapters.publicador import run_publicador
 from app.modules.agents.adapters.generic import run_generic_agent, load_agent_profile
 from app.platform.bus import get_bus
 from app.platform.metrics import current_agent_ctx, observe_agent_run
+from app.platform.tracing import record_error, span
 
 logger = logging.getLogger(__name__)
 
@@ -220,6 +221,14 @@ def make_node_wrapper(agent_name: str, run_fn):
         _token_agente = current_agent_ctx.set(agent_name)
         _inicio_agente = time.perf_counter()
         _estado_agente = "error"
+        # Span por paso de agente (SPEC-019/T5.3/AC3). Cuelga del span del pipeline
+        # porque comparten contexto de ejecución, así que la traza sale anidada sin
+        # que haya que pasar padres a mano.
+        _span_ctx = span(
+            f"agent.{agent_name}",
+            **{"agent.name": agent_name, "article.id": str(article_id)},
+        )
+        _span_agente = _span_ctx.__enter__()
 
         input_data = {
             "title": state.get("title"),
@@ -270,12 +279,14 @@ def make_node_wrapper(agent_name: str, run_fn):
         except Exception as e:
             logger.error(f"Error executing agent {agent_name}: {str(e)}")
             await log_run_end(run_id, {}, "failed", error_message=str(e))
+            record_error(_span_agente, e)
             publish_event(article_id, {"type": "agent_error", "agent": agent_name, "error": str(e)})
             publish_event(article_id, {"type": "log", "agent": agent_name, "message": f"✗ {agent_name} falló: {str(e)}", "level": "error"})
             raise
         finally:
             observe_agent_run(agent_name, time.perf_counter() - _inicio_agente, _estado_agente)
             current_agent_ctx.reset(_token_agente)
+            _span_ctx.__exit__(None, None, None)
 
     return wrapper
 
@@ -467,6 +478,20 @@ class Orchestrator:
             bus.register_cancel_handler(article_id, current_task.cancel)
         await bus.mark_running(article_id)
 
+        # Span raíz de la ejecución (SPEC-019/T5.3/AC3): los de cada agente cuelgan
+        # de este, así que la traza enseña dónde se fue el tiempo dentro del
+        # pipeline. Se abre a mano —y no con `with`— porque el cuerpo de la
+        # ejecución vive en el try/finally que sigue.
+        _span_pipeline_ctx = span(
+            "pipeline.run",
+            **{
+                "article.id": str(article_id),
+                "pipeline.agents": " → ".join(flow_sequence),
+                "pipeline.resumed": resume,
+            },
+        )
+        _span_pipeline = _span_pipeline_ctx.__enter__()
+
         # Open log buffer for this run
         _log_buffers[article_id] = []
         ts_start = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -560,9 +585,11 @@ class Orchestrator:
                 "type": "done_error", "error": str(exc), "can_resume": can_resume,
             })
             logger.error(f"LangGraph run failed for article {article_id}: {exc}")
+            record_error(_span_pipeline, exc)
             _flush_log_file(article_id, title)
             raise
         finally:
             active_tasks.pop(article_id, None)
             bus.unregister_cancel_handler(article_id)
             await bus.clear_running(article_id)
+            _span_pipeline_ctx.__exit__(None, None, None)

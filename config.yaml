@@ -112,3 +112,11 @@ retention:
 redis:
   url: redis://localhost:6379/0
   enabled: false
+
+# Tracing OpenTelemetry (SPEC-019/T5.3). Apagado por defecto: exporta a un colector
+# externo. Cada petición y cada paso de agente generan spans anidados.
+otel:
+  enabled: false
+  service_name: alejandria-backend
+  # Endpoint OTLP/HTTP del colector, p. ej. http://otel-collector:4318
+  endpoint: ""

@@ -35,9 +35,10 @@ Ollama), por lo que un despliegue "sano" puede estar roto.
   *Then* expone en formato Prometheus latencia y errores por endpoint y
   contadores de tokens/latencia LLM por agente y modelo.
   *(hecho: #172, `test_metrics.py`)*
-- [ ] **AC3** — *Given* una ejecución de pipeline, *When* el tracing OTel está
+- [x] **AC3** — *Given* una ejecución de pipeline, *When* el tracing OTel está
   habilitado, *Then* cada request y cada paso de agente genera spans anidados
   exportables por OTLP (activable por configuración, apagado por defecto).
+  *(hecho: #173, `test_tracing.py`)*
 - [x] **AC4** — *Given* `/health`, *Then* distingue **liveness** (proceso vivo)
   de **readiness** (DB, Qdrant y Ollama alcanzables), devolviendo `503` con el
   detalle de la dependencia caída cuando no está listo.
