@@ -32,9 +32,13 @@ No hay criterios objetivos de "UI correcta" ni una comprobación que lo valide.
 
 ## 3. Criterios de aceptación (Given/When/Then)
 
-- [ ] **AC1** — *Given* el código de `frontend/src`, *When* se busca color
+- [x] **AC1** — *Given* el código de `frontend/src`, *When* se busca color
   hexadecimal literal en JSX/CSS, *Then* no hay coincidencias: todo color usa
   un token (`var(--…)`) o la escala del design system.
+  <br>*T7.1 (#192)*: 82 hexes sustituidos en 11 ficheros. Única exención,
+  `src/paperTheme.js`: son los colores del **paper impreso**, espejo de
+  `_THEME_ACCENTS` del backend — la muestra debe enseñar el color del PDF, no el
+  de la aplicación; hay un test que comprueba que el espejo sigue siendo fiel.
 - [ ] **AC2** — *Given* un usuario que navega solo con teclado, *When* abre un
   modal (p. ej. editor de agentes), *Then* el foco queda atrapado en el modal,
   es **visible**, y `Esc` lo cierra devolviendo el foco al disparador.
@@ -46,6 +50,12 @@ No hay criterios objetivos de "UI correcta" ni una comprobación que lo valide.
   estado **loading / empty / error** consistente y reutilizable.
 - [ ] **AC5** — Existe una comprobación automatizable (lint/script) que valida
   AC1 y un checklist verificable para AC2–AC4.
+  <br>*T7.1 (#192)*: hecha la mitad automatizable —
+  `scripts/check_design_tokens.py`, en el job `frontend-build` de la CI. Además
+  del hex literal detecta `var(--token)` **que no existe**, que es el fallo
+  silencioso: sin fallback la propiedad se descarta y el elemento no pinta nada
+  (había 6 en `main`, ya corregidos). Pendiente el checklist de AC2–AC4, que
+  llega con T7.2 y T7.3.
 
 ## 4. Diseño propuesto
 

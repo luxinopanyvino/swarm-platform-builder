@@ -75,7 +75,7 @@ export default function FlowDesignerPage() {
       output_language: agent.output_language,
       target_word_count: agent.target_word_count,
       emoji: meta.emoji || '🤖',
-      color: meta.color || '#6b6b8a',
+      color: meta.color || 'var(--neutral-60)',
       label: meta.label || agent.name || agent.slug || agent.id,
       desc: meta.desc || `Perfil ${agent.slug || agent.id}`,
     };
@@ -392,8 +392,8 @@ export default function FlowDesignerPage() {
           <Controls />
           <MiniMap
             nodeColor={(n) => {
-              if (n.type === 'condition') return '#c47d04';
-              return n.data?.color || AGENT_META[n.data?.agentId]?.color || '#8793a5';
+              if (n.type === 'condition') return 'var(--agent-review)';
+              return n.data?.color || AGENT_META[n.data?.agentId]?.color || 'var(--neutral-60)';
             }}
             maskColor="rgba(244,246,249,0.6)"
           />
@@ -508,20 +508,20 @@ export default function FlowDesignerPage() {
                 </label>
                 <div style={{
                   display: 'flex', flexWrap: 'wrap', gap: 6, padding: '6px 10px',
-                  background: 'var(--bg-input)', border: '1px solid var(--border-subtle)',
+                  background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)',
                   borderRadius: 'var(--radius-md)', minHeight: 42, alignItems: 'center',
                 }}>
                   {runKeywords.map(kw => (
                     <span key={kw} style={{
                       display: 'inline-flex', alignItems: 'center', gap: 4,
-                      background: 'rgba(99,102,241,0.18)', color: '#a5b4fc',
+                      background: 'rgba(99,102,241,0.18)', color: 'var(--violet-40)',
                       borderRadius: 20, padding: '2px 10px', fontSize: 'var(--font-size-xs)', fontWeight: 500,
                     }}>
                       {kw}
                       <button
                         type="button"
                         onClick={() => setRunKeywords(ks => ks.filter(k => k !== kw))}
-                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#a5b4fc', lineHeight: 1, padding: 0 }}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--violet-40)', lineHeight: 1, padding: 0 }}
                         aria-label={`Eliminar keyword ${kw}`}
                       >×</button>
                     </span>

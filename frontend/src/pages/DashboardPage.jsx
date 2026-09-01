@@ -31,11 +31,11 @@ const USE_CASE_LABEL = {
 
 const USE_CASE_COLOR = {
   alejandria_magazine: 'var(--brand)',
-  desarrollo:          '#2e844a',
-  marketing:           '#c47d04',
-  tiqueting:           '#0d9dda',
-  diseno:              '#6b4fe3',
-  custom:              '#8793a5',
+  desarrollo:          'var(--agent-format)',
+  marketing:           'var(--agent-review)',
+  tiqueting:           'var(--agent-research)',
+  diseno:              'var(--agent-write)',
+  custom:              'var(--neutral-60)',
 };
 
 const NAV_ITEMS = [
@@ -208,7 +208,7 @@ export default function DashboardPage() {
                 {unread > 0 && (
                   <span style={{
                     position: 'absolute', top: 3, right: 3,
-                    background: 'var(--error)', color: '#fff',
+                    background: 'var(--error)', color: 'var(--neutral-00)',
                     borderRadius: '50%', width: 16, height: 16,
                     fontSize: 10, fontWeight: 700,
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -220,11 +220,11 @@ export default function DashboardPage() {
                 <div style={{
                   position: 'absolute', right: 0, top: 'calc(100% + 8px)',
                   width: 320, background: 'var(--bg-elevated)',
-                  border: '1px solid var(--border-color)', borderRadius: 'var(--radius-lg)',
+                  border: '1px solid var(--border-default)', borderRadius: 'var(--radius-lg)',
                   boxShadow: '0 8px 24px rgba(0,0,0,0.4)', zIndex: 200,
                   overflow: 'hidden',
                 }}>
-                  <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border-default)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <span style={{ fontWeight: 600, fontSize: 'var(--font-size-sm)' }}>Notificaciones {unread > 0 && <span style={{ color: 'var(--error)' }}>({unread} nuevas)</span>}</span>
                     {unread > 0 && (
                       <button onClick={handleMarkAllRead} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 11, color: 'var(--text-muted)', padding: 0 }} aria-label="Marcar todas como leídas">
@@ -244,7 +244,7 @@ export default function DashboardPage() {
                           padding: '12px 16px',
                           cursor: n.article_id ? 'pointer' : 'default',
                           background: n.read ? 'transparent' : 'rgba(99,102,241,0.08)',
-                          borderBottom: '1px solid var(--border-color)',
+                          borderBottom: '1px solid var(--border-default)',
                           transition: 'background 0.15s',
                         }}>
                         <div style={{ fontWeight: n.read ? 400 : 600, fontSize: 'var(--font-size-sm)', marginBottom: 2 }}>

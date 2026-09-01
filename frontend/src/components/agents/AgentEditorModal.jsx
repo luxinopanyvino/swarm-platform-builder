@@ -166,7 +166,7 @@ function RagTab({ agentName, ragCollection, ragChunkSize, ragChunkOverlap, onCol
 
   const ownDocsContent = (() => {
     if (docs === null) return <div style={{ minHeight: 24 }} aria-hidden="true" />;
-    if (loadError) return <div style={{ color: '#f59e0b', fontSize: 'var(--font-size-sm)' }}>{loadError}</div>;
+    if (loadError) return <div style={{ color: 'var(--warning)', fontSize: 'var(--font-size-sm)' }}>{loadError}</div>;
     if (docs.length === 0) return (
       <div style={{ color: 'var(--text-muted)', fontSize: 'var(--font-size-sm)', fontStyle: 'italic' }}>
         Sin documentos indexados para este agente aún.
@@ -323,7 +323,7 @@ function RagTab({ agentName, ragCollection, ragChunkSize, ragChunkOverlap, onCol
         </div>
 
         {lastIndexed && (
-          <div style={{ fontSize: 'var(--font-size-xs)', color: '#34d399' }}>
+          <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--success)' }}>
             Indexado: {lastIndexed.filename} · {lastIndexed.chunks} chunks en "{lastIndexed.collection}"
           </div>
         )}
@@ -644,7 +644,7 @@ export function AgentEditorModal({ agent, isBuiltin, models, onClose, onSaved, o
                     borderRadius: 'var(--radius-md)', padding: 'var(--space-4)',
                     fontSize: 'var(--font-size-xs)', color: 'var(--text-secondary)', lineHeight: 1.7,
                   }}>
-                    <strong style={{ color: '#0d9dda', display: 'block', marginBottom: 6 }}>Pipeline del Investigador</strong>
+                    <strong style={{ color: 'var(--agent-research)', display: 'block', marginBottom: 6 }}>Pipeline del Investigador</strong>
                     El agente ejecuta las siguientes etapas en orden:
                     <ol style={{ margin: '8px 0 0 16px', display: 'flex', flexDirection: 'column', gap: 4 }}>
                       <li><strong>RAG local</strong> — búsqueda vectorial (cosine similarity) en Qdrant con las keywords del artículo como query. Controlado por <em>Top-K RAG</em> y <em>coleción</em> del tab RAG.</li>

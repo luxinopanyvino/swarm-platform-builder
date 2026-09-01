@@ -56,10 +56,17 @@ jobs:
           node-version: "20"
           cache: npm
           cache-dependency-path: frontend/package-lock.json
+      - name: Validar tokens de diseno (sin colores hex literales)
+        # SPEC-003/T7.1/AC5: la comprobación automatizable de AC1. Solo stdlib,
+        # así que corre con el Python del runner sin instalar nada.
+        working-directory: ${{ github.workspace }}
+        run: python3 scripts/check_design_tokens.py
       - name: Instalar dependencias
         run: npm ci
       - name: Build
         run: npm run build
+      - name: Build revista pública
+        run: npm run build:public
 
   specs-validate:
     name: SDD · validar specs
