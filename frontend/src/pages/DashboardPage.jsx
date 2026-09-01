@@ -61,6 +61,8 @@ export default function DashboardPage() {
     try {
       const { data } = await api.get('/api/v1/notifications');
       setNotifications(data);
+    // mejor-esfuerzo: el sondeo de notificaciones se repite solo; avisar en
+    // cada vuelta sería más molesto que el propio fallo.
     } catch { /* silently ignore */ }
   };
 
@@ -84,6 +86,8 @@ export default function DashboardPage() {
       try {
         await api.post(`/api/v1/notifications/${n.id}/read`);
         setNotifications(prev => prev.map(x => x.id === n.id ? { ...x, read: true } : x));
+      // mejor-esfuerzo: marcar como leída es cosmético; si falla, la
+      // navegación al artículo sigue siendo lo que la persona ha pedido.
       } catch { /* ignore */ }
     }
     if (n.article_id) {

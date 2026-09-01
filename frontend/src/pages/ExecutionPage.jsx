@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { EmptyState } from '../components/ui/states';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import { CheckCircle, XCircle, Clock, Loader, ArrowRight, ArrowLeft, FileText, UserPlus, Square, Upload, Play, AlertTriangle } from 'lucide-react';
@@ -77,6 +78,8 @@ export default function ExecutionPage() {
   // fetch the article body as a last-resort fallback.
   useEffect(() => {
     if (done && !preview) {
+      // mejor-esfuerzo: es el último recurso cuando el SSE no trajo el cuerpo;
+      // si también falla, la vista se queda con lo que el SSE sí dio.
       fetchArticle(articleId).then(art => {
         if (art?.body) setPreview(art.body);
       }).catch(() => {});
@@ -143,6 +146,8 @@ export default function ExecutionPage() {
           // Always fetch the final article body from the server — this is the
           // authoritative source after publicador commits, and acts as a fallback
           // when SSE draft_text/formatted_text events were missed or empty.
+          // mejor-esfuerzo: refresco autoritativo tras publicar; el preview del
+          // SSE ya está en pantalla si esto no llega.
           fetchArticle(articleId).then(art => {
             if (art?.body) setPreview(art.body);
           }).catch(() => {});
@@ -159,6 +164,8 @@ export default function ExecutionPage() {
           addLog('Pipeline cancelado por el usuario — artículo en borrador', 'warn');
           evtSource.close();
         }
+      // mejor-esfuerzo: un evento SSE ilegible se descarta; el siguiente
+      // llega en milisegundos y cortar el flujo por uno sería peor.
       } catch { /* ignore parse errors */ }
     };
 
@@ -167,6 +174,7 @@ export default function ExecutionPage() {
       // normally after sending `done`. In either case, try to show the article body.
       evtSource.close();
       setDone(true);
+      // mejor-esfuerzo: mismo refresco al cerrarse la conexión.
       fetchArticle(articleId).then(art => {
         if (art?.body) setPreview(p => p || art.body);
       }).catch(() => {});
@@ -493,13 +501,11 @@ export default function ExecutionPage() {
               <ReactMarkdown>{preview}</ReactMarkdown>
             </div>
           ) : (
-            <div className="empty-state">
-              <div className="empty-state-icon">
-                <FileText size={28} />
-              </div>
-              <h3>Esperando contenido</h3>
-              <p>El artículo aparecerá aquí conforme los agentes generen contenido.</p>
-            </div>
+            <EmptyState
+              icon={<FileText size={28} />}
+              title="Esperando contenido"
+              description="El artículo aparecerá aquí conforme los agentes generen contenido."
+            />
           )}
         </div>
       </div>

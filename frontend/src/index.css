@@ -658,6 +658,23 @@ textarea.input { resize: vertical; min-height: 80px; line-height: var(--leading-
 .empty-state h3 { font-size: var(--font-size-lg); color: var(--text-secondary); }
 .empty-state p { font-size: var(--font-size-sm); max-width: 320px; }
 
+/* El estado de error se distingue del vacío **a simple vista**: si los dos se
+   pintan igual, un fallo de red se lee como «no hay datos». */
+.state-error h3 { color: var(--error); }
+.state-error-icon { background: var(--error-bg); color: var(--error); }
+
+/* Solo para lectores de pantalla: el texto que acompaña a un spinner, que si no
+   sería un anuncio vacío. */
+.sr-only {
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 /* ============================================================
    NOTIFICATION BELL
    ============================================================ */

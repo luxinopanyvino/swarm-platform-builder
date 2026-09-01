@@ -95,6 +95,12 @@ PARES: list[tuple[str, str, Fondo, float, str]] = [
     ("anillo de foco · canvas",    "--border-focus",   "--bg-canvas",    AA_NO_TEXTUAL,   AA),
     ("modal · texto de cabecera",  "--text-heading",   "--bg-surface",   AA_TEXTO_NORMAL, AA),
 
+    # ── Estados de datos remotos (T7.3) ──────────────────────────────────────
+    ("estado de error · título",   "--error",          "--bg-canvas",    AA_TEXTO_NORMAL, AA),
+    ("estado de error · icono",    "--error",          ("--bg-canvas", "--error-bg"), AA_NO_TEXTUAL, AA),
+    ("estado vacío · título",      "--text-secondary", "--bg-canvas",    AA_TEXTO_NORMAL, AA),
+    ("estado vacío · descripción", "--text-muted",     "--bg-canvas",    AA_TEXTO_NORMAL, AA),
+
     # ── Separadores decorativos (no son contorno de control: solo se informan) ─
     ("separador de modal",         "--border-default", "--bg-surface",   AA_NO_TEXTUAL,   AVISO),
     ("separador sutil",            "--border-subtle",  "--bg-surface",   AA_NO_TEXTUAL,   AVISO),

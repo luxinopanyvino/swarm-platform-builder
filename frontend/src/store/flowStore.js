@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { flowsApi } from '../api/flows';
+import { mensajeDeCarga } from '../api/errors';
 import { useProjectStore } from './projectStore';
 import { useAuthStore } from './authStore';
 
@@ -30,13 +31,13 @@ export const useFlowStore = create(
 
       // Remote flows
       fetchFlows: async () => {
-        set({ isLoading: true });
+        set({ isLoading: true, error: null });
         try {
           const projectId = getProjectId();
           const data = await flowsApi.list(projectId ? { project_id: projectId } : {});
           set({ flows: data, isLoading: false });
-        } catch {
-          set({ isLoading: false });
+        } catch (err) {
+          set({ isLoading: false, error: mensajeDeCarga(err, 'No se pudieron cargar los flujos') });
         }
       },
 

@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { LoadingState, ErrorState } from '../components/ui/states';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Save, Loader, AlertCircle, Columns2, Columns3, ImagePlus } from 'lucide-react';
+import { ArrowLeft, Save, Loader, Columns2, Columns3, ImagePlus } from 'lucide-react';
 import { articlesApi } from '../api/articles';
 import toast from 'react-hot-toast';
 import { PAPER_ACCENTS } from '../paperTheme';
@@ -136,21 +137,18 @@ export default function PaperDesignPage() {
   };
 
   if (loading) {
-    return (
-      <div className="page-body">
-        <div className="empty-state"><div className="spinner spinner-lg" /></div>
-      </div>
-    );
+    return <div className="page-body"><LoadingState label="Cargando la maquetación…" /></div>;
   }
 
   if (error || !draft) {
     return (
       <div className="page-body">
-        <div className="empty-state" style={{ textAlign: 'center' }}>
-          <AlertCircle size={40} style={{ color: 'var(--status-error)', marginBottom: 12 }} />
-          <h3>No se pudo cargar el artículo</h3>
-          <p style={{ fontSize: 'var(--font-size-sm)' }}>Revisa que exista y que tengas permisos.</p>
-        </div>
+        <ErrorState
+          title="No se pudo cargar el artículo"
+          description="Revisa que exista y que tengas permisos."
+          onRetry={() => globalThis.location.reload()}
+          retryLabel="Volver a intentarlo"
+        />
       </div>
     );
   }

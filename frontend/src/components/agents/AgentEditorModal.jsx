@@ -120,6 +120,8 @@ function RagTab({ agentName, ragCollection, ragChunkSize, ragChunkOverlap, onCol
     try {
       const data = await agentsApi.getLibraryDocs();
       setLibraryCollections(data.collections || []);
+    // mejor-esfuerzo: la biblioteca compartida es una ayuda del panel RAG; sin
+    // ella el editor sigue guardando el agente.
     } catch {
       // library unavailable — non-critical
     }
@@ -844,6 +846,8 @@ export function AgentCreateModal({ builtInIds, onClose, onCreate }) {
   const [nameError, setNameError] = useState('');
 
   useEffect(() => {
+    // mejor-esfuerzo: la lista de modelos es un desplegable de ayuda; si no
+    // llega, queda el valor por defecto y el editor sigue siendo usable.
     agentsApi.getModels().then((response) => setModels(response.models || ['llama3.2:1b'])).catch(() => {});
   }, []);
 

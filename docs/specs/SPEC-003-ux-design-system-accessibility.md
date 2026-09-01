@@ -55,10 +55,16 @@ No hay criterios objetivos de "UI correcta" ni una comprobación que lo valide.
   oscuro. Partían 18 por debajo del umbral; se corrigieron **en los tokens**, no
   en los componentes. Los separadores decorativos se miden pero no bloquean: no
   son contorno de ningún control y WCAG no les fija umbral.
-- [ ] **AC4** — *Given* una página con datos remotos (artículos, agentes,
+- [x] **AC4** — *Given* una página con datos remotos (artículos, agentes,
   documentos), *When* está cargando / sin datos / con error, *Then* muestra un
   estado **loading / empty / error** consistente y reutilizable.
-- [ ] **AC5** — Existe una comprobación automatizable (lint/script) que valida
+  <br>*T7.3 (#194)*: `src/components/ui/states.jsx` — `LoadingState`,
+  `EmptyState`, `ErrorState` y el compositor `AsyncState`, adoptados por las
+  once vistas con datos remotos. El estado de **error no existía**: toda carga
+  fallida acababa en un `toast` que se va solo y dejaba en pantalla el estado
+  **vacío**, diciendo que no había datos cuando lo que pasaba es que no se habían
+  podido pedir. Los stores ahora guardan el error y el estado ofrece reintentar.
+- [x] **AC5** — Existe una comprobación automatizable (lint/script) que valida
   AC1 y un checklist verificable para AC2–AC4.
   <br>*T7.1 (#192)*: hecha la mitad automatizable —
   `scripts/check_design_tokens.py`, en el job `frontend-build` de la CI. Además
@@ -69,7 +75,13 @@ No hay criterios objetivos de "UI correcta" ni una comprobación que lo valide.
   automatizadas. AC3 lo mide `scripts/check_contrast.py` en la CI; AC2 lo
   comprueba `backend/tests/test_modal_a11y.py`, con una capa estructural que
   siempre corre y una capa de teclado en Chromium que se salta si no hay
-  navegador (hoy, en la CI, se salta). Pendiente AC4, que llega con T7.3.
+  navegador (hoy, en la CI, se salta).
+  <br>*T7.3 (#194)*: cierra AC5. AC4 tampoco se queda en checklist:
+  `scripts/check_async_states.py` corre en la CI y comprueba que nadie pinte un
+  estado a mano ni se trague un error de carga sin motivo escrito. Los cuatro
+  criterios quedan con comprobación automatizada y no con lista de repaso:
+  **AC1** `check_design_tokens.py`, **AC3** `check_contrast.py`, **AC4**
+  `check_async_states.py` y **AC2** los tests de teclado.
 
 ## 4. Diseño propuesto
 

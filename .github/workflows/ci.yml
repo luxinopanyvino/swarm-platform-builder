@@ -66,6 +66,11 @@ jobs:
         # claro y oscuro. Es la parte de AC5 que corresponde a AC3.
         working-directory: ${{ github.workspace }}
         run: python3 scripts/check_contrast.py --table
+      - name: Validar estados de carga / vacio / error
+        # SPEC-003/T7.3/AC5: nadie pinta un estado a mano ni se traga un error de
+        # carga sin motivo escrito.
+        working-directory: ${{ github.workspace }}
+        run: python3 scripts/check_async_states.py
       - name: Instalar dependencias
         run: npm ci
       - name: Build
