@@ -47,6 +47,7 @@
   --neutral-40: #c9cfdb;
   --neutral-50: #aab2c2;
   --neutral-60: #8793a5;
+  --neutral-65: #657286;  /* texto atenuado — el escalón mínimo que llega a AA */
   --neutral-70: #5c6b7e;  /* muted / secondary text */
   --neutral-80: #44546a;
   --neutral-90: #2e3a4d;
@@ -98,7 +99,7 @@
   --text-primary:     var(--ink-90);
   --text-body:        var(--neutral-90);
   --text-secondary:   var(--neutral-70);
-  --text-muted:       var(--neutral-60);
+  --text-muted:       var(--neutral-65);
   --text-link:        var(--blue-60);
   --text-on-brand:    #ffffff;
   --text-inverse:     #ffffff;
@@ -109,22 +110,35 @@
   --border-strong:    var(--neutral-30);
   --border-brand:     var(--blue-60);
   --border-focus:     var(--blue-60);
+  /* Contorno de un **control** (input, toggle, botón secundario). WCAG 2.1
+     SC 1.4.11 le pide 3:1 contra su fondo: `--border-strong` (#d8dde6) da 1.36:1
+     sobre blanco, así que un input blanco sobre un panel blanco no se distingue.
+     Token aparte y no un `--border-strong` más oscuro: ese está publicado en
+     zeroheight con un hex concreto y se usa también en separadores decorativos,
+     que no tienen ese requisito. */
+  --border-control:   #7b8caa;
 
   /* Status semantics */
-  --success:          var(--green-60);
+  --success:          var(--green-70);
   --success-bg:       var(--green-05);
-  --warning:          var(--amber-60);
+  --warning:          var(--amber-70);
   --warning-bg:       var(--amber-05);
   --error:            var(--red-60);
   --error-bg:         var(--red-05);
-  --info:             var(--blue-60);
+  --text-on-error:    #ffffff;        /* 6.73:1 sobre --error */
+  --info:             var(--blue-70);
   --info-bg:          var(--blue-05);
 
+  /* Azul de marca cuando es **texto pequeño sobre su tinte** (badge publicado).
+     `--brand` no se toca: también se usa como fondo, y oscurecerlo repintaría
+     toda la identidad de la aplicación para arreglar una etiqueta. */
+  --brand-on-tint:    var(--blue-70);
+
   /* Editorial workflow status */
-  --status-draft:     var(--neutral-60);
-  --status-review:    var(--amber-60);
-  --status-approved:  var(--green-60);
-  --status-published: var(--blue-60);
+  --status-draft:     var(--neutral-70);
+  --status-review:    var(--amber-70);
+  --status-approved:  var(--green-70);
+  --status-published: var(--blue-70);
   --status-rejected:  var(--red-60);
 
   /* ----------------------------------------------------------
@@ -283,10 +297,11 @@
   --text-primary:   #e6ecf6;
   --text-body:      #d2dcea;
   --text-secondary: #9aa8c0;
-  --text-muted:     #6c7c97;
+  --text-muted:     #75849d;
   --text-link:      #54adff;
   --text-on-brand:  #04162c;
   --text-inverse:   #0a1120;
+  --brand-on:       #04162c;  /* sin esto quedaba el #ffffff del claro: 2.90:1 */
 
   /* Borders */
   --border-subtle:  rgba(255,255,255,0.06);
@@ -294,14 +309,16 @@
   --border-strong:  rgba(255,255,255,0.18);
   --border-brand:   #2f9bff;
   --border-focus:   #54adff;
+  --border-control: #8793a5;  /* 5.48:1 sobre --bg-surface */
 
   /* Status — lighter values + translucent tints */
   --success: #3ecf8e;  --success-bg: rgba(62,207,142,0.15);
   --warning: #e8b04b;  --warning-bg: rgba(232,176,75,0.15);
   --error:   #ff6b6b;  --error-bg:   rgba(255,107,107,0.15);
+  --text-on-error: #2a0508;  /* el rojo del tema oscuro es claro: blanco daría 2.78:1 */
   --info:    #2f9bff;  --info-bg:    rgba(47,155,255,0.15);
 
-  --status-draft:     #6c7c97;
+  --status-draft:     #8390a7;
   --status-review:    #e8b04b;
   --status-approved:  #3ecf8e;
   --status-published: #2f9bff;

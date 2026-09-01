@@ -61,6 +61,11 @@ jobs:
         # así que corre con el Python del runner sin instalar nada.
         working-directory: ${{ github.workspace }}
         run: python3 scripts/check_design_tokens.py
+      - name: Validar contraste WCAG AA de los componentes base
+        # SPEC-003/T7.2/AC3: mide los pares texto/fondo del design system en tema
+        # claro y oscuro. Es la parte de AC5 que corresponde a AC3.
+        working-directory: ${{ github.workspace }}
+        run: python3 scripts/check_contrast.py --table
       - name: Instalar dependencias
         run: npm ci
       - name: Build

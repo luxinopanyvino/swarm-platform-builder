@@ -39,12 +39,22 @@ No hay criterios objetivos de "UI correcta" ni una comprobación que lo valide.
   `src/paperTheme.js`: son los colores del **paper impreso**, espejo de
   `_THEME_ACCENTS` del backend — la muestra debe enseñar el color del PDF, no el
   de la aplicación; hay un test que comprueba que el espejo sigue siendo fiel.
-- [ ] **AC2** — *Given* un usuario que navega solo con teclado, *When* abre un
+- [x] **AC2** — *Given* un usuario que navega solo con teclado, *When* abre un
   modal (p. ej. editor de agentes), *Then* el foco queda atrapado en el modal,
   es **visible**, y `Esc` lo cierra devolviendo el foco al disparador.
-- [ ] **AC3** — *Given* los pares texto/fondo de los componentes base
+  <br>*T7.2 (#193)*: el contrato lo implementa un único componente,
+  `src/components/ui/Modal.jsx`, y los seis diálogos de la aplicación pasan por
+  él. Foco visible mediante `:focus-visible` global con `outline-offset` (antes no
+  había ninguno, y cuatro campos lo apagaban con `outline: none` en línea).
+  Verificado **con teclas reales en Chromium** sobre el componente construido, no
+  leyendo el código.
+- [x] **AC3** — *Given* los pares texto/fondo de los componentes base
   (botones, badges, inputs), *When* se mide el contraste, *Then* cumplen
   **WCAG 2.1 AA** (≥ 4.5:1 texto normal; ≥ 3:1 texto grande/iconos).
+  <br>*T7.2 (#193)*: `scripts/check_contrast.py` mide 30 pares en tema claro y
+  oscuro. Partían 18 por debajo del umbral; se corrigieron **en los tokens**, no
+  en los componentes. Los separadores decorativos se miden pero no bloquean: no
+  son contorno de ningún control y WCAG no les fija umbral.
 - [ ] **AC4** — *Given* una página con datos remotos (artículos, agentes,
   documentos), *When* está cargando / sin datos / con error, *Then* muestra un
   estado **loading / empty / error** consistente y reutilizable.
@@ -54,8 +64,12 @@ No hay criterios objetivos de "UI correcta" ni una comprobación que lo valide.
   `scripts/check_design_tokens.py`, en el job `frontend-build` de la CI. Además
   del hex literal detecta `var(--token)` **que no existe**, que es el fallo
   silencioso: sin fallback la propiedad se descarta y el elemento no pinta nada
-  (había 6 en `main`, ya corregidos). Pendiente el checklist de AC2–AC4, que
-  llega con T7.2 y T7.3.
+  (había 6 en `main`, ya corregidos).
+  <br>*T7.2 (#193)*: AC2 y AC3 no se quedan en checklist — son comprobaciones
+  automatizadas. AC3 lo mide `scripts/check_contrast.py` en la CI; AC2 lo
+  comprueba `backend/tests/test_modal_a11y.py`, con una capa estructural que
+  siempre corre y una capa de teclado en Chromium que se salta si no hay
+  navegador (hoy, en la CI, se salta). Pendiente AC4, que llega con T7.3.
 
 ## 4. Diseño propuesto
 
