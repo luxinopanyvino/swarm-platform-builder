@@ -126,8 +126,13 @@ async def test_non_admin_cannot_change_role() -> None:
 
 
 @pytest.mark.asyncio
-async def test_admin_can_change_role() -> None:
+async def test_admin_can_change_role(monkeypatch) -> None:
     await _reset_database()
+    # La siembra del admin exige flag explícito (SPEC-015/T1.6): este test necesita
+    # ese admin, así que lo activa como haría un entorno de desarrollo.
+    from app.core.config import settings
+
+    monkeypatch.setattr(settings, "ENABLE_DEV_SEED", True)
     await ensure_local_admin_user()
     try:
         async with _client() as client:

@@ -54,6 +54,10 @@ access_control:
   # Secure by default: dev-only role promotion shortcut stays OFF.
   # Enable explicitly (and only) in local development.
   enable_dev_role_promotion: false
+  # Siembra de demo (SPEC-015/T1.6): usuarios con credenciales conocidas
+  # (admin@admin/admin123 y compañía) y contenido de ejemplo. Apagada por defecto;
+  # con DEBUG=false su valor efectivo es False aunque aquí se ponga true.
+  enable_dev_seed: false
   # Role assigned on self-registration. Minimal privilege: lector | publico.
   default_signup_role: lector
 qdrant:

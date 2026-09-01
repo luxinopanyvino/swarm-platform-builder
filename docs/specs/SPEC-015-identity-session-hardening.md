@@ -43,9 +43,10 @@ credenciales débiles (`admin123`, …) en cada arranque SQLite.
 - [ ] **AC4** — *Given* `ENABLE_DEV_ROLE_PROMOTION` ausente **o** un
   `config.yaml` que lo activa, *When* `DEBUG=false`, *Then* el valor efectivo
   es `False` y `dev/promote-reviewer` responde `403`.
-- [ ] **AC5** — *Given* un arranque con `DEBUG=false`, *When* se inicializa la
+- [x] **AC5** — *Given* un arranque con `DEBUG=false`, *When* se inicializa la
   BD, *Then* **no** se siembran usuarios con credenciales débiles; el seed de
   demo solo corre bajo flag de dev explícito.
+  *(hecho: #158, `test_dev_seed_flag.py`)*
 
 ## 4. Diseño propuesto
 
