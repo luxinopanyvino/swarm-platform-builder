@@ -1,72 +1,56 @@
-"""Single-use, short-lived tickets to authenticate SSE stream connections (T1.4).
+"""Tickets efímeros y de un solo uso para autenticar el stream SSE (T1.4).
 
-The browser ``EventSource`` API cannot send an ``Authorization`` header, so the
-agent-run stream previously accepted the JWT in the query string
-(``/stream?token=<JWT>``). That leaks a long-lived credential into server logs,
-browser history and proxy logs. Instead, an already-authenticated client
-exchanges its JWT (sent as a normal Bearer header on a POST) for an opaque
-**ticket**, and connects to the stream with ``?ticket=<ticket>``. A leaked
-ticket is near-useless: it expires within seconds and is consumed on first use.
+La API `EventSource` del navegador no puede mandar cabecera `Authorization`, así
+que el stream aceptaba el JWT en el query string (`/stream?token=<JWT>`), lo que
+filtra una credencial de larga vida a los logs del servidor, al historial del
+navegador y a los del proxy. En su lugar, un cliente ya autenticado cambia su JWT
+—enviado como Bearer en un POST normal— por un **ticket** opaco, y se conecta con
+`?ticket=<ticket>`. Un ticket filtrado no sirve de gran cosa: caduca en segundos y
+se consume al primer uso.
 
-The store is in-process (like ``active_streams``); a multi-worker deployment
-should back it with a shared store (Redis) — see task T4.3 (#170).
+**El almacén vive en el bus de coordinación** (SPEC-018/T4.3), no en un diccionario
+de proceso. Con varios workers, el POST que emite el ticket y la conexión SSE que
+lo canjea caen casi siempre en procesos distintos: con el almacén local, el segundo
+no reconocería el ticket del primero y el stream respondería `403` sin motivo
+aparente.
 """
 
 from __future__ import annotations
 
 import secrets
-import time
-from dataclasses import dataclass
+
+from app.platform.bus import get_bus
 
 DEFAULT_TTL_SECONDS = 30
 
 
-@dataclass
-class _Ticket:
-    user_id: str
-    article_id: str
-    expires_at: float  # time.monotonic() deadline
-
-
-_tickets: dict[str, _Ticket] = {}
-
-
-def _purge_expired(now: float) -> None:
-    for key in [k for k, t in _tickets.items() if t.expires_at <= now]:
-        _tickets.pop(key, None)
-
-
-def issue_ticket(user_id: str, article_id: str, ttl_seconds: int = DEFAULT_TTL_SECONDS) -> str:
-    """Mint a one-time ticket binding *user_id* to *article_id* for a short TTL."""
-    now = time.monotonic()
-    _purge_expired(now)
+async def issue_ticket(user_id: str, article_id: str, ttl_seconds: int = DEFAULT_TTL_SECONDS) -> str:
+    """Emitir un ticket de un solo uso que ata *user_id* a *article_id*."""
     ticket = secrets.token_urlsafe(32)
-    _tickets[ticket] = _Ticket(
-        user_id=str(user_id),
-        article_id=str(article_id),
-        expires_at=now + max(1, ttl_seconds),
+    await get_bus().store_ticket(
+        ticket,
+        {"user_id": str(user_id), "article_id": str(article_id)},
+        ttl_seconds,
     )
     return ticket
 
 
-def consume_ticket(ticket: str, article_id: str) -> str | None:
-    """Return the bound ``user_id`` if *ticket* is valid for *article_id*, else None.
+async def consume_ticket(ticket: str, article_id: str) -> str | None:
+    """Devolver el `user_id` atado si el ticket vale para *article_id*; si no, `None`.
 
-    The ticket is **single-use**: it is removed on any consume attempt (valid or
-    not) so it cannot be replayed.
+    El ticket se retira **en cualquier intento**, válido o no, para que no pueda
+    reproducirse.
     """
     if not ticket:
         return None
-    entry = _tickets.pop(ticket, None)
-    if entry is None:
+    datos = await get_bus().take_ticket(ticket)
+    if datos is None:
         return None
-    if entry.expires_at <= time.monotonic():
+    if datos.get("article_id") != str(article_id):
         return None
-    if entry.article_id != str(article_id):
-        return None
-    return entry.user_id
+    return datos.get("user_id")
 
 
-def reset_stream_tickets() -> None:
-    """Clear all outstanding tickets (used by tests to isolate cases)."""
-    _tickets.clear()
+async def reset_stream_tickets() -> None:
+    """Vaciar los tickets pendientes (lo usan los tests para aislar casos)."""
+    await get_bus().clear_tickets()

@@ -32,12 +32,13 @@ from app.models import (
     AgentProfileModel, AgentProfileResponse,
 )
 from app.core.database import get_session
+from app.platform.bus import get_bus
 from app.platform.audit import AuditAction, record_audit
 from app.routers.auth import get_current_user, require_redactor
 from app.core.config import settings
 from app.core.stream_auth import issue_ticket, consume_ticket
 from app.modules.agents.application.use_cases import (
-    Orchestrator, active_streams, active_tasks, publish_event,
+    Orchestrator, active_tasks, publish_event,
     submit_user_decision,
 )
 from app.platform.capabilities.rag import (
@@ -749,10 +750,15 @@ async def cancel_pipeline_run(
         raise HTTPException(status_code=403, detail="Forbidden")
 
     task = active_tasks.get(article_id)
-    if task is None or task.done():
+    if task is not None and not task.done():
+        task.cancel()
+        return {"status": "cancelled", "article_id": str(article_id)}
+
+    # La tarea no está en este worker. Con el bus en proceso eso significa que no
+    # existe; con Redis, que la ejecuta otro worker y hay que pedírselo por señal.
+    if not await get_bus().request_cancel(article_id):
         raise HTTPException(status_code=409, detail="No active pipeline for this article")
 
-    task.cancel()
     return {"status": "cancelled", "article_id": str(article_id)}
 
 
@@ -782,7 +788,7 @@ async def submit_pipeline_decision(
     if decision not in ("add_source", "continue"):
         raise HTTPException(status_code=422, detail="decision must be 'add_source' or 'continue'")
 
-    if not submit_user_decision(article_id, decision):
+    if not await submit_user_decision(article_id, decision):
         raise HTTPException(status_code=409, detail="No pending decision for this article")
 
     return {"status": "ok", "decision": decision}
@@ -839,7 +845,7 @@ async def create_stream_ticket(
     if str(article.author_id) != token_data["user_id"]:
         raise HTTPException(status_code=403, detail="Forbidden")
 
-    ticket = issue_ticket(token_data["user_id"], str(article_id), settings.SSE_TICKET_TTL_SECONDS)
+    ticket = await issue_ticket(token_data["user_id"], str(article_id), settings.SSE_TICKET_TTL_SECONDS)
     return {"ticket": ticket, "expires_in": settings.SSE_TICKET_TTL_SECONDS}
 
 
@@ -854,7 +860,7 @@ async def stream_agent_runs(
     Authenticated with a single-use ticket from ``POST /{id}/stream-ticket``;
     the JWT is never placed in the query string (T1.4).
     """
-    user_id = consume_ticket(ticket, str(article_id)) if ticket else None
+    user_id = await consume_ticket(ticket, str(article_id)) if ticket else None
     if not user_id:
         raise HTTPException(status_code=401, detail="Invalid or missing stream ticket")
 
@@ -868,27 +874,20 @@ async def stream_agent_runs(
     if str(article.author_id) != user_id:
         raise HTTPException(status_code=403, detail="Forbidden")
 
-    q = asyncio.Queue()
-    if article_id not in active_streams:
-        active_streams[article_id] = []
-    active_streams[article_id].append(q)
-
     async def event_generator():
-        try:
-            while True:
-                # Wait for an event from active_streams
-                event = await q.get()
-                yield f"data: {json.dumps(event)}\n\n"
-                if event.get("type") == "done":
-                    break
-        except asyncio.CancelledError:
-            # client disconnected — re-raise so the generator is properly cancelled
-            raise
-        finally:
-            if article_id in active_streams:
-                if q in active_streams[article_id]:
-                    active_streams[article_id].remove(q)
-                if not active_streams[article_id]:
-                    del active_streams[article_id]
+        # La suscripción va por el bus: con varios workers, este cliente puede estar
+        # conectado a un proceso distinto del que ejecuta el pipeline, y aun así
+        # recibe todos los eventos (SPEC-018/T4.3). El `async with` se encarga de
+        # darse de baja cuando el cliente se desconecta.
+        async with get_bus().subscribe(article_id) as q:
+            try:
+                while True:
+                    event = await q.get()
+                    yield f"data: {json.dumps(event)}\n\n"
+                    if event.get("type") == "done":
+                        break
+            except asyncio.CancelledError:
+                # client disconnected — re-raise so the generator is properly cancelled
+                raise
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")

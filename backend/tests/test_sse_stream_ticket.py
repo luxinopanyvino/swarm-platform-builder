@@ -10,6 +10,7 @@ import uuid
 from pathlib import Path
 
 import pytest
+import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -27,43 +28,53 @@ from app.models import ArticleModel, UserModel  # noqa: E402
 from app.core.database import Base, engine  # noqa: E402
 
 
-@pytest.fixture(autouse=True)
-def _reset_tickets():
-    reset_stream_tickets()
+@pytest_asyncio.fixture(autouse=True)
+async def _reset_tickets():
+    """El almacén de tickets vive ahora en el bus (SPEC-018/T4.3), así que
+    vaciarlo es una operación async."""
+    await reset_stream_tickets()
     yield
-    reset_stream_tickets()
+    await reset_stream_tickets()
 
 
 # ── Unit: ticket store ──────────────────────────────────────────────────────────
 
-def test_issue_and_consume_roundtrip():
-    ticket = issue_ticket("user-1", "article-1")
-    assert consume_ticket(ticket, "article-1") == "user-1"
+@pytest.mark.asyncio
+async def test_issue_and_consume_roundtrip():
+    ticket = await issue_ticket("user-1", "article-1")
+    assert await consume_ticket(ticket, "article-1") == "user-1"
 
 
-def test_ticket_is_single_use():
-    ticket = issue_ticket("user-1", "article-1")
-    assert consume_ticket(ticket, "article-1") == "user-1"
-    assert consume_ticket(ticket, "article-1") is None
+@pytest.mark.asyncio
+async def test_ticket_is_single_use():
+    ticket = await issue_ticket("user-1", "article-1")
+    assert await consume_ticket(ticket, "article-1") == "user-1"
+    assert await consume_ticket(ticket, "article-1") is None
 
 
-def test_ticket_article_mismatch_is_rejected_and_consumed():
-    ticket = issue_ticket("user-1", "article-1")
-    assert consume_ticket(ticket, "article-2") is None
+@pytest.mark.asyncio
+async def test_ticket_article_mismatch_is_rejected_and_consumed():
+    ticket = await issue_ticket("user-1", "article-1")
+    assert await consume_ticket(ticket, "article-2") is None
     # even the correct article can no longer use it (single-use on any attempt)
-    assert consume_ticket(ticket, "article-1") is None
+    assert await consume_ticket(ticket, "article-1") is None
 
 
-def test_expired_ticket_is_rejected(monkeypatch):
-    ticket = issue_ticket("user-1", "article-1", ttl_seconds=30)
-    now = stream_auth.time.monotonic()
-    monkeypatch.setattr(stream_auth.time, "monotonic", lambda: now + 61)
-    assert consume_ticket(ticket, "article-1") is None
+@pytest.mark.asyncio
+async def test_expired_ticket_is_rejected(monkeypatch):
+    """El reloj que cuenta vive ahora en el bus, no en `stream_auth`."""
+    from app.platform import bus as bus_module
+
+    ticket = await issue_ticket("user-1", "article-1", ttl_seconds=30)
+    ahora = bus_module.time.monotonic()
+    monkeypatch.setattr(bus_module.time, "monotonic", lambda: ahora + 61)
+    assert await consume_ticket(ticket, "article-1") is None
 
 
-def test_empty_ticket_is_rejected():
-    assert consume_ticket("", "article-1") is None
-    assert consume_ticket(None, "article-1") is None
+@pytest.mark.asyncio
+async def test_empty_ticket_is_rejected():
+    assert await consume_ticket("", "article-1") is None
+    assert await consume_ticket(None, "article-1") is None
 
 
 # ── Integration: endpoints ──────────────────────────────────────────────────────
@@ -156,8 +167,8 @@ async def test_owner_gets_valid_single_use_ticket():
             assert ticket
 
             # The issued ticket authenticates this user for this article, once.
-            assert consume_ticket(ticket, article_id) == user_id
-            assert consume_ticket(ticket, article_id) is None
+            assert await consume_ticket(ticket, article_id) == user_id
+            assert await consume_ticket(ticket, article_id) is None
     finally:
         await engine.dispose()
         _cleanup_db()

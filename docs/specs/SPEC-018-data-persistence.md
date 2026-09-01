@@ -25,16 +25,16 @@ memoria del proceso, lo que impide correr múltiples workers.
 
 ## 3. Criterios de aceptación
 
-- [ ] **AC1** — *Given* un cambio de esquema, *When* se aplica, *Then* se hace
+- [x] **AC1** — *Given* un cambio de esquema, *When* se aplica, *Then* se hace
   mediante una migración **Alembic** versionada en el repo; `init_db` deja de
   ejecutar `ALTER TABLE` ad hoc y un despliegue limpio llega al mismo esquema
   que uno migrado.
-- [ ] **AC2** — *Given* el repo, *Then* `dev.db` (y cualquier `*.db` local) no
+- [x] **AC2** — *Given* el repo, *Then* `dev.db` (y cualquier `*.db` local) no
   está trackeado y `.gitignore` lo excluye; el arranque en dev lo recrea solo.
-- [ ] **AC3** — *Given* el backend con **más de un worker**, *When* un pipeline
+- [x] **AC3** — *Given* el backend con **más de un worker**, *When* un pipeline
   emite eventos SSE o espera una decisión HITL, *Then* streams/tareas/decisiones
   se coordinan vía Redis y cualquier worker puede atender la conexión, sin
-  pérdida de eventos.
+  pérdida de eventos. *(hecho: #170, `test_bus_multiworker.py`)*
 
 ## 4. Diseño propuesto
 

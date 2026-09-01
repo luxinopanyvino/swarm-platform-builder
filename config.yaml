@@ -105,3 +105,10 @@ retention:
   checkpoints_days: 30
   notifications_days: 90
   orphan_assets_days: 30
+
+# Coordinación entre workers (SPEC-018/T4.3): pub/sub de eventos SSE, decisiones
+# HITL y tickets de stream. Necesario para correr con más de un worker; con uno
+# solo el bus en proceso basta y no hace falta levantar Redis.
+redis:
+  url: redis://localhost:6379/0
+  enabled: false
