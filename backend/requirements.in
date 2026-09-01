@@ -33,6 +33,10 @@ passlib[bcrypt]>=1.7.4
 httpx>=0.27.0
 python-multipart>=0.0.19
 
+# Métricas Prometheus (SPEC-019/T5.2): latencia y errores por endpoint, y tokens
+# y latencia de LLM por agente y modelo.
+prometheus-client>=0.20.0
+
 # Coordinación entre workers (SPEC-018/T4.3): pub/sub de eventos SSE, decisiones
 # HITL y tickets de stream. Solo se usa con REDIS_ENABLED; con un worker el bus
 # vive en proceso y esta dependencia queda sin cargar.

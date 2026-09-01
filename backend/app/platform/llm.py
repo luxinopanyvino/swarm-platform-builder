@@ -16,6 +16,7 @@ Supported providers
 
 import asyncio
 import logging
+import time
 import random
 from pathlib import Path
 from typing import Optional, AsyncGenerator, Awaitable, Callable, TypeVar
@@ -229,6 +230,25 @@ def resolve_agent_model(agent_name: str, agent_settings: Optional[dict] = None) 
     return get_default_model()
 
 
+def _record_usage(provider: str, model: str, entrada, salida) -> None:
+    """Anotar tokens consumidos (SPEC-019/T5.2).
+
+    Se llama desde cada proveedor porque es el único sitio donde se conocen: la
+    respuesta de la API los trae, y `call_llm` solo ve el texto ya extraído.
+    Nunca lanza — medir no puede tumbar una generación.
+    """
+    try:
+        from app.platform.metrics import observe_llm_tokens
+
+        observe_llm_tokens(
+            provider=provider, model=model,
+            input_tokens=int(entrada or 0) or None,
+            output_tokens=int(salida or 0) or None,
+        )
+    except Exception:  # pragma: no cover - defensivo
+        pass
+
+
 async def call_llm(
     prompt: str,
     *,
@@ -257,12 +277,32 @@ async def call_llm(
         RuntimeError: On any network, API or parsing error.
     """
     from app.core.config import settings
+    from app.platform.metrics import observe_llm_call
 
     provider = settings.LLM_PROVIDER.lower()
     resolved_model = model or get_default_model()
+    _inicio = time.perf_counter()
+
+    async def _medido(coro_factory):
+        """Cronometra la llamada y anota el resultado (SPEC-019/T5.2).
+
+        Envuelve el dispatcher entero para que la latencia incluya los reintentos:
+        es lo que de verdad espera quien llama, y un proveedor que solo responde al
+        tercer intento tiene que verse lento, no sano.
+        """
+        estado = "error"
+        try:
+            resultado = await coro_factory()
+            estado = "ok"
+            return resultado
+        finally:
+            observe_llm_call(
+                provider=provider, model=resolved_model,
+                duration=time.perf_counter() - _inicio, status=estado,
+            )
 
     if provider == "anthropic":
-        return await _retry_async(
+        return await _medido(lambda: _retry_async(
             lambda: _call_anthropic(
                 prompt=prompt,
                 model=resolved_model,
@@ -270,10 +310,10 @@ async def call_llm(
                 system_prompt=system_prompt,
             ),
             what=f"Anthropic call ({resolved_model})",
-        )
+        ))
 
     if provider == "openai":
-        return await _retry_async(
+        return await _medido(lambda: _retry_async(
             lambda: _call_openai(
                 prompt=prompt,
                 model=resolved_model,
@@ -281,10 +321,10 @@ async def call_llm(
                 system_prompt=system_prompt,
             ),
             what=f"OpenAI call ({resolved_model})",
-        )
+        ))
 
     # Default: Ollama
-    return await _retry_async(
+    return await _medido(lambda: _retry_async(
         lambda: _call_ollama(
             prompt=prompt,
             model=resolved_model,
@@ -293,7 +333,7 @@ async def call_llm(
             num_ctx=num_ctx,
         ),
         what=f"Ollama call ({resolved_model})",
-    )
+    ))
 
 
 async def call_llm_stream(
@@ -375,10 +415,12 @@ async def _call_ollama(
                 if response.status_code >= 500 or response.status_code == 429:
                     raise TransientLLMError(err)
                 raise RuntimeError(err)
-            text = response.json().get("response", "").strip()
+            datos = response.json()
+            text = datos.get("response", "").strip()
             if not text:
                 # Often a model still warming up — worth another attempt.
                 raise TransientLLMError("Ollama returned an empty response")
+            _record_usage("ollama", model, datos.get("prompt_eval_count"), datos.get("eval_count"))
             return text
     except httpx.TimeoutException as exc:
         raise TransientLLMError(
@@ -439,6 +481,9 @@ async def _call_openai(
         text = (response.choices[0].message.content or "").strip()
         if not text:
             raise TransientLLMError("OpenAI returned an empty response")
+        uso = getattr(response, "usage", None)
+        _record_usage("openai", model,
+                      getattr(uso, "prompt_tokens", None), getattr(uso, "completion_tokens", None))
         return text
 
     except AuthenticationError as exc:
@@ -499,6 +544,12 @@ async def _call_ollama_stream(
                             token = chunk.get("response", "")
                             if token:
                                 yield token
+                            # El chunk final (`done`) trae el recuento de tokens.
+                            if chunk.get("done"):
+                                _record_usage(
+                                    "ollama", model,
+                                    chunk.get("prompt_eval_count"), chunk.get("eval_count"),
+                                )
                         except Exception:
                             pass
     except httpx.TimeoutException as exc:
@@ -535,6 +586,11 @@ async def _call_openai_stream(
     try:
         client = AsyncOpenAI(**client_kwargs)
         try:
+            # Sin `stream_options={"include_usage": True}` a propósito: esta ruta
+            # admite `OPENAI_BASE_URL`, y las pasarelas compatibles con OpenAI a
+            # menudo rechazan ese parámetro. Una llamada rota es peor que una
+            # métrica ausente, así que el streaming de OpenAI queda sin recuento
+            # de tokens (la latencia sí se mide, como en el resto).
             stream = await client.chat.completions.create(
                 model=model,
                 messages=messages,
@@ -698,6 +754,9 @@ async def _call_anthropic(
     text = _anthropic_text(message)
     if not text:
         raise TransientLLMError("Anthropic devolvió una respuesta vacía")
+    uso = getattr(message, "usage", None)
+    _record_usage("anthropic", model,
+                  getattr(uso, "input_tokens", None), getattr(uso, "output_tokens", None))
     return text
 
 
@@ -730,6 +789,14 @@ async def _call_anthropic_stream(
             async for token in stream.text_stream:
                 if token:
                     yield token
+            # El mensaje final del stream trae el uso acumulado.
+            try:
+                final = await stream.get_final_message()
+                uso = getattr(final, "usage", None)
+                _record_usage("anthropic", model,
+                              getattr(uso, "input_tokens", None), getattr(uso, "output_tokens", None))
+            except Exception:  # pragma: no cover - el uso es opcional
+                pass
     except Exception as exc:  # noqa: BLE001 - re-raised as Transient/Runtime below
         raise _classify_anthropic_error(exc, symbols) from exc
     finally:
