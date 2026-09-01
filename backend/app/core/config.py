@@ -60,6 +60,13 @@ class Settings(BaseModel):
 
     # Redis
     REDIS_URL: str = "redis://:password@localhost:6379/0"
+    # Coordinación entre workers (SPEC-018/T4.3). Apagada por defecto: con un solo
+    # worker el bus en proceso basta y no obliga a levantar Redis para desarrollar.
+    #
+    # Hace falta un interruptor propio y no vale «¿hay REDIS_URL?»: esa variable
+    # tiene un valor por defecto no vacío, así que la ausencia de configuración es
+    # indistinguible de una configuración real y el fallback nunca se activaría.
+    REDIS_ENABLED: bool = False
 
     # Ollama
     OLLAMA_BASE_URL: str = "http://localhost:11434"
@@ -186,6 +193,7 @@ def _build_settings() -> Settings:
         "ENABLE_DEV_SEED": access.get("enable_dev_seed", False),
         "DEFAULT_SIGNUP_ROLE": access.get("default_signup_role", "lector"),
         "REDIS_URL": redis.get("url", "redis://:password@localhost:6379/0"),
+        "REDIS_ENABLED": redis.get("enabled", False),
         "OLLAMA_BASE_URL": ollama.get("base_url", "http://localhost:11434"),
         "OLLAMA_MODEL": ollama.get("default_model", "llama3.2:1b"),
         "OLLAMA_EMBED_MODEL": ollama.get("embed_model", "nomic-embed-text"),

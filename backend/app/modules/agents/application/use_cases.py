@@ -20,19 +20,28 @@ from app.modules.agents.adapters.revisor import run_revisor
 from app.modules.agents.adapters.formateador import run_formateador
 from app.modules.agents.adapters.publicador import run_publicador
 from app.modules.agents.adapters.generic import run_generic_agent, load_agent_profile
+from app.platform.bus import get_bus
 
 logger = logging.getLogger(__name__)
 
-# Global registry for active SSE streams: article_id -> list of asyncio.Queue
-active_streams: Dict[uuid.UUID, list] = {}
-
-# Global registry for active pipeline tasks: article_id -> asyncio.Task
+# Registro de tareas del pipeline: article_id -> asyncio.Task.
+#
+# **Sigue siendo local al worker** y no puede dejar de serlo: un `asyncio.Task` es
+# el manejador de una corrutina viva, no un dato serializable. Lo que sí cruza
+# procesos es la *señal* de cancelación, que viaja por el bus (SPEC-018/T4.3): el
+# worker dueño de la tarea registra un handler y la cancela cuando llega.
 active_tasks: Dict[uuid.UUID, asyncio.Task] = {}
 
 # LangGraph checkpointer: persists the graph state after every completed node so a
 # failed pipeline can be resumed from the last successful step instead of restarting.
 # Keyed by thread_id == str(article_id). In-memory: survives transient agent errors
 # (e.g. Ollama momentarily unreachable) while the backend process keeps running.
+#
+# **Sigue siendo por proceso, también con Redis (T4.3).** El bus comparte eventos,
+# decisiones y tickets, pero no esto: si una reanudación cae en un worker distinto
+# del que guardó el checkpoint, no lo encuentra y el pipeline empieza de cero. Para
+# que `resume` funcione entre workers hace falta un saver compartido
+# (`langgraph-checkpoint-redis` o el de Postgres), que es cambio aparte.
 _pipeline_checkpointer = InMemorySaver()
 
 
@@ -49,9 +58,6 @@ async def has_pipeline_checkpoint(article_id: uuid.UUID) -> bool:
     except Exception:
         return False
 
-# Pending human-in-the-loop decisions: article_id -> Future resolved by the user
-pending_decisions: Dict[uuid.UUID, "asyncio.Future[str]"] = {}
-
 # Default decision when the user does not respond in time (avoid hanging forever)
 _DECISION_TIMEOUT = 900.0  # 15 minutes
 
@@ -62,29 +68,27 @@ async def request_user_decision(article_id: uuid.UUID, payload: Dict[str, Any]) 
     Emits an ``await_decision`` SSE event and blocks until the user responds via
     ``submit_user_decision`` or the timeout elapses (defaulting to "continue").
     """
-    loop = asyncio.get_event_loop()
-    future: "asyncio.Future[str]" = loop.create_future()
-    pending_decisions[article_id] = future
-
-    publish_event(article_id, {"type": "await_decision", **payload})
-    try:
-        return await asyncio.wait_for(future, timeout=_DECISION_TIMEOUT)
-    except asyncio.TimeoutError:
-        logger.info("User decision timed out for article %s — defaulting to 'continue'", article_id)
-        publish_event(article_id, {"type": "decision_resolved", "decision": "continue", "timed_out": True})
-        return "continue"
-    finally:
-        pending_decisions.pop(article_id, None)
+    bus = get_bus()
+    async with bus.awaiting_decision(article_id) as future:
+        publish_event(article_id, {"type": "await_decision", **payload})
+        try:
+            return await asyncio.wait_for(future, timeout=_DECISION_TIMEOUT)
+        except asyncio.TimeoutError:
+            logger.info("User decision timed out for article %s — defaulting to 'continue'", article_id)
+            publish_event(article_id, {"type": "decision_resolved", "decision": "continue", "timed_out": True})
+            return "continue"
 
 
-def submit_user_decision(article_id: uuid.UUID, decision: str) -> bool:
-    """Resolve a pending decision for an article. Returns True if one was waiting."""
-    future = pending_decisions.get(article_id)
-    if future is not None and not future.done():
-        future.set_result(decision)
+async def submit_user_decision(article_id: uuid.UUID, decision: str) -> bool:
+    """Entregar una decisión pendiente. `True` si había alguien esperándola.
+
+    Puede resolverla un worker distinto del que ejecuta el pipeline: el bus lleva el
+    valor hasta el `Future` que espera, esté donde esté (SPEC-018/T4.3).
+    """
+    entregada = await get_bus().submit_decision(article_id, decision)
+    if entregada:
         publish_event(article_id, {"type": "decision_resolved", "decision": decision})
-        return True
-    return False
+    return entregada
 
 # In-memory log buffer: article_id -> list of formatted log lines
 _log_buffers: Dict[uuid.UUID, List[str]] = {}
@@ -143,12 +147,10 @@ def publish_event(article_id: uuid.UUID, event: dict) -> None:
             f"[{ts}] [ERROR] [{agent}] ✗ {err}"
         )
 
-    if article_id in active_streams:
-        for q in active_streams[article_id]:
-            try:
-                q.put_nowait(event)
-            except Exception:
-                pass
+    # El bus decide si esto es entrega en proceso o un pub/sub que llega a todos
+    # los workers (SPEC-018/T4.3). Sigue siendo síncrono porque los agentes emiten
+    # tokens desde callbacks que no pueden hacer await.
+    get_bus().publish_nowait(article_id, event)
 
 
 async def log_run_start(
@@ -441,10 +443,15 @@ class Orchestrator:
         verb = "Resuming" if resume else "Starting"
         logger.info(f"{verb} LangGraph run for article {article_id} with sequence {flow_sequence}")
 
-        # Register this coroutine as a cancellable task
+        # Registrar la corrutina como cancelable. La tarea es local a este worker;
+        # lo que se comparte por el bus es la marca de «en curso» y el handler que
+        # atiende una cancelación pedida desde otro worker (SPEC-018/T4.3).
+        bus = get_bus()
         current_task = asyncio.current_task()
         if current_task is not None:
             active_tasks[article_id] = current_task
+            bus.register_cancel_handler(article_id, current_task.cancel)
+        await bus.mark_running(article_id)
 
         # Open log buffer for this run
         _log_buffers[article_id] = []
@@ -543,3 +550,5 @@ class Orchestrator:
             raise
         finally:
             active_tasks.pop(article_id, None)
+            bus.unregister_cancel_handler(article_id)
+            await bus.clear_running(article_id)

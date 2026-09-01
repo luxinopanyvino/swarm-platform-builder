@@ -19,6 +19,10 @@ services:
       # El frontend llama por rutas relativas y nginx hace de pasarela, así que no
       # hay origen cruzado que permitir.
       ALLOWED_ORIGINS: ""
+      # Coordinación entre workers (SPEC-018/T4.3): imprescindible en producción,
+      # donde uvicorn corre con varios workers. Sin esto, un cliente conectado al
+      # worker B no vería ni un evento del pipeline que corre en el A.
+      REDIS_ENABLED: "true"
     volumes: !override
       # Solo lo que debe persistir. El código viaja **dentro de la imagen**.
       - ./config.yaml:/app/config.yaml:ro

@@ -100,6 +100,32 @@ services:
           memory: 8G
 
   # ─────────────────────────────────────────
+  # Coordinación entre workers (SPEC-018/T4.3)
+  # ─────────────────────────────────────────
+  redis:
+    image: redis:7.4-alpine
+    container_name: alejandria_redis
+    restart: unless-stopped
+    # Interno: sin puertos publicados (solo alejandria_network).
+    # Sin persistencia a propósito: aquí solo viven eventos en vuelo, decisiones
+    # pendientes y tickets de segundos. Nada que sobreviva a un reinicio, y guardar
+    # en disco solo añadiría E/S y una copia de datos efímeros.
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    networks:
+      - alejandria_network
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli ping | grep -q PONG"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    # Límite de recursos (SPEC-017/AC5). Solo mensajes en vuelo: no necesita más.
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
+
+  # ─────────────────────────────────────────
   # Backend (FastAPI + LangGraph)
   # ─────────────────────────────────────────
   backend:
@@ -131,6 +157,11 @@ services:
       # the environment; never commit a value.
       QDRANT_API_KEY: "${QDRANT_API_KEY:?set QDRANT_API_KEY in your environment}"
       QDRANT_COLLECTION: "rag_docs"
+      # ── Coordinación entre workers (SPEC-018/T4.3) ──────────
+      REDIS_URL: "redis://redis:6379/0"
+      # En desarrollo se deja apagado: con un worker el bus en proceso basta.
+      # El override de producción lo enciende.
+      REDIS_ENABLED: "false"
       # ── CORS ────────────────────────────────────────────────
       ALLOWED_ORIGINS: "http://localhost:8080,http://127.0.0.1:8080"
     depends_on:
@@ -141,6 +172,8 @@ services:
         # empezar a atender con Qdrant todavía sin responder.
         condition: service_healthy
       ollama:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     volumes:
       # Mount source for hot-reload in dev; remove in production image builds
