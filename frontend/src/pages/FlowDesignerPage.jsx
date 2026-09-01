@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useRef } from 'react';
+import Modal from '../components/ui/Modal';
 import {
   ReactFlow, Background, Controls, MiniMap,
   addEdge, useNodesState, useEdgesState, Panel,
@@ -440,12 +441,7 @@ export default function FlowDesignerPage() {
 
       {/* Run Modal */}
       {showRunModal && (
-        <div className="modal-backdrop" onClick={() => setShowRunModal(false)}>
-          <div className="modal" onClick={e => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3>Ejecutar pipeline</h3>
-              <button className="btn btn-ghost btn-sm btn-icon" onClick={() => setShowRunModal(false)}>✕</button>
-            </div>
+        <Modal onClose={() => setShowRunModal(false)} title="Ejecutar pipeline">
             <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
               {existingArticleId ? (
                 <p style={{ fontSize: 'var(--font-size-sm)', color: 'var(--text-muted)', margin: 0 }}>
@@ -528,7 +524,7 @@ export default function FlowDesignerPage() {
                   ))}
                   <input
                     id="kw-input"
-                    style={{ border: 'none', background: 'transparent', outline: 'none', fontSize: 'var(--font-size-sm)', color: 'var(--text-primary)', minWidth: 120, flex: 1 }}
+                    style={{ border: 'none', background: 'transparent', fontSize: 'var(--font-size-sm)', color: 'var(--text-primary)', minWidth: 120, flex: 1 }}
                     placeholder={runKeywords.length === 0 ? 'Escribe y pulsa Enter o coma…' : ''}
                     value={runKeywordInput}
                     onChange={e => setRunKeywordInput(e.target.value)}
@@ -617,8 +613,7 @@ export default function FlowDesignerPage() {
                 <Play size={14} /> Ejecutar pipeline
               </button>
             </div>
-          </div>
-        </div>
+        </Modal>
       )}
 
       {editAgent && (

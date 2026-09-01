@@ -206,6 +206,28 @@ code {
 }
 
 /* ============================================================
+   FOCO VISIBLE (SPEC-003 / AC2)
+   El indicador se dibuja **fuera** del elemento (`outline-offset`), así que su
+   contraste se mide contra la superficie que hay detrás y no contra el propio
+   control: un anillo azul pegado a un botón azul no se vería, separado por 2px
+   de superficie sí. `scripts/check_contrast.py` mide justamente ese par.
+   `:focus-visible` y no `:focus`: el anillo aparece al navegar con teclado y no
+   al hacer clic, que es lo que lleva a la gente a quitarlo con `outline:none`.
+   ============================================================ */
+:focus-visible {
+  outline: 2px solid var(--border-focus);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+/* Los controles con radio propio conservan el suyo para que el anillo lo siga. */
+.btn:focus-visible,
+.badge:focus-visible { border-radius: var(--radius-md); }
+.btn-icon:focus-visible { border-radius: var(--radius-md); }
+.input:focus-visible { border-radius: var(--radius-md); }
+.avatar:focus-visible,
+.toggle:focus-visible { border-radius: var(--radius-full); }
+
+/* ============================================================
    BUTTONS
    ============================================================ */
 .btn {
@@ -220,7 +242,15 @@ code {
   font-weight: var(--weight-semibold);
   cursor: pointer;
   border: none;
-  transition: all var(--transition-base);
+  /* Enumeradas y no `all`: con `all`, el anillo de foco entra animado desde el
+     valor inicial y durante ~200 ms no es ni azul ni de 2px. Un indicador de
+     foco tiene que aparecer, no llegar. (Se vio midiendo `outline-offset`
+     justo después de un Tab: 0.03125px, o sea el 1,5% de la animación.) */
+  transition: background-color var(--transition-base),
+              border-color var(--transition-base),
+              color var(--transition-base),
+              box-shadow var(--transition-base),
+              transform var(--transition-base);
   white-space: nowrap;
   user-select: none;
   letter-spacing: 0.01em;
@@ -246,7 +276,7 @@ code {
 .btn-secondary {
   background: var(--bg-surface);
   color: var(--text-body);
-  border: 1px solid var(--border-strong);
+  border: 1px solid var(--border-control);
 }
 .btn-secondary:hover:not(:disabled) {
   background: var(--bg-hover);
@@ -271,7 +301,7 @@ code {
 }
 .btn-danger:hover:not(:disabled) {
   background: var(--error);
-  color: white;
+  color: var(--text-on-error);
 }
 
 .btn-sm { padding: 5px 12px; font-size: var(--font-size-xs); }
@@ -292,14 +322,13 @@ code {
 .input {
   width: 100%;
   background: var(--bg-surface);
-  border: 1px solid var(--border-strong);
+  border: 1px solid var(--border-control);
   border-radius: var(--radius-md);
   padding: 10px 14px;
   font-family: var(--font-sans);
   font-size: var(--font-size-base);
   color: var(--text-body);
   transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
-  outline: none;
 }
 .input::placeholder { color: var(--text-muted); }
 .input:focus {
@@ -327,7 +356,7 @@ textarea.input { resize: vertical; min-height: 80px; line-height: var(--leading-
 .badge-draft    { background: var(--neutral-15); color: var(--status-draft); }
 .badge-pending  { background: var(--warning-bg); color: var(--warning); }
 .badge-approved { background: var(--success-bg); color: var(--success); }
-.badge-published { background: var(--brand-tint); color: var(--brand); }
+.badge-published { background: var(--brand-tint); color: var(--brand-on-tint); }
 .badge-running  { background: var(--info-bg); color: var(--info); }
 .badge-error    { background: var(--error-bg); color: var(--error); }
 
@@ -560,7 +589,7 @@ textarea.input { resize: vertical; min-height: 80px; line-height: var(--leading-
 .toggle {
   width: 40px; height: 22px;
   background: var(--neutral-30);
-  border: 1px solid var(--border-strong);
+  border: 1px solid var(--border-control);
   border-radius: var(--radius-full);
   position: relative;
   transition: background var(--transition-base);

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import Modal from '../components/ui/Modal';
 import { useParams, useNavigate } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import { ArrowLeft, CheckCircle, XCircle, UserPlus, Clock, AlertCircle, Pencil, Save, X, GitBranch, FileText, Plus, Trash2, Palette } from 'lucide-react';
@@ -315,7 +316,7 @@ export default function ArticleDetailPage() {
                 border: '1px solid var(--border-default)', borderRadius: 'var(--radius-md)',
                 padding: 'var(--space-4)', color: 'var(--text-primary)',
                 fontSize: 'var(--font-size-sm)', fontFamily: 'inherit',
-                lineHeight: 1.7, resize: 'vertical', outline: 'none', boxSizing: 'border-box',
+                lineHeight: 1.7, resize: 'vertical', boxSizing: 'border-box',
               }}
             />
           ) : article.body && !article.body.startsWith('Error:') ? (
@@ -525,12 +526,7 @@ export default function ArticleDetailPage() {
 
       {/* Pipeline agent-select modal */}
       {showPipelineModal && (
-        <div className="modal-backdrop" role="dialog" aria-modal="true" aria-label="Seleccionar agentes" onKeyDown={e => e.key === 'Escape' && setShowPipelineModal(false)}>
-          <div className="modal" onClick={e => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3>Reejecutar pipeline</h3>
-              <button className="btn btn-ghost btn-sm btn-icon" onClick={() => setShowPipelineModal(false)} aria-label="Cerrar">✕</button>
-            </div>
+        <Modal onClose={() => setShowPipelineModal(false)} title="Reejecutar pipeline">
             <div className="modal-body">
               {loadingRuns ? (
                 <div style={{ textAlign: 'center', padding: 'var(--space-6)' }}><div className="spinner" /></div>
@@ -568,18 +564,12 @@ export default function ArticleDetailPage() {
                 <GitBranch size={14} /> Ejecutar
               </button>
             </div>
-          </div>
-        </div>
+        </Modal>
       )}
 
       {/* Reject modal */}
       {showRejectModal && (
-        <div className="modal-backdrop" onClick={() => setShowRejectModal(false)}>
-          <div className="modal" onClick={e => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3>Rechazar artículo</h3>
-              <button className="btn btn-ghost btn-sm btn-icon" onClick={() => setShowRejectModal(false)}>✕</button>
-            </div>
+        <Modal onClose={() => setShowRejectModal(false)} title="Rechazar artículo">
             <div className="modal-body">
               <div className="input-group">
                 <label className="input-label">Motivo del rechazo</label>
@@ -595,8 +585,7 @@ export default function ArticleDetailPage() {
                 <XCircle size={14} /> Confirmar rechazo
               </button>
             </div>
-          </div>
-        </div>
+        </Modal>
       )}
     </div>
   );
