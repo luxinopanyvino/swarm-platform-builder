@@ -411,6 +411,14 @@ class AgentState(TypedDict):
 
 Al arrancar en modo desarrollo, se crean automáticamente los siguientes usuarios por defecto:
 
+> **Requieren flag explícito** (SPEC-015/T1.6). El arranque solo los siembra con
+> `DEBUG=true` **y** `ENABLE_DEV_SEED=true`; `dev-local.cmd` ya los pone. Con
+> `DEBUG=false` el flag se fuerza a `False` aunque `config.yaml` lo active, así que
+> un despliegue de producción nunca crea estas cuentas.
+>
+> Se **crean si faltan** y no se reescriben: si cambias la contraseña del admin,
+> sobrevive al reinicio.
+
 **Admin**:
 - Email: `admin@admin`
 - Contraseña: `admin123`
@@ -637,7 +645,8 @@ La plataforma carga la configuración con la siguiente prioridad (de mayor a men
 | `QDRANT_COLLECTION` | `rag_docs` | Colección vectorial RAG por defecto |
 | `RAG_VECTOR_SIZE` | `768` | Dimensión del vector (768 para nomic-embed-text) |
 | `ENABLE_DEV_ROLE_PROMOTION` | `false` | Permite auto-promoción de rol (solo dev) |
-| `DEV_ADMIN_PASSWORD` | `admin123` | Contraseña del admin auto-creado (solo SQLite/dev) |
+| `ENABLE_DEV_SEED` | `false` | Siembra usuarios de demo y contenido de ejemplo. Forzado a `false` si `DEBUG=false` |
+| `DEV_ADMIN_PASSWORD` | `admin123` | Contraseña del admin sembrado (solo con `ENABLE_DEV_SEED`) |
 
 ---
 

@@ -25,7 +25,8 @@ La plataforma carga configuración con la siguiente prioridad (mayor a menor):
 | `QDRANT_COLLECTION` | `rag_docs` | Colección RAG por defecto |
 | `RAG_VECTOR_SIZE` | `768` | Dimensión del vector (768 para nomic-embed-text) |
 | `ENABLE_DEV_ROLE_PROMOTION` | `false` | Permite auto-promoción de rol (solo dev) |
-| `DEV_ADMIN_PASSWORD` | `admin123` | Contraseña del admin auto-creado (solo SQLite/dev) |
+| `ENABLE_DEV_SEED` | `false` | Siembra usuarios de demo y contenido de ejemplo. Forzado a `false` si `DEBUG=false` |
+| `DEV_ADMIN_PASSWORD` | `admin123` | Contraseña del admin sembrado (solo con `ENABLE_DEV_SEED`) |
 
 ::: warning Producción
 `SECRET_KEY` no puede estar vacío ni usar valores por defecto en producción. El servidor rechazará el arranque si detecta un valor inseguro con `DEBUG=false`.

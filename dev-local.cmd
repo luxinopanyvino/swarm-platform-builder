@@ -98,6 +98,9 @@ set DATABASE_URL=sqlite+aiosqlite:///./data/dev.db
 set SECRET_KEY=local-dev-secret
 set DEBUG=true
 set ENABLE_DEV_ROLE_PROMOTION=true
+REM Siembra de demo (SPEC-015/T1.6): crea admin@admin y los usuarios de
+REM prueba. Sin este flag el arranque no siembra credenciales debiles.
+set ENABLE_DEV_SEED=true
 start "Alex Backend" /D "%BACKEND_DIR%" "%UVICORN_EXE%" app.main:app --reload --port 8000
 
 echo Iniciando frontend en una nueva ventana...

@@ -79,9 +79,15 @@ async def test_register_login_and_get_current_user() -> None:
 
 
 @pytest.mark.asyncio
-async def test_seeded_public_user_login() -> None:
+async def test_seeded_public_user_login(monkeypatch) -> None:
     await _create_test_database()
+    from app.core.config import settings
     from app.main import ensure_dev_users
+
+    # Desde SPEC-015/T1.6 la siembra exige flag explícito; este test ejercita
+    # justamente el camino sembrado, así que opta por él como haría un entorno
+    # de desarrollo.
+    monkeypatch.setattr(settings, "ENABLE_DEV_SEED", True)
     await ensure_dev_users()
     try:
         from httpx import ASGITransport

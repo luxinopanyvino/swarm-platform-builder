@@ -48,6 +48,10 @@ class Settings(BaseModel):
 
     # Access controls — MUST be False in production
     ENABLE_DEV_ROLE_PROMOTION: bool = False
+    # Siembra de demo: usuarios con credenciales conocidas y contenido de ejemplo
+    # (SPEC-015/T1.6/AC5). Apagada por defecto y, además, **imposible de encender
+    # con DEBUG=false** (ver `_disable_dev_only_flags`).
+    ENABLE_DEV_SEED: bool = False
 
     # Default role assigned to users who self-register. Minimal privilege by
     # design: only "lector" or "publico" are accepted; anything else falls back
@@ -179,6 +183,7 @@ def _build_settings() -> Settings:
         "RETENTION_ORPHAN_ASSETS_DAYS": retention.get("orphan_assets_days", 30),
         # Fail-safe: when the key is absent the effective value is False.
         "ENABLE_DEV_ROLE_PROMOTION": access.get("enable_dev_role_promotion", False),
+        "ENABLE_DEV_SEED": access.get("enable_dev_seed", False),
         "DEFAULT_SIGNUP_ROLE": access.get("default_signup_role", "lector"),
         "REDIS_URL": redis.get("url", "redis://:password@localhost:6379/0"),
         "OLLAMA_BASE_URL": ollama.get("base_url", "http://localhost:11434"),
@@ -232,7 +237,26 @@ def _build_settings() -> Settings:
         else:
             merged[key] = env_value
 
+    _disable_dev_only_flags(merged)
     return Settings(**merged)
+
+
+# Flags que solo tienen sentido en desarrollo. Con `DEBUG=false` su valor efectivo
+# es False **venga de donde venga** —variable de entorno o config.yaml—, en lugar de
+# confiar en que nadie los deje encendidos al desplegar.
+#
+# Solo está `ENABLE_DEV_SEED`, que es lo que cubre T1.6/AC5. Añadir aquí
+# `ENABLE_DEV_ROLE_PROMOTION` es exactamente lo que pide AC4 (**T1.5 / #157**, que
+# sigue abierta): hoy ese flag solo es fail-safe cuando falta, no cuando un
+# config.yaml lo activa con DEBUG=false.
+_DEV_ONLY_FLAGS = ("ENABLE_DEV_SEED",)
+
+
+def _disable_dev_only_flags(merged: dict[str, Any]) -> None:
+    if merged.get("DEBUG"):
+        return
+    for flag in _DEV_ONLY_FLAGS:
+        merged[flag] = False
 
 
 # Minimum entropy proxy for a production SECRET_KEY. `openssl rand -hex 32`
