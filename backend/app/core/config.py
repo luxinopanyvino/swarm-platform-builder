@@ -245,11 +245,16 @@ def _build_settings() -> Settings:
 # es False **venga de donde venga** —variable de entorno o config.yaml—, en lugar de
 # confiar en que nadie los deje encendidos al desplegar.
 #
-# Solo está `ENABLE_DEV_SEED`, que es lo que cubre T1.6/AC5. Añadir aquí
-# `ENABLE_DEV_ROLE_PROMOTION` es exactamente lo que pide AC4 (**T1.5 / #157**, que
-# sigue abierta): hoy ese flag solo es fail-safe cuando falta, no cuando un
-# config.yaml lo activa con DEBUG=false.
-_DEV_ONLY_FLAGS = ("ENABLE_DEV_SEED",)
+# Ser fail-safe *cuando el flag falta* no basta, que es donde estaba el hueco: un
+# `config.yaml` con el flag a `true` viaja en el repositorio y se despliega tal cual,
+# así que el caso peligroso no es el olvido de ponerlo sino el olvido de quitarlo.
+#
+# - `ENABLE_DEV_ROLE_PROMOTION` (SPEC-015/T1.5/AC4): atajo que permite a un usuario
+#   cambiarse el rol a sí mismo. En producción es una escalada de privilegios.
+# - `ENABLE_DEV_SEED` (SPEC-015/T1.6/AC5): siembra cuentas con contraseña conocida.
+#
+# Cualquier flag nuevo que abra un atajo de desarrollo va en esta tupla.
+_DEV_ONLY_FLAGS = ("ENABLE_DEV_ROLE_PROMOTION", "ENABLE_DEV_SEED")
 
 
 def _disable_dev_only_flags(merged: dict[str, Any]) -> None:
