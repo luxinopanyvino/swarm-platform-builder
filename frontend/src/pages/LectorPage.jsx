@@ -125,7 +125,7 @@ export default function LectorPage() {
                 {unread > 0 && (
                   <span style={{
                     position: 'absolute', top: 3, right: 3,
-                    background: 'var(--error)', color: '#fff',
+                    background: 'var(--error)', color: 'var(--neutral-00)',
                     borderRadius: '50%', width: 16, height: 16,
                     fontSize: 10, fontWeight: 700,
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -136,10 +136,10 @@ export default function LectorPage() {
                 <div style={{
                   position: 'absolute', right: 0, top: 'calc(100% + 8px)',
                   width: 300, background: 'var(--bg-elevated)',
-                  border: '1px solid var(--border-color)', borderRadius: 'var(--radius-lg)',
+                  border: '1px solid var(--border-default)', borderRadius: 'var(--radius-lg)',
                   boxShadow: '0 8px 24px rgba(0,0,0,0.4)', zIndex: 200, overflow: 'hidden',
                 }}>
-                  <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border-color)', fontWeight: 600, fontSize: 'var(--font-size-sm)' }}>
+                  <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border-default)', fontWeight: 600, fontSize: 'var(--font-size-sm)' }}>
                     Notificaciones {unread > 0 && <span style={{ color: 'var(--error)' }}>({unread} nuevas)</span>}
                   </div>
                   <div style={{ maxHeight: 320, overflowY: 'auto' }}>
@@ -151,7 +151,7 @@ export default function LectorPage() {
                       <div key={n.id} style={{
                         padding: '12px 16px',
                         background: n.read ? 'transparent' : 'rgba(99,102,241,0.08)',
-                        borderBottom: '1px solid var(--border-color)',
+                        borderBottom: '1px solid var(--border-default)',
                       }}>
                         <div style={{ fontWeight: n.read ? 400 : 600, fontSize: 'var(--font-size-sm)', marginBottom: 2 }}>
                           {!n.read && <span style={{ display: 'inline-block', width: 7, height: 7, borderRadius: '50%', background: 'var(--brand)', marginRight: 6, verticalAlign: 'middle' }} />}

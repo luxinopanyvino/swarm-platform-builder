@@ -3,11 +3,11 @@ import { Handle, Position } from '@xyflow/react';
 import { Search, PenLine, Eye, FileText, Send, Bot, Zap } from 'lucide-react';
 
 const AGENT_META = {
-  investigador: { icon: Search,   color: '#0d9dda', label: 'Investigador', desc: 'Busca contexto en RAG y APIs científicas' },
-  redactor:     { icon: PenLine,  color: '#6b4fe3', label: 'Redactor',     desc: 'Genera borrador con Ollama' },
-  revisor:      { icon: Eye,      color: '#c47d04', label: 'Revisor',      desc: 'Evalúa calidad (score 0-100)' },
-  formateador:  { icon: FileText, color: '#2e844a', label: 'Formateador',  desc: 'Aplica formato APA/IEEE/Vancouver' },
-  publicador:   { icon: Send,     color: '#cb4b3f', label: 'Publicador',   desc: 'Publica el artículo en DB' },
+  investigador: { icon: Search,   color: 'var(--agent-research)', label: 'Investigador', desc: 'Busca contexto en RAG y APIs científicas' },
+  redactor:     { icon: PenLine,  color: 'var(--agent-write)', label: 'Redactor',     desc: 'Genera borrador con Ollama' },
+  revisor:      { icon: Eye,      color: 'var(--agent-review)', label: 'Revisor',      desc: 'Evalúa calidad (score 0-100)' },
+  formateador:  { icon: FileText, color: 'var(--agent-format)', label: 'Formateador',  desc: 'Aplica formato APA/IEEE/Vancouver' },
+  publicador:   { icon: Send,     color: 'var(--agent-publish)', label: 'Publicador',   desc: 'Publica el artículo en DB' },
 };
 
 // Agents that truly query RAG by themselves (not via pipeline state)
@@ -17,7 +17,7 @@ export const AgentNode = memo(({ data, selected }) => {
   const fallbackMeta = AGENT_META[data.agentId] || {};
   const meta = {
     Icon:  fallbackMeta.icon  || Bot,
-    color: data.color || fallbackMeta.color || '#8793a5',
+    color: data.color || fallbackMeta.color || 'var(--neutral-60)',
     label: data.label || fallbackMeta.label || data.agentId,
     desc:  data.desc  || fallbackMeta.desc  || '',
   };
@@ -73,9 +73,9 @@ export const ConditionNode = memo(({ data, selected }) => (
       <div className="condition-node-expr">{data.expression}</div>
     )}
     <Handle type="source" position={Position.Right} id="true"
-      style={{ top: '30%', background: '#2e844a', border: '2px solid #2e844a' }} />
+      style={{ top: '30%', background: 'var(--agent-format)', border: '2px solid var(--agent-format)' }} />
     <Handle type="source" position={Position.Right} id="false"
-      style={{ top: '70%', background: '#ba0517', border: '2px solid #ba0517' }} />
+      style={{ top: '70%', background: 'var(--red-60)', border: '2px solid var(--red-60)' }} />
   </div>
 ));
 

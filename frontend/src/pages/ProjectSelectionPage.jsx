@@ -25,35 +25,35 @@ const USE_CASES = [
     label: 'Desarrollo',
     description: 'Agentes orientados a ciclos de desarrollo de software.',
     icon: <Code2 size={22} />,
-    color: '#2e844a',
+    color: 'var(--agent-format)',
   },
   {
     value: 'marketing',
     label: 'Marketing',
     description: 'Generación de contenido y campañas de marketing.',
     icon: <Megaphone size={22} />,
-    color: '#c47d04',
+    color: 'var(--agent-review)',
   },
   {
     value: 'tiqueting',
     label: 'Tiqueting',
     description: 'Gestión y resolución automática de tickets de soporte.',
     icon: <Ticket size={22} />,
-    color: '#0d9dda',
+    color: 'var(--agent-research)',
   },
   {
     value: 'diseno',
     label: 'Diseño',
     description: 'Flujos de revisión y producción de assets visuales.',
     icon: <Palette size={22} />,
-    color: '#6b4fe3',
+    color: 'var(--agent-write)',
   },
   {
     value: 'custom',
     label: 'Custom',
     description: 'Crea tus propios agentes completamente desde cero.',
     icon: <Wand2 size={22} />,
-    color: '#8793a5',
+    color: 'var(--neutral-60)',
   },
 ];
 
@@ -219,7 +219,7 @@ function NewProjectModal({ onClose, onCreated }) {
                 style={{
                   flex: 2, padding: '0.65rem', background: 'var(--brand-gradient)',
                   border: 'none', borderRadius: 'var(--radius-md)',
-                  color: '#fff', cursor: 'pointer', fontSize: '0.88rem',
+                  color: 'var(--neutral-00)', cursor: 'pointer', fontSize: '0.88rem',
                   fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
                   opacity: isLoading || !name.trim() ? 0.6 : 1,
                 }}
@@ -383,7 +383,7 @@ export default function ProjectSelectionPage() {
           <div style={{
             width: 32, height: 32, borderRadius: '50%', background: 'var(--brand-gradient)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            color: '#fff', fontWeight: 700, fontSize: '0.8rem',
+            color: 'var(--neutral-00)', fontWeight: 700, fontSize: '0.8rem',
           }}>
             {initials}
           </div>

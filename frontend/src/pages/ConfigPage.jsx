@@ -232,8 +232,8 @@ function FieldControl({ field, config, onChange, ollamaModels, modelsLoading, on
           display: 'inline-flex', alignItems: 'center', gap: 6,
           padding: '5px 10px', borderRadius: 6,
           fontSize: 'var(--font-size-xs)', fontFamily: 'var(--font-mono)',
-          border: '1px solid var(--border-color, #d0d7de)',
-          color: isSet ? 'var(--color-success, #1a7f37)' : 'var(--color-danger, #b42318)',
+          border: '1px solid var(--border-default)',
+          color: isSet ? 'var(--success)' : 'var(--error)',
         }}
       >
         <span aria-hidden="true">{isSet ? '●' : '○'}</span>
@@ -368,7 +368,7 @@ function ConfigSection({ section, config, onChange, ollamaModels, modelsLoading,
   const isAgent = !!section.group;
 
   return (
-    <div className="config-section" style={isAgent ? { borderLeft: '3px solid var(--color-accent, #6c63ff)' } : {}}>
+    <div className="config-section" style={isAgent ? { borderLeft: '3px solid var(--accent)' } : {}}>
       <button
         className="config-section-header"
         onClick={() => setOpen(o => !o)}
@@ -539,9 +539,9 @@ export default function ConfigPage() {
 
             {/* Explanation callout */}
             <div style={{
-              background: 'var(--surface-2, #f5f5f5)',
-              border: '1px solid var(--border-muted, #ddd)',
-              borderLeft: '3px solid var(--color-accent, #6c63ff)',
+              background: 'var(--bg-inset)',
+              border: '1px solid var(--border-subtle)',
+              borderLeft: '3px solid var(--accent)',
               borderRadius: 6,
               padding: '8px 12px',
               marginBottom: 'var(--space-3)',
@@ -549,7 +549,7 @@ export default function ConfigPage() {
               color: 'var(--text-muted)',
               lineHeight: 1.5,
             }}>
-              <strong style={{ color: 'var(--text-default)' }}>Prioridad en runtime:</strong>{' '}
+              <strong style={{ color: 'var(--text-body)' }}>Prioridad en runtime:</strong>{' '}
               los perfiles de agente guardados en BD (editables en cada proyecto) <em>siempre</em> tienen
               prioridad sobre estos defaults. Estos valores solo aplican cuando el campo en BD está vacío
               o el agente no tiene perfil guardado.

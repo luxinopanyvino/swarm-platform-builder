@@ -231,7 +231,7 @@ export default function UsersPage() {
                 {/* Expanded project access panel */}
                 {expandedUser === u.id && (
                   <tr>
-                    <td colSpan={5} style={{ padding: '0 16px 16px 56px', borderBottom: '1px solid var(--border-subtle)', background: 'var(--surface-secondary)' }}>
+                    <td colSpan={5} style={{ padding: '0 16px 16px 56px', borderBottom: '1px solid var(--border-subtle)', background: 'var(--bg-sunken)' }}>
                       <div style={{ paddingTop: 12 }}>
                         <p style={{ fontSize: 'var(--font-size-xs)', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 10 }}>
                           Acceso a proyectos
@@ -248,7 +248,7 @@ export default function UsersPage() {
                                 key={p.id}
                                 style={{
                                   display: 'inline-flex', alignItems: 'center', gap: 6,
-                                  background: 'var(--surface-tertiary)', border: '1px solid var(--border-default)',
+                                  background: 'var(--bg-inset)', border: '1px solid var(--border-default)',
                                   borderRadius: 20, padding: '3px 10px', fontSize: 'var(--font-size-xs)',
                                   color: 'var(--text-secondary)',
                                 }}

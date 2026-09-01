@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Save, Loader, AlertCircle, Columns2, Columns3, ImagePlus } from 'lucide-react';
 import { articlesApi } from '../api/articles';
 import toast from 'react-hot-toast';
+import { PAPER_ACCENTS } from '../paperTheme';
 
 /**
  * Paper design studio: edit the article's text and presentation with a live
@@ -26,15 +27,9 @@ const FONTS = [
   { value: 'verdana', label: 'Verdana', preview: 'Verdana, sans-serif' },
 ];
 
-const ACCENTS = [
-  { value: 'ink', label: 'Tinta', hex: '#0b1b33' },
-  { value: 'blue', label: 'Azul', hex: '#0176d3' },
-  { value: 'violet', label: 'Violeta', hex: '#6b4fe3' },
-  { value: 'green', label: 'Verde', hex: '#2e844a' },
-  { value: 'amber', label: 'Ámbar', hex: '#c47d04' },
-  { value: 'red', label: 'Rojo', hex: '#ba0517' },
-  { value: 'teal', label: 'Turquesa', hex: '#06a59a' },
-];
+// Espejo de `_THEME_ACCENTS` del backend: son los colores del **paper**, no de la
+// interfaz. Ver el porqué en src/paperTheme.js.
+const ACCENTS = PAPER_ACCENTS;
 
 const FORMATS = [
   { value: 'apa', label: 'APA (1 columna)' },
@@ -167,7 +162,7 @@ export default function PaperDesignPage() {
       {/* Header */}
       <div style={{
         display: 'flex', alignItems: 'center', gap: 'var(--space-4)',
-        padding: 'var(--space-3) var(--space-5)', borderBottom: '1px solid var(--border-color)',
+        padding: 'var(--space-3) var(--space-5)', borderBottom: '1px solid var(--border-default)',
         background: 'var(--bg-surface)', flex: 'none',
       }}>
         <button className="btn btn-ghost btn-sm" onClick={() => navigate(-1)} aria-label="Volver">
@@ -189,7 +184,7 @@ export default function PaperDesignPage() {
         {/* ── Controls + text ─────────────────────────────────────────── */}
         <div style={{
           width: 380, flex: 'none', overflowY: 'auto', padding: 'var(--space-5)',
-          borderRight: '1px solid var(--border-color)', background: 'var(--bg-surface)',
+          borderRight: '1px solid var(--border-default)', background: 'var(--bg-surface)',
           display: 'flex', flexDirection: 'column', gap: 'var(--space-5)',
         }}>
           <section>
@@ -233,7 +228,7 @@ export default function PaperDesignPage() {
                     aria-pressed={active}
                     style={{
                       width: 30, height: 30, borderRadius: '50%', background: a.hex,
-                      border: active ? '3px solid var(--brand-primary)' : '1px solid var(--border-color)',
+                      border: active ? '3px solid var(--brand-primary)' : '1px solid var(--border-default)',
                       cursor: 'pointer', padding: 0,
                     }}
                   />
@@ -312,13 +307,13 @@ export default function PaperDesignPage() {
         </div>
 
         {/* ── Live preview ────────────────────────────────────────────── */}
-        <div style={{ flex: 1, minWidth: 0, background: 'var(--bg-app)' }}>
+        <div style={{ flex: 1, minWidth: 0, background: 'var(--bg-canvas)' }}>
           <iframe
             title="Vista previa de la maquetación"
             srcDoc={html}
             // Static HTML+CSS only: no scripts, no same-origin (T2.2).
             sandbox=""
-            style={{ width: '100%', height: '100%', border: 'none', background: '#fff' }}
+            style={{ width: '100%', height: '100%', border: 'none', background: 'var(--paper-surface)' }}
           />
         </div>
       </div>

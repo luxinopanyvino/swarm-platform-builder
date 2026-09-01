@@ -78,7 +78,7 @@ export default function PaperViewPage() {
             // script execution on its own, and the dangerous pair
             // (same-origin + scripts) is never combined.
             sandbox="allow-same-origin allow-modals"
-            style={{ flex: 1, border: 'none', width: '100%', height: '100%', background: '#fff' }}
+            style={{ flex: 1, border: 'none', width: '100%', height: '100%', background: 'var(--neutral-00)' }}
           />
         )}
       </div>

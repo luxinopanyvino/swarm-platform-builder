@@ -7,6 +7,11 @@
    without touching every JSX file.
    ============================================================ */
 :root {
+  /* Superficie del papel. Blanco siempre, también en tema oscuro: la vista de
+     maquetación y su impresión a PDF son una hoja, no parte del chrome de la
+     aplicación. Es un token para que ningún componente vuelva a escribir #fff. */
+  --paper-surface: var(--neutral-00);
+
   /* Brand */
   --brand-primary:       var(--brand);
   --brand-primary-hover: var(--brand-hover);
@@ -1012,7 +1017,7 @@ textarea.input { resize: vertical; min-height: 80px; line-height: var(--leading-
 .markdown-body code { font-family: var(--font-mono); font-size: 0.88em; }
 .markdown-body pre {
   background: var(--ink-100);
-  color: #d6e2f3;
+  color: var(--neutral-05);
   border: none;
   border-radius: var(--radius-md);
   padding: var(--space-4);
