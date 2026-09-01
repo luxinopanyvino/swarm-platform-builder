@@ -2,6 +2,7 @@ import asyncio
 import logging
 import datetime
 import re
+import time
 import uuid
 from pathlib import Path
 from typing import Dict, Any, List
@@ -21,6 +22,7 @@ from app.modules.agents.adapters.formateador import run_formateador
 from app.modules.agents.adapters.publicador import run_publicador
 from app.modules.agents.adapters.generic import run_generic_agent, load_agent_profile
 from app.platform.bus import get_bus
+from app.platform.metrics import current_agent_ctx, observe_agent_run
 
 logger = logging.getLogger(__name__)
 
@@ -211,6 +213,14 @@ def make_node_wrapper(agent_name: str, run_fn):
         article_id = state.get("article_id")
         author_id = state.get("author_id")
 
+        # Etiquetar las llamadas al LLM con el agente en curso (SPEC-019/T5.2).
+        # Aquí y no en `call_llm`: este wrapper es el único punto por el que pasan
+        # **todos** los agentes, incluidos los dinámicos de `.agent.md`, así que uno
+        # nuevo queda etiquetado sin tocar nada.
+        _token_agente = current_agent_ctx.set(agent_name)
+        _inicio_agente = time.perf_counter()
+        _estado_agente = "error"
+
         input_data = {
             "title": state.get("title"),
             "keywords": state.get("keywords"),
@@ -245,6 +255,7 @@ def make_node_wrapper(agent_name: str, run_fn):
         try:
             res = await run_fn(enriched_state)
             await log_run_end(run_id, res, "completed")
+            _estado_agente = "completed"
 
             end_event: Dict[str, Any] = {"type": "agent_end", "agent": agent_name, "output": res}
             if res.get("draft_text"):
@@ -262,6 +273,9 @@ def make_node_wrapper(agent_name: str, run_fn):
             publish_event(article_id, {"type": "agent_error", "agent": agent_name, "error": str(e)})
             publish_event(article_id, {"type": "log", "agent": agent_name, "message": f"✗ {agent_name} falló: {str(e)}", "level": "error"})
             raise
+        finally:
+            observe_agent_run(agent_name, time.perf_counter() - _inicio_agente, _estado_agente)
+            current_agent_ctx.reset(_token_agente)
 
     return wrapper
 

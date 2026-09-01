@@ -27,17 +27,18 @@ Ollama), por lo que un despliegue "sano" puede estar roto.
 
 ## 3. Criterios de aceptación
 
-- [ ] **AC1** — *Given* cualquier request o paso de pipeline, *When* se
+- [x] **AC1** — *Given* cualquier request o paso de pipeline, *When* se
   loguea, *Then* la salida es **JSON estructurado** con `timestamp`, `level`,
   `logger`, `request_id`/correlation id (propagado por middleware) y campos
   contextuales; sin emojis en nivel INFO+.
-- [ ] **AC2** — *Given* el backend en marcha, *When* se consulta `/metrics`,
+- [x] **AC2** — *Given* el backend en marcha, *When* se consulta `/metrics`,
   *Then* expone en formato Prometheus latencia y errores por endpoint y
   contadores de tokens/latencia LLM por agente y modelo.
+  *(hecho: #172, `test_metrics.py`)*
 - [ ] **AC3** — *Given* una ejecución de pipeline, *When* el tracing OTel está
   habilitado, *Then* cada request y cada paso de agente genera spans anidados
   exportables por OTLP (activable por configuración, apagado por defecto).
-- [ ] **AC4** — *Given* `/health`, *Then* distingue **liveness** (proceso vivo)
+- [x] **AC4** — *Given* `/health`, *Then* distingue **liveness** (proceso vivo)
   de **readiness** (DB, Qdrant y Ollama alcanzables), devolviendo `503` con el
   detalle de la dependencia caída cuando no está listo.
 

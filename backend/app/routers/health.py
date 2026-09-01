@@ -28,6 +28,7 @@ from sqlalchemy import text
 
 from app.core.config import settings
 from app.core.database import engine
+from app.platform.metrics import render_metrics
 from app.shared.qdrant import qdrant_headers
 
 logger = logging.getLogger(__name__)
@@ -106,6 +107,18 @@ async def _check_llm() -> tuple[Status, str | None]:
         return ("ok", None) if claves[provider] else ("not_configured", "sin credencial")
 
     return "not_configured", "proveedor desconocido"
+
+
+@router.get("/metrics")
+async def metrics() -> Response:
+    """Métricas en formato Prometheus (SPEC-019/T5.2/AC2).
+
+    Sin autenticación, como `/health`: quien la consulta es el recolector, que no
+    tiene credenciales. No queda expuesta al exterior porque nginx solo hace de
+    pasarela para `/api/` (T3.4), así que solo se llega desde la red interna.
+    """
+    cuerpo, tipo = render_metrics()
+    return Response(content=cuerpo, media_type=tipo)
 
 
 @router.get("/health")

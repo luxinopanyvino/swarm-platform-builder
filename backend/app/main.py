@@ -11,6 +11,7 @@ from app import models
 from app.core.config import settings
 from app.core.errors import install_error_handling
 from app.core.logging_config import configure_logging, request_id_middleware
+from app.platform.metrics import metrics_middleware
 from app.core.security import hash_password
 
 # Structured logging (JSON in prod, human-readable in debug) + correlation ids.
@@ -298,6 +299,12 @@ app = FastAPI(title="AlejandrIA Magazine API", version="0.1.0", lifespan=lifespa
 # request id is bound) and inside CORS (the 500 carries CORS headers, so the
 # browser can actually read the id instead of seeing an opaque network error).
 install_error_handling(app)
+
+# Métricas por petición (SPEC-019/T5.2). Va aquí, dentro de CORS y por fuera del
+# manejador de errores, para que una excepción también quede contada: si solo se
+# midieran las respuestas correctas, la latencia parecería mejorar justo cuando el
+# servicio empieza a fallar.
+app.middleware("http")(metrics_middleware)
 
 # Correlation id per request (X-Request-ID → logs + response header). Added before
 # CORS so every request — including those short-circuited later — gets an id.
