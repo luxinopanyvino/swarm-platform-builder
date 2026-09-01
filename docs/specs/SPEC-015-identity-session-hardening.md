@@ -40,9 +40,10 @@ credenciales débiles (`admin123`, …) en cada arranque SQLite.
 - [x] **AC3** — *Given* el stream SSE de ejecución, *When* un cliente conecta,
   *Then* se autentica con un **ticket efímero de un solo uso** y el JWT nunca
   viaja en el query string. *(hecho: #156, `test_sse_stream_ticket.py`)*
-- [ ] **AC4** — *Given* `ENABLE_DEV_ROLE_PROMOTION` ausente **o** un
+- [x] **AC4** — *Given* `ENABLE_DEV_ROLE_PROMOTION` ausente **o** un
   `config.yaml` que lo activa, *When* `DEBUG=false`, *Then* el valor efectivo
   es `False` y `dev/promote-reviewer` responde `403`.
+  *(hecho: #157, `test_dev_role_promotion_gate.py`)*
 - [x] **AC5** — *Given* un arranque con `DEBUG=false`, *When* se inicializa la
   BD, *Then* **no** se siembran usuarios con credenciales débiles; el seed de
   demo solo corre bajo flag de dev explícito.
