@@ -10,16 +10,26 @@ set "UVICORN_EXE=%VENV_DIR%\Scripts\uvicorn.exe"
 echo.
 echo Verificando entorno virtual en %VENV_DIR%...
 pushd "%BACKEND_DIR%"
-if not exist "%VENV_DIR%\Scripts\python.exe" (
-  echo [info] Creando entorno virtual en %VENV_DIR%...
-  python -m venv .venv
-  if errorlevel 1 (
-    popd
-    echo [error] No se pudo crear el entorno virtual.
-    exit /b 1
-  )
+if exist "%VENV_DIR%\Scripts\python.exe" goto :venv_ready
+
+REM El proyecto se fija a Python 3.12 (igual que CI y la imagen Docker). Se
+REM prioriza el lanzador `py -3.12`; si no esta, se cae a `python` con aviso.
+set "PY_CMD=python"
+py -3.12 --version >nul 2>&1 && set "PY_CMD=py -3.12"
+if not "%PY_CMD%"=="py -3.12" (
+  echo [aviso] No se encontro Python 3.12 via "py -3.12". Usando "python" del PATH.
+  echo         Si la instalacion de dependencias falla, instala 3.12:
+  echo           winget install --id Python.Python.3.12 -e
+)
+echo [info] Creando entorno virtual en %VENV_DIR% con %PY_CMD%...
+%PY_CMD% -m venv .venv
+if errorlevel 1 (
+  popd
+  echo [error] No se pudo crear el entorno virtual.
+  exit /b 1
 )
 
+:venv_ready
 if exist "%VENV_DIR%\Scripts\activate.bat" (
   call "%VENV_DIR%\Scripts\activate.bat"
 ) else (
