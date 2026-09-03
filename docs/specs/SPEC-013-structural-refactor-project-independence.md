@@ -67,6 +67,10 @@ y cada proyecto nuevo seguiría exigiendo código.
 - [ ] **AC5** — *Given* un proyecto nuevo creado desde el *template* AlejandrIA,
   *When* se ejecuta su pipeline, *Then* produce el mismo resultado que el AlejandrIA
   actual (test de **paridad** input→output sobre el flujo investigador→…→publicador).
+  <br>*T8.3 (#209)*: hecha la mitad que corresponde a esta tarea — el test de
+  paridad sobre el flujo completo existe y compara los dos caminos del motor. La
+  otra mitad —«creado desde el *template*»— necesita `template.yaml`, que es
+  T8.4 (#210); AC5 queda por tanto **sin marcar** hasta entonces.
 - [x] **AC6** — *Given* dos proyectos con documentos RAG distintos, *When* uno ejecuta
   su pipeline, *Then* solo recupera documentos de **su** proyecto (RAG con *namespace*
   por proyecto); ningún documento de otro proyecto ni del *seed* de demo se filtra.
@@ -82,9 +86,16 @@ y cada proyecto nuevo seguiría exigiendo código.
 - [ ] **AC7** — *Given* el front, *When* se inspecciona `frontend/src`, *Then* el
   *builder* reutilizable vive en `platform/` separado de las vistas de consumo en
   `projects/`, y `npm run build` y `npm run build:public` siguen compilando.
-- [ ] **AC8** — *Given* la migración, *When* se conmuta el *feature flag*
+- [x] **AC8** — *Given* la migración, *When* se conmuta el *feature flag*
   adapter↔capacidades, *Then* ambos caminos producen el mismo resultado hasta retirar
   los adapters legacy.
+  <br>*T8.3 (#209)*: el flag es `AGENT_ENGINE` (`adapters` por defecto |
+  `capabilities`). Cada agente declara en `alejandria.py` **qué capacidades
+  compone**; en modo `capabilities` el motor las resuelve del registro y se las
+  inyecta, y en modo `adapters` el agente usa sus imports de siempre. Nada del
+  camino viejo se ha borrado. Hay un test de paridad sobre el flujo completo y
+  otro que comprueba que el flag **cambia de verdad el camino**, para que la
+  paridad no acabe comparando el mismo camino consigo mismo.
 
 ## 4. Diseño propuesto
 
@@ -93,8 +104,10 @@ Sigue ADR-0005. Resumen por área:
 - **`core/`** *(hecho — T8.1, #237)*: fusionar `app/config.py` → `app/core/config.py`;
   `app/database.py` → `app/core/database.py`. Imports actualizados.
 - **`platform/`**: nuevo paquete motor.
-  - `engine/graph.py` + `engine/runtime.py` + `engine/routing.py` (desde
-    `application/use_cases.py`, con routing como datos) — pendiente (T8.3).
+  - `engine/graph.py` + `engine/routing.py` + `engine/agents.py` (desde
+    `application/use_cases.py`, con routing como datos) *(hecho — T8.3, #209)*:
+    el motor ya no menciona a `revisor` ni a `redactor`; la forma del pipeline
+    sale de un `GraphSpec` y los nodos del registro de agentes.
   - `capabilities/registry.py` + subcarpetas *(hecho — T8.2, #239)*: movidos
     `rag.py`, `tools.py` y `shared/llm.py` → `platform/`. (`scraper.py` ya no
     existe: eliminado como código muerto, SPEC-002 Superseded; la capacidad

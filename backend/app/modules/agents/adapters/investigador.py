@@ -3,6 +3,7 @@ import re
 from typing import Dict, Any, List
 
 from app.core.config import settings
+from app.platform.capabilities.binding import provider
 from app.platform.project_context import collection_for_state
 from app.platform.capabilities.rag import semantic_search_results, get_rag_backend, fetch_doc_head, LIBRARY_AGENT
 from app.modules.agents.adapters.doc_metadata import extract_doc_metadata
@@ -96,7 +97,10 @@ async def run_investigador(state: Dict[str, Any]) -> Dict[str, Any]:
         log(f"🔎 Etapa 1/2 — Buscando fuentes [backend: {backend}, colección: {rag_collection}, "
             f"buckets: {', '.join(search_agents)}]...")
     try:
-        rag_results = await semantic_search_results(
+        # La búsqueda sale de la capacidad `rag_results` cuando el motor la
+        # inyecta, y del import de siempre cuando no (SPEC-013/T8.3/AC8).
+        buscar = provider(state, "rag_results", semantic_search_results)
+        rag_results = await buscar(
             query=query_str,
             qdrant_url=settings.QDRANT_URL,
             collection=rag_collection,
@@ -224,7 +228,8 @@ async def run_investigador(state: Dict[str, Any]) -> Dict[str, Any]:
                 f"RESUMEN DE INVESTIGACIÓN:"
             )
 
-        synthesis = await call_llm(
+        sintetizar = provider(state, "llm", call_llm)
+        synthesis = await sintetizar(
             synthesis_prompt,
             model=synthesis_model,
             timeout=600.0 if research_chunks else 120.0,
