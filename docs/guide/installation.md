@@ -2,7 +2,9 @@
 
 ## Requisitos previos
 
-- Python 3.12+
+- Python 3.12 exactamente — el lock (`backend/requirements.txt`) se compila con
+  3.12, igual que CI y Docker; con 3.13+ la instalación falla. En Windows crea el
+  venv con `py -3.12 -m venv .venv` (es lo que hace `dev-local.cmd`).
 - Node.js 20+
 - [Ollama](https://ollama.com/) instalado y ejecutándose
 - [Qdrant](https://qdrant.tech/) binario descargado

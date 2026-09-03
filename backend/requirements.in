@@ -14,6 +14,11 @@
 # Web framework
 fastapi>=0.104.1
 uvicorn[standard]>=0.24.0
+# uvloop llega como extra de uvicorn[standard]. Su metadata ya lo excluye en
+# win32, pero pip-compile aplanaba la transitiva SIN el marcador y el lock
+# intentaba compilarlo en Windows ("uvloop does not support Windows"), rompiendo
+# dev-local.cmd. Lo declaramos aquí con el marcador para que el lock lo conserve.
+uvloop>=0.15.1 ; sys_platform != "win32"
 
 # Validation & settings
 pydantic>=2.9.0
@@ -71,3 +76,8 @@ openai>=1.0.0
 pytest>=8.0.0
 pytest-asyncio>=0.23.0
 httpx>=0.27.0
+# pytest arrastra colorama SOLO en win32 (salida ANSI en consola). Un lock
+# compilado en Linux lo omite y `pip install --require-hashes` en Windows falla
+# porque la transitiva no esta pineada. Se declara con el marcador para que el
+# lock la incluya y dev-local.cmd funcione en Windows.
+colorama>=0.4 ; sys_platform == "win32"
