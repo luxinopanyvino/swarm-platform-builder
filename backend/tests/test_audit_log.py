@@ -28,7 +28,9 @@ from sqlalchemy import select  # noqa: E402
 
 from app.core.database import AsyncSessionLocal, Base, engine  # noqa: E402
 from app.core.security import hash_password  # noqa: E402
-from app.models import ArticleModel, ArticleStatus, UserModel, UserRole  # noqa: E402
+from app.models import (  # noqa: E402
+    ArticleModel, ArticleStatus, ProjectModel, UserModel, UserRole,
+)
 from app.models.audit_log import AuditAction, AuditLogModel  # noqa: E402
 from app.platform.audit import build_entry, mask_email  # noqa: E402
 
@@ -69,6 +71,16 @@ async def _make_user(email: str, role: UserRole, password: str = "Contrasena-123
         await session.commit()
         await session.refresh(user)
         return user
+
+
+async def _make_project(name: str = "Proyecto de prueba") -> ProjectModel:
+    """Los endpoints RAG exigen proyecto desde T8.5: sin él no hay dónde aislar."""
+    async with AsyncSessionLocal() as session:
+        project = ProjectModel(name=name, description="", is_system=True)
+        session.add(project)
+        await session.commit()
+        await session.refresh(project)
+        return project
 
 
 async def _token(client: AsyncClient, email: str, password: str = "Contrasena-1234") -> str:
@@ -313,11 +325,15 @@ async def test_deleting_a_rag_document_is_audited(db, client, monkeypatch):
     monkeypatch.setattr(agents_router, "delete_document", _fake_delete)
 
     admin = await _make_user("borradora@ejemplo.com", UserRole.ADMIN)
+    project = await _make_project()
     async with client as ac:
         token = await _token(ac, admin.email)
         response = await ac.delete(
             "/api/v1/agents/investigador/rag/documents/doc-42",
-            headers={"Authorization": f"Bearer {token}"},
+            headers={
+                "Authorization": f"Bearer {token}",
+                "X-Project-Id": str(project.id),
+            },
         )
     assert response.status_code == 200, response.text
 
@@ -339,11 +355,15 @@ async def test_a_failed_rag_deletion_leaves_no_audit_entry(db, client, monkeypat
     monkeypatch.setattr(agents_router, "delete_document", _fake_delete)
 
     admin = await _make_user("fallida@ejemplo.com", UserRole.ADMIN)
+    project = await _make_project()
     async with client as ac:
         token = await _token(ac, admin.email)
         response = await ac.delete(
             "/api/v1/agents/investigador/rag/documents/doc-99",
-            headers={"Authorization": f"Bearer {token}"},
+            headers={
+                "Authorization": f"Bearer {token}",
+                "X-Project-Id": str(project.id),
+            },
         )
     assert response.status_code == 500
     assert await _entries(AuditAction.RAG_DOCUMENT_DELETED) == []

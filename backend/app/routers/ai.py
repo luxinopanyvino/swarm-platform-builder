@@ -5,6 +5,8 @@ import httpx
 from fastapi import APIRouter, Depends, HTTPException
 
 from app.core.config import settings
+from app.platform.project_access import get_project_context
+from app.platform.project_context import ProjectContext
 from app.models import AIAssistRequest, AIAssistResponse, AIIngestRequest, AIFormatRequest, AIFormatResponse, ScientificFormat
 from app.platform.llm import call_llm, get_default_model
 from app.shared.qdrant import qdrant_client
@@ -31,9 +33,8 @@ def _chunk_text(text: str, chunk_size: int = 400) -> list[str]:
     return [clean[i : i + chunk_size] for i in range(0, len(clean), chunk_size)]
 
 
-async def _ensure_qdrant_collection() -> None:
+async def _ensure_qdrant_collection(collection: str) -> None:
     """Ensure Qdrant collection exists."""
-    collection = settings.QDRANT_COLLECTION
     try:
         async with qdrant_client() as client:
             response = await client.get(f"/collections/{collection}")
@@ -108,9 +109,13 @@ async def list_models(token_data=Depends(get_current_user)):
 
 
 @router.post("/assist", response_model=AIAssistResponse)
-async def assist(req: AIAssistRequest, token_data=Depends(get_current_user)):
+async def assist(
+    req: AIAssistRequest,
+    token_data=Depends(get_current_user),
+    project: ProjectContext = Depends(get_project_context),
+):
     """AI writing assistance using RAG."""
-    await _ensure_qdrant_collection()
+    await _ensure_qdrant_collection(project.collection(settings.QDRANT_COLLECTION))
     
     # Generate suggestion
     model = get_default_model()
@@ -129,9 +134,20 @@ async def assist(req: AIAssistRequest, token_data=Depends(get_current_user)):
 
 
 @router.post("/ingest")
-async def ingest(req: AIIngestRequest, token_data=Depends(get_current_user)):
-    """Ingest text into RAG (Qdrant)."""
-    await _ensure_qdrant_collection()
+async def ingest(
+    req: AIIngestRequest,
+    token_data=Depends(get_current_user),
+    project: ProjectContext = Depends(get_project_context),
+):
+    """Ingest text into RAG (Qdrant), dentro del espacio del proyecto activo.
+
+    Este módulo escribe en Qdrant por su cuenta, al margen de
+    `platform/capabilities/rag`. Si se quedara fuera del espacio por proyecto
+    seguiría habiendo un escritor en la colección común, y el aislamiento de AC6
+    valdría solo para la mitad de los caminos.
+    """
+    collection = project.collection(settings.QDRANT_COLLECTION)
+    await _ensure_qdrant_collection(collection)
     
     # Chunk and vectorize
     chunks = _chunk_text(req.text)
@@ -154,7 +170,7 @@ async def ingest(req: AIIngestRequest, token_data=Depends(get_current_user)):
             ]
             
             response = await client.put(
-                f"/collections/{settings.QDRANT_COLLECTION}/points?wait=true",
+                f"/collections/{collection}/points?wait=true",
                 json={"points": points}
             )
             

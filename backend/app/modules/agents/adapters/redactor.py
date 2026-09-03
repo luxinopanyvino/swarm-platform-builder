@@ -3,6 +3,7 @@ import logging
 from typing import Dict, Any
 
 from app.core.config import settings
+from app.platform.project_context import collection_for_state
 from app.platform.capabilities.rag import semantic_search_context, LIBRARY_AGENT
 from app.platform.llm import call_llm, call_llm_stream, resolve_agent_model
 
@@ -107,7 +108,8 @@ async def run_redactor(state: Dict[str, Any]) -> Dict[str, Any]:
             log(f"  → {item}")
 
     # ── RAG lookup: pull additional context from the knowledge base ───────────
-    rag_collection = (agent_cfg.get("rag_collection") or "").strip() or settings.QDRANT_COLLECTION
+    rag_bucket = (agent_cfg.get("rag_collection") or "").strip() or settings.QDRANT_COLLECTION
+    rag_collection = collection_for_state(state, rag_bucket)
     rag_doc_ids = agent_cfg.get("rag_doc_ids") or None
     if isinstance(rag_doc_ids, list) and len(rag_doc_ids) == 0:
         rag_doc_ids = None

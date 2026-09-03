@@ -6,6 +6,7 @@ from typing import Dict, Any, Optional
 import yaml
 
 from app.platform.capabilities.rag import fetch_agent_context
+from app.platform.project_context import collection_for_state
 from app.platform.llm import call_llm, get_default_model
 
 logger = logging.getLogger(__name__)
@@ -124,7 +125,8 @@ async def run_generic_agent(agent_name: str, state: Dict[str, Any]) -> Dict[str,
     rag_enabled = agent_cfg.get("rag_enabled") if agent_cfg.get("rag_enabled") is not None else profile.get("rag_enabled", False)
     graph_rag_enabled = agent_cfg.get("graph_rag_enabled") if agent_cfg.get("graph_rag_enabled") is not None else profile.get("graph_rag_enabled", False)
     semantic_search_enabled = agent_cfg.get("semantic_search_enabled") if agent_cfg.get("semantic_search_enabled") is not None else profile.get("semantic_search_enabled", False)
-    rag_collection = agent_cfg.get("rag_collection") or profile.get("rag_collection", settings.QDRANT_COLLECTION)
+    rag_bucket = agent_cfg.get("rag_collection") or profile.get("rag_collection", settings.QDRANT_COLLECTION)
+    rag_collection = collection_for_state(state, rag_bucket)
     rag_doc_ids = agent_cfg.get("rag_doc_ids") or profile.get("rag_doc_ids") or None
 
     rag_context = ""

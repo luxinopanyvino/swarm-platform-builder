@@ -80,9 +80,20 @@ Docker (`docker compose up --build`, backend en `:8080`).
 - **LLM**: `backend/app/shared/llm.py` es el dispatcher único Ollama/OpenAI
   (`LLM_PROVIDER`). Cada agente usa `keep_alive=0` para liberar VRAM al terminar y
   un `num_ctx` fijo — relevante si tocas tiempos/memoria del pipeline.
-- **RAG**: `backend/app/modules/agents/adapters/rag.py` (extracción PDF, chunking,
+- **RAG**: `backend/app/platform/capabilities/rag.py` (extracción PDF, chunking,
   embeddings `nomic-embed-text` 768-dim, Qdrant). Busca en el bucket del agente +
-  la biblioteca compartida `__library__`. No hay scraping web.
+  la biblioteca `__library__`. No hay scraping web.
+- **Aislamiento por proyecto (T8.5)**: el nombre de la colección de Qdrant **se
+  deriva, no se recibe**. `backend/app/platform/project_context.py` es el único
+  sitio que lo compone: `p_<project_id>__<bucket>`, donde el *bucket* es lo que
+  aporta el perfil del agente (`rag_collection`, un campo que escribe la persona
+  usuaria). Así `__library__` es compartida **dentro** del proyecto y un perfil no
+  puede apuntar al espacio de otro. Las peticiones llevan el proyecto en la
+  cabecera `X-Project-Id`, que resuelve y autoriza `project_access.py`; en el
+  pipeline viaja en `AgentState.project_id`. Si tocas una ruta que lee o escribe
+  documentos, pídele la dependencia `get_project_context` — hay un test que lo
+  comprueba. Para bases anteriores:
+  `python scripts/migrate_rag_namespaces.py --apply`.
 - **Config con precedencia**: env vars > `config.yaml` (raíz o `backend/`) >
   defaults en `backend/app/core/config.py`. En producción `SECRET_KEY` es
   obligatorio; en debug se autocrean usuarios y admin.

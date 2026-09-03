@@ -3,6 +3,7 @@ import { LoadingState } from './components/ui/states';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { useAuthStore } from './store/authStore';
+import { useProjectStore } from './store/projectStore';
 
 import AuthPage          from './pages/AuthPage';
 import ProjectSelectionPage from './pages/ProjectSelectionPage';
@@ -72,6 +73,19 @@ function AppBootGate({ children }) {
   return children;
 }
 
+/**
+ * Todo lo que hay bajo el dashboard trabaja **dentro de un proyecto**: los
+ * documentos, los agentes y los flujos se piden con la cabecera `X-Project-Id`
+ * (SPEC-013 / T8.5 / AC6). Sin proyecto activo esas llamadas responden 400, así
+ * que se vuelve a la selección en vez de enseñar una página de error que no
+ * explica qué falta.
+ */
+function RequireProject({ children }) {
+  const { activeProject } = useProjectStore();
+  if (!activeProject?.id) return <Navigate to="/projects" replace />;
+  return children;
+}
+
 function ProtectedRoute({ children, allowedRoles }) {
   const { isAuthenticated, user } = useAuthStore();
   if (!isAuthenticated) return <Navigate to="/auth" replace />;
@@ -130,7 +144,7 @@ export default function App() {
 
           {/* Execution (full screen, no dashboard shell) */}
           <Route path="/execution/:articleId" element={
-            <ProtectedRoute><ExecutionPage /></ProtectedRoute>
+            <ProtectedRoute><RequireProject><ExecutionPage /></RequireProject></ProtectedRoute>
           } />
 
           {/* Paper-layout printable view (full screen) */}
@@ -142,7 +156,9 @@ export default function App() {
           } />
 
           {/* Dashboard */}
-          <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>}>
+          <Route path="/dashboard" element={
+            <ProtectedRoute><RequireProject><DashboardPage /></RequireProject></ProtectedRoute>
+          }>
             <Route index element={<Navigate to="articles" replace />} />
             <Route path="flow-designer" element={<FlowDesignerPage />} />
             <Route path="flows"         element={<FlowsPage />} />

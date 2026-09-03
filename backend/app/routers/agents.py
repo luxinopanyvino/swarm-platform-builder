@@ -46,6 +46,10 @@ from app.platform.capabilities.rag import (
     list_documents, delete_document, get_rag_backend, backfill_doc_metadata,
 )
 from app.modules.agents.adapters.doc_metadata import extract_doc_metadata
+from app.platform.project_access import (
+    get_project_context, load_project_context, usuario_actual,
+)
+from app.platform.project_context import ProjectContext, bucket_of
 
 router = APIRouter(prefix="/api/v1/agents", tags=["agents"])
 
@@ -95,7 +99,19 @@ def read_agent_profile(filepath: Path) -> dict[str, Any]:
     }
 
 
-def resolve_agent_rag_settings(agent_name: str, settings: Any, overrides: dict[str, Any] | None = None) -> dict[str, Any]:
+def resolve_agent_rag_settings(
+    agent_name: str,
+    settings: Any,
+    overrides: dict[str, Any] | None = None,
+    project: ProjectContext | None = None,
+) -> dict[str, Any]:
+    """Ajustes RAG de un agente, con la colección **resuelta dentro del proyecto**.
+
+    `rag_collection` es un campo que escribe la persona usuaria en el editor de
+    agentes. Antes se usaba tal cual como nombre de colección de Qdrant, así que
+    bastaba con teclear la del proyecto vecino para leer sus documentos. Ahora es
+    un *bucket* y el proyecto compone el nombre real (SPEC-013 / T8.5 / AC6).
+    """
     collection = settings.QDRANT_COLLECTION
     chunk_size = 500
     chunk_overlap = 50
@@ -121,7 +137,8 @@ def resolve_agent_rag_settings(agent_name: str, settings: Any, overrides: dict[s
     chunk_overlap = max(0, min(chunk_overlap, max(chunk_size - 1, 0)))
 
     return {
-        "collection": collection,
+        "collection": project.collection(collection) if project else collection,
+        "bucket": collection,
         "chunk_size": chunk_size,
         "chunk_overlap": chunk_overlap,
     }
@@ -155,8 +172,16 @@ async def get_claude_agent_definitions(
 
 
 @router.get("/rag/collections")
-async def get_rag_collections_overview(token_data=Depends(get_current_user)):
-    """Return all RAG documents stored in the local filesystem store (no Qdrant required)."""
+async def get_rag_collections_overview(
+    token_data=Depends(get_current_user),
+    project: ProjectContext = Depends(get_project_context),
+):
+    """Documentos RAG del **proyecto activo** en el almacén local (sin Qdrant).
+
+    Recorría todo el almacén y devolvía las colecciones de todos los proyectos:
+    cualquier sesión autenticada veía los nombres de fichero de los demás. Ahora
+    solo se listan las colecciones del proyecto (SPEC-013 / T8.5 / AC6).
+    """
     from app.platform.capabilities.rag import _local_rag_root, _load_local_document
 
     rag_root = _local_rag_root()
@@ -165,7 +190,9 @@ async def get_rag_collections_overview(token_data=Depends(get_current_user)):
     for collection_dir in sorted(rag_root.iterdir()):
         if not collection_dir.is_dir():
             continue
-        collection_name = collection_dir.name
+        if not project.owns_collection(collection_dir.name):
+            continue
+        collection_name = bucket_of(collection_dir.name)
 
         for doc_path in sorted(collection_dir.glob("*.json")):
             data = _load_local_document(doc_path)
@@ -208,8 +235,15 @@ async def get_rag_collections_overview(token_data=Depends(get_current_user)):
 
 
 @router.get("/rag/library")
-async def get_rag_library(token_data=Depends(get_current_user)):
-    """Return all documents stored in Qdrant (or local fallback) across all collections."""
+async def get_rag_library(
+    token_data=Depends(get_current_user),
+    project: ProjectContext = Depends(get_project_context),
+):
+    """Documentos del **proyecto activo** en Qdrant (o en el respaldo local).
+
+    Igual que `/rag/collections`: antes recorría todas las colecciones de la
+    instancia (SPEC-013 / T8.5 / AC6).
+    """
     from app.core.config import settings
     from app.platform.capabilities.rag import list_library_documents
 
@@ -218,7 +252,9 @@ async def get_rag_library(token_data=Depends(get_current_user)):
     # Group by collection
     collections: dict[str, dict[str, Any]] = {}
     for doc in docs:
-        col_name = doc["collection"]
+        if not project.owns_collection(doc["collection"]):
+            continue
+        col_name = bucket_of(doc["collection"])
         bucket = collections.setdefault(col_name, {
             "name": col_name,
             "documents": [],
@@ -244,8 +280,14 @@ async def upload_to_rag_library(
     chunk_size: int | None = Form(None),
     chunk_overlap: int | None = Form(None),
     token_data=Depends(require_redactor),
+    project: ProjectContext = Depends(get_project_context),
 ):
-    """Upload a document to the global RAG library (not tied to any agent)."""
+    """Sube un documento a la biblioteca compartida **del proyecto activo**.
+
+    «Compartida» significa compartida entre los agentes del proyecto, no entre
+    proyectos: antes era una sola biblioteca global y el bucket `__library__` se
+    leía desde cualquier pipeline (SPEC-013 / T8.5 / AC6).
+    """
     from app.core.config import settings
 
     from app.platform.uploads import validate_upload
@@ -261,7 +303,7 @@ async def upload_to_rag_library(
     if not text.strip():
         raise HTTPException(status_code=422, detail="No se pudo extraer texto del archivo")
 
-    col = (collection or settings.QDRANT_COLLECTION).strip() or settings.QDRANT_COLLECTION
+    col = project.collection(collection or settings.QDRANT_COLLECTION)
     c_size = max(100, min(int(chunk_size or settings.RAG_CHUNK_SIZE if hasattr(settings, "RAG_CHUNK_SIZE") else 500), 4000))
     c_overlap = max(0, min(int(chunk_overlap or 50), 499))
 
@@ -292,7 +334,7 @@ async def upload_to_rag_library(
         "status": "indexed",
         "doc_id": doc_id,
         "filename": file.filename,
-        "collection": col,
+        "collection": bucket_of(col),
         "chunks": count,
         "title": metadata.get("title", ""),
         "authors": metadata.get("authors", ""),
@@ -303,13 +345,18 @@ async def upload_to_rag_library(
 async def backfill_rag_metadata(
     collection: str | None = None,
     token_data=Depends(get_current_user),
+    project: ProjectContext = Depends(get_project_context),
 ):
     """Re-derive title/authors for existing documents that were ingested before
-    metadata extraction existed (text heuristic only; re-upload for PDF metadata)."""
+    metadata extraction existed (text heuristic only; re-upload for PDF metadata).
+
+    Reescribe payloads, así que la colección se resuelve dentro del proyecto: sin
+    eso, `?collection=` de otro proyecto permitía tocar sus documentos.
+    """
     from app.core.config import settings
-    col = (collection or settings.QDRANT_COLLECTION).strip() or settings.QDRANT_COLLECTION
+    col = project.collection(collection or settings.QDRANT_COLLECTION)
     updated = await backfill_doc_metadata(settings.QDRANT_URL, col, settings.QDRANT_API_KEY)
-    return {"collection": col, "updated": len(updated), "documents": updated}
+    return {"collection": bucket_of(col), "updated": len(updated), "documents": updated}
 
 
 @router.delete("/rag/library/{collection}/{doc_id}")
@@ -317,8 +364,14 @@ async def delete_from_rag_library(
     collection: str,
     doc_id: str,
     token_data=Depends(get_current_user),
+    project: ProjectContext = Depends(get_project_context),
 ):
-    """Delete a document from the global RAG library."""
+    """Borra un documento de la biblioteca del **proyecto activo**.
+
+    El nombre de la ruta es el *bucket*; la colección real la compone el proyecto.
+    Antes se pasaba tal cual a Qdrant, así que un `DELETE` con la colección del
+    vecino borraba sus documentos (SPEC-013 / T8.5 / AC6).
+    """
     from app.core.config import settings
     import re as _re
 
@@ -328,7 +381,9 @@ async def delete_from_rag_library(
     if not _re.match(r"^[a-zA-Z0-9_\-]+$", doc_id):
         raise HTTPException(status_code=422, detail="Invalid doc_id")
 
-    ok = await delete_document(settings.QDRANT_URL, collection, doc_id, settings.QDRANT_API_KEY)
+    ok = await delete_document(
+        settings.QDRANT_URL, project.collection(collection), doc_id, settings.QDRANT_API_KEY
+    )
     if not ok:
         raise HTTPException(status_code=500, detail="No se pudo eliminar el documento")
     return {"status": "deleted", "doc_id": doc_id}
@@ -347,10 +402,20 @@ async def update_claude_agent_definition(
     payload: dict,
     session: AsyncSession = Depends(get_session),
     token_data=Depends(get_current_user),
+    project: ProjectContext = Depends(get_project_context),
 ):
-    """Update an agent profile by its UUID."""
+    """Update an agent profile by its UUID, **dentro del proyecto activo**.
+
+    Buscaba solo por id, sin comprobar a qué proyecto pertenece: con el
+    identificador de un perfil ajeno se podía reescribir su prompt, su modelo o su
+    `rag_collection` (SPEC-013 / T8.5 / AC6). El 404 en vez de 403 es deliberado:
+    un 403 confirmaría que ese identificador existe.
+    """
     result = await session.execute(
-        select(AgentProfileModel).where(AgentProfileModel.id == agent_id)
+        select(AgentProfileModel).where(
+            AgentProfileModel.id == agent_id,
+            AgentProfileModel.project_id == project.project_id,
+        )
     )
     agent = result.scalars().first()
     if not agent:
@@ -441,10 +506,18 @@ async def delete_claude_agent_definition(
     agent_id: UUID,
     session: AsyncSession = Depends(get_session),
     token_data=Depends(get_current_user),
+    project: ProjectContext = Depends(get_project_context),
 ):
-    """Delete a custom agent profile. Built-in agents cannot be deleted."""
+    """Delete a custom agent profile. Built-in agents cannot be deleted.
+
+    Mismo motivo que en la edición: sin el filtro por proyecto, el id de un perfil
+    ajeno bastaba para borrarlo.
+    """
     result = await session.execute(
-        select(AgentProfileModel).where(AgentProfileModel.id == agent_id)
+        select(AgentProfileModel).where(
+            AgentProfileModel.id == agent_id,
+            AgentProfileModel.project_id == project.project_id,
+        )
     )
     agent = result.scalars().first()
     if not agent:
@@ -498,8 +571,9 @@ async def upload_rag_document(
     rag_chunk_size: int | None = Form(None),
     rag_chunk_overlap: int | None = Form(None),
     token_data=Depends(require_redactor),
+    project: ProjectContext = Depends(get_project_context),
 ):
-    """Upload a file, chunk it, embed via Ollama and store in Qdrant for an agent."""
+    """Indexa un fichero en el bucket RAG de un agente **del proyecto activo**."""
     from app.core.config import settings
 
     from app.platform.uploads import validate_upload
@@ -522,7 +596,7 @@ async def upload_rag_document(
         "rag_collection": rag_collection,
         "rag_chunk_size": rag_chunk_size,
         "rag_chunk_overlap": rag_chunk_overlap,
-    })
+    }, project=project)
     chunks = chunk_text(text, chunk_size=rag_settings["chunk_size"], overlap=rag_settings["chunk_overlap"])
     collection = rag_settings["collection"]
 
@@ -555,7 +629,7 @@ async def upload_rag_document(
         "doc_id": doc_id,
         "filename": file.filename,
         "chunks": count,
-        "collection": collection,
+        "collection": rag_settings["bucket"],
         "chunk_size": rag_settings["chunk_size"],
         "chunk_overlap": rag_settings["chunk_overlap"],
         "title": metadata.get("title", ""),
@@ -564,18 +638,22 @@ async def upload_rag_document(
 
 
 @router.get("/{agent_name}/rag/documents")
-async def list_rag_documents(agent_name: str, token_data=Depends(get_current_user)):
-    """List all RAG documents indexed for an agent."""
+async def list_rag_documents(
+    agent_name: str,
+    token_data=Depends(get_current_user),
+    project: ProjectContext = Depends(get_project_context),
+):
+    """Documentos RAG del agente **dentro del proyecto activo**."""
     from app.core.config import settings
 
-    rag_settings = resolve_agent_rag_settings(agent_name, settings)
+    rag_settings = resolve_agent_rag_settings(agent_name, settings, project=project)
     collection = rag_settings["collection"]
     backend = await get_rag_backend(settings.QDRANT_URL, settings.QDRANT_API_KEY)
 
     docs = await list_documents(settings.QDRANT_URL, collection, agent_name, settings.QDRANT_API_KEY)
     return {
         "documents": docs,
-        "collection": collection,
+        "collection": rag_settings["bucket"],
         "chunk_size": rag_settings["chunk_size"],
         "chunk_overlap": rag_settings["chunk_overlap"],
         "storage_backend": backend,
@@ -589,11 +667,12 @@ async def delete_rag_document(
     request: Request,
     token_data=Depends(get_current_user),
     session: AsyncSession = Depends(get_session),
+    project: ProjectContext = Depends(get_project_context),
 ):
-    """Remove all Qdrant points belonging to a RAG document."""
+    """Borra los puntos de un documento RAG **del proyecto activo**."""
     from app.core.config import settings
 
-    rag_settings = resolve_agent_rag_settings(agent_name, settings)
+    rag_settings = resolve_agent_rag_settings(agent_name, settings, project=project)
     collection = rag_settings["collection"]
 
     ok = await delete_document(settings.QDRANT_URL, collection, doc_id, settings.QDRANT_API_KEY)
@@ -642,6 +721,17 @@ async def run_agent_pipeline(
         
     if str(article.author_id) != token_data["user_id"]:
         raise HTTPException(status_code=403, detail="Forbidden: You do not own this article")
+
+    # El proyecto de la ejecución sale del **artículo**, no de la cabecera: el
+    # aislamiento de AC6 no puede depender de lo que mande el cliente. Sin
+    # proyecto no hay dónde aislar, así que el artículo huérfano no se ejecuta.
+    if article.project_id is None:
+        raise HTTPException(
+            status_code=409,
+            detail="El artículo no pertenece a ningún proyecto; asígnalo antes de ejecutar el pipeline",
+        )
+    usuario = await usuario_actual(session, token_data)
+    project = await load_project_context(session, usuario, article.project_id)
         
     # Use provided keywords if given; otherwise extract from title as fallback
     title = article.title
@@ -664,7 +754,15 @@ async def run_agent_pipeline(
     # This ensures persisted values (e.g. target_word_count, output_language)
     # are used even when the frontend doesn't forward them explicitly.
     agent_slugs = list(req.flow_sequence)
-    profiles_stmt = select(AgentProfileModel).where(AgentProfileModel.slug.in_(agent_slugs))
+    # `slug` no es único entre proyectos: dos proyectos creados desde la misma
+    # plantilla tienen ambos un `investigador`. Sin el filtro por proyecto, esta
+    # consulta traía el perfil de **cualquiera** de los dos —con su modelo, su
+    # prompt, su `rag_collection` y sus `rag_doc_ids`— según el orden que
+    # devolviera la base (SPEC-013 / T8.5 / AC6).
+    profiles_stmt = select(AgentProfileModel).where(
+        AgentProfileModel.slug.in_(agent_slugs),
+        AgentProfileModel.project_id == project.project_id,
+    )
     profiles_res = await session.execute(profiles_stmt)
     for profile in profiles_res.scalars().all():
         slug = profile.slug
@@ -716,6 +814,7 @@ async def run_agent_pipeline(
         Orchestrator.run,
         article_id=article_id,
         author_id=article.author_id,
+        project=project,
         title=title,
         keywords=keywords,
         scientific_format=scientific_format,
