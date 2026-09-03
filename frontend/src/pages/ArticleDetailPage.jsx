@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import Modal from '../components/ui/Modal';
+import { EmptyState, ErrorState, LoadingState } from '../components/ui/states';
 import { useParams, useNavigate } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import { ArrowLeft, CheckCircle, XCircle, UserPlus, Clock, AlertCircle, Pencil, Save, X, GitBranch, FileText, Plus, Trash2, Palette } from 'lucide-react';
@@ -44,7 +45,7 @@ export default function ArticleDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuthStore();
-  const { currentArticle, fetchArticle, approveArticle, rejectArticle, assignReviewer, updateArticle, publishArticle } = useArticleStore();
+  const { currentArticle, fetchArticle, approveArticle, rejectArticle, assignReviewer, updateArticle, publishArticle, error } = useArticleStore();
   const [loading, setLoading] = useState(true);
   const [reviewerEmail, setReviewerEmail] = useState('');  // accepts email or full name
   const [showPipelineModal, setShowPipelineModal] = useState(false);
@@ -61,9 +62,12 @@ export default function ArticleDetailPage() {
   const [abstractDraft, setAbstractDraft] = useState('');
   const [authorsDraft, setAuthorsDraft] = useState([]);
 
-  useEffect(() => {
+  const cargarArticulo = useCallback(() => {
+    setLoading(true);
     fetchArticle(id).finally(() => setLoading(false));
   }, [id]);
+
+  useEffect(() => { cargarArticulo(); }, [cargarArticulo]);
 
   const article = currentArticle;
   const st = article ? (STATUS_CONFIG[article.status] || STATUS_CONFIG.draft) : null;
@@ -224,8 +228,32 @@ export default function ArticleDetailPage() {
   const handleViewPaper = () => navigate(`/articles/${id}/paper`);
   const handleDesignPaper = () => navigate(`/articles/${id}/design`);
 
-  if (loading) return <div className="page-body"><div className="empty-state"><div className="spinner spinner-lg" /></div></div>;
-  if (!article) return <div className="page-body"><div className="empty-state"><h3>Artículo no encontrado</h3></div></div>;
+  if (loading) return <div className="page-body"><LoadingState label="Cargando el artículo…" /></div>;
+  // Antes, cualquier fallo de carga acababa aquí como «Artículo no encontrado»,
+  // que es una afirmación sobre el artículo cuando lo único que se sabe es que
+  // la petición falló. Ahora el store guarda el error y se distinguen.
+  if (!article && error) {
+    return (
+      <div className="page-body">
+        <ErrorState
+          title="No se pudo cargar el artículo"
+          description={error}
+          onRetry={cargarArticulo}
+        />
+      </div>
+    );
+  }
+  if (!article) {
+    return (
+      <div className="page-body">
+        <EmptyState
+          icon={<FileText size={28} />}
+          title="Artículo no encontrado"
+          description="Puede que se haya eliminado o que el enlace no sea correcto."
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="page-body" style={{ maxWidth: 900, margin: '0 auto' }}>
@@ -324,17 +352,17 @@ export default function ArticleDetailPage() {
               <ReactMarkdown>{article.body}</ReactMarkdown>
             </div>
           ) : (
-            <div className="empty-state" style={{ padding: 'var(--space-10)' }}>
-              <h3>{article.body?.startsWith('Error:') ? 'Error en la generación' : 'Sin contenido'}</h3>
-              <p style={{ color: 'var(--text-muted)', fontSize: 'var(--font-size-sm)' }}>
-                {article.body?.startsWith('Error:')
-                  ? 'El agente no pudo generar el contenido. Puedes escribirlo manualmente usando el botón Editar.'
-                  : 'Este artículo aún no tiene contenido generado.'}
-              </p>
-              <button className="btn btn-primary btn-sm" style={{ marginTop: 'var(--space-4)' }} onClick={handleEditBody}>
-                <Pencil size={13} /> Escribir manualmente
-              </button>
-            </div>
+            <EmptyState
+              title={article.body?.startsWith('Error:') ? 'Error en la generación' : 'Sin contenido'}
+              description={article.body?.startsWith('Error:')
+                ? 'El agente no pudo generar el contenido. Puedes escribirlo manualmente usando el botón Editar.'
+                : 'Este artículo aún no tiene contenido generado.'}
+              action={(
+                <button className="btn btn-primary btn-sm" onClick={handleEditBody}>
+                  <Pencil size={13} /> Escribir manualmente
+                </button>
+              )}
+            />
           )}
         </div>
 

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { LoadingState } from './components/ui/states';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { useAuthStore } from './store/authStore';
@@ -63,7 +64,7 @@ function AppBootGate({ children }) {
   if (!hasHydrated) {
     return (
       <div style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', background: 'var(--bg-canvas)' }}>
-        <div className="spinner spinner-lg" />
+        <LoadingState label="Iniciando…" />
       </div>
     );
   }

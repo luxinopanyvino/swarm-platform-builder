@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { AsyncState, EmptyState } from '../components/ui/states';
 import { useNavigate } from 'react-router-dom';
 import { FileText, Clock, CheckCircle, AlertCircle, Search, Pencil, Trash2, User } from 'lucide-react';
 import { useArticleStore } from '../store/articleStore';
@@ -25,7 +26,7 @@ const TAB_FILTER = {
 
 export default function ArticlesPage() {
   const navigate = useNavigate();
-  const { articles, fetchArticles, updateArticle, deleteArticle, isLoading } = useArticleStore();
+  const { articles, fetchArticles, updateArticle, deleteArticle, isLoading, error } = useArticleStore();
   const { user } = useAuthStore();
   const [tab, setTab] = useState('Todos');
   const [search, setSearch] = useState('');
@@ -92,15 +93,23 @@ export default function ArticlesPage() {
         </div>
       </div>
 
-      {isLoading ? (
-        <div className="empty-state"><div className="spinner spinner-lg" /></div>
-      ) : filtered.length === 0 ? (
-        <div className="empty-state">
-          <div className="empty-state-icon"><FileText size={28} /></div>
-          <h3>Sin artículos</h3>
-          <p>Ejecuta un pipeline desde el Flow Designer para generar tu primer artículo.</p>
-        </div>
-      ) : (
+      <AsyncState
+        loading={isLoading}
+        error={error}
+        isEmpty={filtered.length === 0}
+        onRetry={() => fetchArticles()}
+        loadingLabel="Cargando artículos…"
+        empty={(
+          <EmptyState
+            icon={<FileText size={28} />}
+            title={articles.length === 0 ? 'Sin artículos' : 'Ningún artículo coincide'}
+            description={articles.length === 0
+              ? 'Ejecuta un pipeline desde el Flow Designer para generar tu primer artículo.'
+              : 'Prueba con otro filtro o cambia el término de búsqueda.'}
+          />
+        )}
+      >
+        {(
         <div className="article-grid">
           {filtered.map(article => {
             const st = STATUS_MAP[article.status] || STATUS_MAP.draft;
@@ -184,7 +193,8 @@ export default function ArticlesPage() {
             );
           })}
         </div>
-      )}
+        )}
+      </AsyncState>
     </div>
   );
 }

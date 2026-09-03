@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { articlesApi } from '../api/articles';
+import { mensajeDeCarga } from '../api/errors';
 import { useProjectStore } from './projectStore';
 import { useAuthStore } from './authStore';
 
@@ -20,22 +21,28 @@ export const useArticleStore = create((set, get) => ({
   error: null,
 
   fetchArticles: async (params) => {
-    set({ isLoading: true });
+    set({ isLoading: true, error: null });
     try {
       const projectId = getProjectId();
       const merged = { ...(projectId ? { project_id: projectId } : {}), ...params };
       const data = await articlesApi.list(merged);
       set({ articles: data.items || data, isLoading: false });
-    } catch { set({ isLoading: false }); }
+    } catch (err) {
+      // Se guarda el error en vez de tragárselo: sin esto la página no puede
+      // distinguir «no hay artículos» de «no he podido preguntarlo».
+      set({ isLoading: false, error: mensajeDeCarga(err, 'No se pudieron cargar los artículos') });
+    }
   },
 
   fetchArticle: async (id) => {
-    set({ isLoading: true });
+    set({ isLoading: true, error: null });
     try {
       const data = await articlesApi.get(id);
       set({ currentArticle: data, isLoading: false });
       return data;
-    } catch { set({ isLoading: false }); }
+    } catch (err) {
+      set({ isLoading: false, error: mensajeDeCarga(err, 'No se pudo cargar el artículo') });
+    }
   },
 
   createArticle: async (title, body = '') => {

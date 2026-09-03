@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { AsyncState, EmptyState } from '../components/ui/states';
 import { useNavigate } from 'react-router-dom';
 import { Zap, Play, Pencil, Trash2, Plus, GitBranch, Clock } from 'lucide-react';
 import { useFlowStore } from '../store/flowStore';
@@ -7,7 +8,7 @@ import toast from 'react-hot-toast';
 
 export default function FlowsPage() {
   const navigate = useNavigate();
-  const { flows, fetchFlows, loadFlow, deleteFlow, newFlow, isLoading } = useFlowStore();
+  const { flows, fetchFlows, loadFlow, deleteFlow, newFlow, isLoading, error } = useFlowStore();
 
   useEffect(() => { fetchFlows(); }, []);
 
@@ -44,16 +45,22 @@ export default function FlowsPage() {
         </button>
       </div>
 
-      {isLoading ? (
-        <div className="empty-state"><div className="spinner spinner-lg" /></div>
-      ) : flows.length === 0 ? (
-        <div className="empty-state">
-          <div className="empty-state-icon"><GitBranch size={28} /></div>
-          <h3>Sin flujos guardados</h3>
-          <p>Crea tu primer pipeline en el Flow Designer.</p>
-          <button className="btn btn-primary" onClick={handleNew}><Plus size={14} /> Crear flujo</button>
-        </div>
-      ) : (
+      <AsyncState
+        loading={isLoading}
+        error={error}
+        isEmpty={flows.length === 0}
+        onRetry={fetchFlows}
+        loadingLabel="Cargando flujos…"
+        empty={(
+          <EmptyState
+            icon={<GitBranch size={28} />}
+            title="Sin flujos guardados"
+            description="Crea tu primer pipeline en el Flow Designer."
+            action={<button className="btn btn-primary" onClick={handleNew}><Plus size={14} /> Crear flujo</button>}
+          />
+        )}
+      >
+        {(
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
           {flows.map(flow => (
             <div key={flow.id} className="card" style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)', padding: 'var(--space-4) var(--space-5)' }}>
@@ -101,7 +108,8 @@ export default function FlowsPage() {
             </div>
           ))}
         </div>
-      )}
+        )}
+      </AsyncState>
     </div>
   );
 }

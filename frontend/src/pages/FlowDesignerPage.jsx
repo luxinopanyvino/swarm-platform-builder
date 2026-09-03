@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef } from 'react';
 import Modal from '../components/ui/Modal';
+import { EmptyState } from '../components/ui/states';
 import {
   ReactFlow, Background, Controls, MiniMap,
   addEdge, useNodesState, useEdgesState, Panel,
@@ -133,6 +134,7 @@ export default function FlowDesignerPage() {
   useEffect(() => {
     let mounted = true;
     loadPaletteAgents();
+    // mejor-esfuerzo: el desplegable de modelos; el lienzo funciona sin él.
     agentsApi.getModels().then((response) => {
       if (mounted) {
         setModels(response.models || ['llama3.2:1b']);
@@ -429,12 +431,12 @@ export default function FlowDesignerPage() {
 
         {/* Empty state */}
         {nodes.length === 0 && (
-          <div className="empty-state" style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 0 }}>
-            <div className="empty-state-icon">
-              <GitBranch size={28} />
-            </div>
-            <h3>Diseña tu pipeline</h3>
-            <p>Arrastra agentes desde el panel izquierdo al canvas para crear tu flujo de trabajo.</p>
+          <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 0 }}>
+            <EmptyState
+              icon={<GitBranch size={28} />}
+              title="Diseña tu pipeline"
+              description="Arrastra agentes desde el panel izquierdo al canvas para crear tu flujo de trabajo."
+            />
           </div>
         )}
       </div>
