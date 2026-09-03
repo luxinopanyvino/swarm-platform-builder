@@ -5,7 +5,7 @@ import re
 import time
 import uuid
 from pathlib import Path
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 
 from sqlalchemy import select
 from langgraph.graph import StateGraph, START, END
@@ -13,6 +13,7 @@ from langgraph.checkpoint.memory import InMemorySaver
 
 from app.core.database import AsyncSessionLocal
 from app.platform.llm import TransientLLMError
+from app.platform.project_context import ProjectContext
 from app.models import AgentRunModel
 from app.modules.agents.domain.entities import AgentState
 from app.modules.agents.adapters.investigador import run_investigador
@@ -411,6 +412,7 @@ class Orchestrator:
         keywords: List[str],
         scientific_format: str,
         flow_sequence: List[str],
+        project: Optional[ProjectContext] = None,
         agent_settings: Dict[str, Any] = None,
         context_description: str = "",
         initial_draft_text: str = "",
@@ -446,6 +448,7 @@ class Orchestrator:
         initial_state = AgentState(
             article_id=article_id,
             author_id=author_id,
+            project_id=project.project_id if project else None,
             title=title,
             keywords=keywords,
             research_data="",

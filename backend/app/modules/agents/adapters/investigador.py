@@ -3,6 +3,7 @@ import re
 from typing import Dict, Any, List
 
 from app.core.config import settings
+from app.platform.project_context import collection_for_state
 from app.platform.capabilities.rag import semantic_search_results, get_rag_backend, fetch_doc_head, LIBRARY_AGENT
 from app.modules.agents.adapters.doc_metadata import extract_doc_metadata
 
@@ -71,7 +72,11 @@ async def run_investigador(state: Dict[str, Any]) -> Dict[str, Any]:
     research_chunks: List[str] = []
 
     # Resolve RAG collection
-    rag_collection = (agent_cfg.get("rag_collection") or "").strip() or settings.QDRANT_COLLECTION
+    # El perfil aporta un *bucket*; el proyecto de la ejecución compone la
+    # colección real, y así dos proyectos con el mismo perfil no se leen
+    # (SPEC-013 / T8.5 / AC6).
+    rag_bucket = (agent_cfg.get("rag_collection") or "").strip() or settings.QDRANT_COLLECTION
+    rag_collection = collection_for_state(state, rag_bucket)
     rag_top_k = int(agent_cfg.get("rag_top_k") or 0) or settings.RAG_TOP_K
     rag_chunk_size = int(agent_cfg.get("rag_chunk_size") or 0) or settings.RAG_CHUNK_SIZE
     rag_doc_ids = agent_cfg.get("rag_doc_ids") or None

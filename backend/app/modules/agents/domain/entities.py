@@ -8,6 +8,10 @@ class AgentState(TypedDict):
     """Shared state passed between LangGraph nodes during an agent flow execution."""
     article_id: uuid.UUID
     author_id: uuid.UUID
+    # Proyecto bajo el que corre la ejecución (SPEC-013 / T8.5 / AC6). Va en el
+    # estado y no en una variable de módulo porque varios pipelines de proyectos
+    # distintos pueden estar en vuelo a la vez en el mismo proceso.
+    project_id: Optional[uuid.UUID]
     title: str
     keywords: List[str]
     research_data: str

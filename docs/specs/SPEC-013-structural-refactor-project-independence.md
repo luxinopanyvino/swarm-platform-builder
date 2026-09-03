@@ -67,9 +67,18 @@ y cada proyecto nuevo seguiría exigiendo código.
 - [ ] **AC5** — *Given* un proyecto nuevo creado desde el *template* AlejandrIA,
   *When* se ejecuta su pipeline, *Then* produce el mismo resultado que el AlejandrIA
   actual (test de **paridad** input→output sobre el flujo investigador→…→publicador).
-- [ ] **AC6** — *Given* dos proyectos con documentos RAG distintos, *When* uno ejecuta
+- [x] **AC6** — *Given* dos proyectos con documentos RAG distintos, *When* uno ejecuta
   su pipeline, *Then* solo recupera documentos de **su** proyecto (RAG con *namespace*
   por proyecto); ningún documento de otro proyecto ni del *seed* de demo se filtra.
+  <br>*T8.5 (#211)*: el nombre de la colección **se deriva, no se recibe** —
+  `platform/project_context.py` compone `p_<project_id>__<bucket>` y es el único
+  sitio que lo hace. Se cerraron tres puertas: la colección salía del perfil del
+  agente (dos proyectos con la misma plantilla compartían `rag_docs`);
+  `rag_collection` es un campo que escribe la persona usuaria, así que bastaba
+  teclear el de otro; y la consulta de perfiles de la ejecución no filtraba por
+  proyecto, con lo que el pipeline podía arrancar con el modelo, el prompt y los
+  `rag_doc_ids` del vecino. El *seed* de demo va ahora al espacio del proyecto del
+  sistema. `scripts/migrate_rag_namespaces.py` mueve lo heredado.
 - [ ] **AC7** — *Given* el front, *When* se inspecciona `frontend/src`, *Then* el
   *builder* reutilizable vive en `platform/` separado de las vistas de consumo en
   `projects/`, y `npm run build` y `npm run build:public` siguen compilando.
