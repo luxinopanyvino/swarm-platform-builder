@@ -7,6 +7,7 @@ from sqlalchemy import select
 from app.core.database import AsyncSessionLocal
 from app.models import ArticleModel, ArticleStatus
 from app.modules.agents.adapters.paper_layout import build_paper_html
+from app.platform.capabilities.binding import provider
 
 logger = logging.getLogger(__name__)
 
@@ -57,7 +58,8 @@ async def run_publicador(state: Dict[str, Any]) -> Dict[str, Any]:
                     or "apa"
                 )
                 try:
-                    article.paper_html = build_paper_html(
+                    maquetar = provider(state, "format", build_paper_html)
+                    article.paper_html = maquetar(
                         title=article.title or "",
                         authors=article.authors or [],
                         abstract=article.abstract or "",

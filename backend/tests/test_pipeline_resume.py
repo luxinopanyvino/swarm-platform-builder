@@ -3,8 +3,15 @@ import uuid
 
 import pytest
 
+from app.modules.agents.adapters import investigador as adapter_investigador
+from app.modules.agents.adapters import redactor as adapter_redactor
 from app.modules.agents.application import use_cases as orquestador
 from app.platform.llm import TransientLLMError
+
+# Desde T8.3 el motor resuelve los agentes por el registro
+# (`platform/engine/agents.py`) y ya no por atributos de `use_cases`, así que las
+# sustituciones van donde vive de verdad cada runner. Que este fichero tuviera
+# que cambiar es la señal de que la indirección se movió al sitio previsto.
 
 
 @pytest.mark.asyncio
@@ -37,8 +44,8 @@ async def test_resume_from_checkpoint_preserves_completed_nodes(monkeypatch):
         assert state.get("research_data") == "datos de investigacion"
         return {"draft_text": "# Borrador\nContenido"}
 
-    monkeypatch.setattr(orquestador, "run_investigador", fake_investigador)
-    monkeypatch.setattr(orquestador, "run_redactor", fake_redactor)
+    monkeypatch.setattr(adapter_investigador, "run_investigador", fake_investigador)
+    monkeypatch.setattr(adapter_redactor, "run_redactor", fake_redactor)
 
     flow = ["investigador", "redactor"]
     article_id = uuid.uuid4()
@@ -110,8 +117,8 @@ async def test_transient_failure_auto_resumes_without_user(monkeypatch):
             raise TransientLLMError("Ollama stream unavailable: All connection attempts failed")
         return {"draft_text": "# Borrador"}
 
-    monkeypatch.setattr(orquestador, "run_investigador", fake_investigador)
-    monkeypatch.setattr(orquestador, "run_redactor", fake_redactor)
+    monkeypatch.setattr(adapter_investigador, "run_investigador", fake_investigador)
+    monkeypatch.setattr(adapter_redactor, "run_redactor", fake_redactor)
 
     article_id = uuid.uuid4()
     # No exception should escape — the orchestrator auto-resumes and finishes
@@ -154,8 +161,8 @@ async def test_permanent_failure_is_not_auto_resumed(monkeypatch):
         calls["redactor"] += 1
         raise RuntimeError("Ollama returned HTTP 404: model not found")  # permanent
 
-    monkeypatch.setattr(orquestador, "run_investigador", fake_investigador)
-    monkeypatch.setattr(orquestador, "run_redactor", fake_redactor)
+    monkeypatch.setattr(adapter_investigador, "run_investigador", fake_investigador)
+    monkeypatch.setattr(adapter_redactor, "run_redactor", fake_redactor)
 
     article_id = uuid.uuid4()
     with pytest.raises(RuntimeError):

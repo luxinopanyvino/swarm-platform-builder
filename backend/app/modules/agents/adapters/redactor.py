@@ -3,6 +3,7 @@ import logging
 from typing import Dict, Any
 
 from app.core.config import settings
+from app.platform.capabilities.binding import provider
 from app.platform.project_context import collection_for_state
 from app.platform.capabilities.rag import semantic_search_context, LIBRARY_AGENT
 from app.platform.llm import call_llm, call_llm_stream, resolve_agent_model
@@ -117,8 +118,9 @@ async def run_redactor(state: Dict[str, Any]) -> Dict[str, Any]:
     log(f"🔎 Consultando base de conocimiento (colección: {rag_collection}, límite: 10)...")
     try:
         rag_query = f"{title} {' '.join(keywords[:6])}"
+        buscar = provider(state, "rag", semantic_search_context)
         extra_rag = await asyncio.wait_for(
-            semantic_search_context(
+            buscar(
                 query=rag_query,
                 qdrant_url=settings.QDRANT_URL,
                 collection=rag_collection,
@@ -258,7 +260,8 @@ async def run_redactor(state: Dict[str, Any]) -> Dict[str, Any]:
 
     try:
         draft_chunks = []
-        async for token in call_llm_stream(prompt, model=model, timeout=timeout, num_ctx=4096, keep_alive=0):
+        generar = provider(state, "llm_stream", call_llm_stream)
+        async for token in generar(prompt, model=model, timeout=timeout, num_ctx=4096, keep_alive=0):
             emit_token(token)
             draft_chunks.append(token)
         draft_text = "".join(draft_chunks)
@@ -303,7 +306,8 @@ async def run_redactor(state: Dict[str, Any]) -> Dict[str, Any]:
                 )
             try:
                 expanded_chunks = []
-                async for token in call_llm_stream(expand_prompt, model=model, timeout=timeout, num_ctx=4096, keep_alive=0):
+                ampliar = provider(state, "llm_stream", call_llm_stream)
+                async for token in ampliar(expand_prompt, model=model, timeout=timeout, num_ctx=4096, keep_alive=0):
                     emit_token(token)
                     expanded_chunks.append(token)
                 expanded = "".join(expanded_chunks)

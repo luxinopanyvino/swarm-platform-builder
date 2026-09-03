@@ -104,6 +104,16 @@ def _register_builtins() -> None:
         entrypoint="app.platform.capabilities.rag:semantic_search_context",
     ))
     register(Capability(
+        kind=CapabilityKind.RAG,
+        name="rag_results",
+        description=(
+            "La misma búsqueda, devolviendo resultados con metadatos (doc_id, "
+            "título, autores) en vez de un bloque de texto: es lo que necesita "
+            "un agente que construye citas."
+        ),
+        entrypoint="app.platform.capabilities.rag:semantic_search_results",
+    ))
+    register(Capability(
         kind=CapabilityKind.SEARCH,
         name="search",
         description="Búsqueda web (DuckDuckGo) con URLs de fuente, vía tool-calling.",
@@ -140,8 +150,17 @@ def _register_builtins() -> None:
     register(Capability(
         kind=CapabilityKind.LLM,
         name="llm",
-        description="Generación LLM vía el dispatcher único Ollama/OpenAI.",
+        description="Generación LLM vía el dispatcher único (Anthropic/Ollama/OpenAI).",
         entrypoint="app.platform.llm:call_llm",
+    ))
+    register(Capability(
+        kind=CapabilityKind.LLM,
+        name="llm_stream",
+        description=(
+            "La misma generación, en streaming token a token: es lo que permite "
+            "que la redacción se vea escribirse en la interfaz."
+        ),
+        entrypoint="app.platform.llm:call_llm_stream",
     ))
 
 

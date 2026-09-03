@@ -8,19 +8,19 @@ from pathlib import Path
 from typing import Dict, Any, List, Optional
 
 from sqlalchemy import select
-from langgraph.graph import StateGraph, START, END
 from langgraph.checkpoint.memory import InMemorySaver
 
+from app.core.config import settings
 from app.core.database import AsyncSessionLocal
 from app.platform.llm import TransientLLMError
 from app.platform.project_context import ProjectContext
 from app.models import AgentRunModel
 from app.modules.agents.domain.entities import AgentState
-from app.modules.agents.adapters.investigador import run_investigador
-from app.modules.agents.adapters.redactor import run_redactor
-from app.modules.agents.adapters.revisor import run_revisor
-from app.modules.agents.adapters.formateador import run_formateador
-from app.modules.agents.adapters.publicador import run_publicador
+from app.modules.agents.domain import alejandria
+from app.platform.engine.agents import MODO_CAPACIDADES, bundle_for, resolve_runner
+from app.platform.capabilities.binding import CLAVE_ESTADO as CLAVE_CAPACIDADES
+from app.platform.engine.graph import GraphSpec, build_graph
+from app.platform.engine.routing import make_review_router, next_after
 from app.modules.agents.adapters.generic import run_generic_agent, load_agent_profile
 from app.platform.bus import get_bus
 from app.platform.metrics import current_agent_ctx, observe_agent_run
@@ -262,6 +262,16 @@ def make_node_wrapper(agent_name: str, run_fn):
         enriched_state["_emit_token"] = emit_token_fn
         enriched_state["_request_decision"] = request_decision_fn
 
+        # Capacidades del agente (SPEC-013/T8.3/AC8). Con el flag en
+        # `capabilities` se resuelven desde el registro y el agente las usa en
+        # lugar de sus imports; con el flag en `adapters` no se inyecta nada y el
+        # agente sigue el camino de siempre. Los dos deben dar el mismo
+        # resultado: eso es lo que comprueba el test de paridad.
+        if settings.AGENT_ENGINE == MODO_CAPACIDADES:
+            bundle = bundle_for(agent_name)
+            if bundle is not None:
+                enriched_state[CLAVE_CAPACIDADES] = bundle
+
         try:
             res = await run_fn(enriched_state)
             await log_run_end(run_id, res, "completed")
@@ -292,116 +302,58 @@ def make_node_wrapper(agent_name: str, run_fn):
     return wrapper
 
 
-MAX_REVIEW_LOOPS = 3
+#: Compatibilidad: el bucle de revisión pasó a ser un dato del proyecto
+#: (`alejandria.BUCLE_REVISION`) y el enrutado lo fabrica el motor. Se mantienen
+#: estos nombres porque hay código y tests que los importan, pero delegan.
+MAX_REVIEW_LOOPS = alejandria.BUCLE_REVISION.max_loops
 
 
 def _next_after_revisor(flow: List[str]) -> str:
-    """Return the node that follows 'revisor' in the flow, or END."""
-    try:
-        revisor_idx = flow.index("revisor")
-        if revisor_idx + 1 < len(flow):
-            return flow[revisor_idx + 1]
-    except ValueError:
-        pass
-    return "__end__"
+    """Nodo que sigue a 'revisor' en el flujo, o el final."""
+    return next_after(flow, alejandria.BUCLE_REVISION.reviewer)
 
 
 def route_after_revisor(state: AgentState) -> str:
-    """
-    Conditional edge after the revisor node.
-
-    - user chose "add_source"  →  re-run from investigador (or redactor) with the
-      newly uploaded document so it feeds research and citations.
-    - user chose "continue"    →  advance to the next node regardless of score.
-    - no explicit decision (headless / coherent draft):
-        - score < 80 AND loop_count < MAX  →  automatic redraft loop to redactor
-        - otherwise                        →  next node in flow (or END)
-    """
-    flow = state.get("flow_sequence", [])
-    user_decision = state.get("user_decision")
-
-    if user_decision == "add_source":
-        for candidate in ("investigador", "redactor"):
-            if candidate in flow:
-                logger.info("User added a source — re-running from '%s'.", candidate)
-                return candidate
-        return _next_after_revisor(flow)
-
-    if user_decision == "continue":
-        logger.info("User chose to continue with the current draft.")
-        return _next_after_revisor(flow)
-
-    # No human decision recorded — fall back to automatic score-based looping.
-    approval_score = state.get("approval_score", 100)
-    loop_count = state.get("loop_count", 0)
-    if approval_score < 80 and loop_count < MAX_REVIEW_LOOPS:
-        logger.info(
-            f"Revisor scored {approval_score} (loop {loop_count}/{MAX_REVIEW_LOOPS}). "
-            "Looping back to redactor."
-        )
-        return "redactor"
-
-    next_node = _next_after_revisor(flow)
-    logger.info(f"Revisor scored {approval_score}. Advancing to '{next_node}'.")
-    return next_node
+    """Arista condicional tras el revisor, construida desde el bucle del proyecto."""
+    return make_review_router(alejandria.BUCLE_REVISION)(state)
 
 
 class Orchestrator:
     """Dynamically compiles and executes a LangGraph flow for article generation."""
 
     @staticmethod
+    def _load_dynamic_agent(name: str):
+        """Runner de un agente definido por un perfil `.agent.md`, si existe."""
+        if load_agent_profile(name) is None:
+            return None
+        logger.info("Registrando agente dinámico '%s' desde su perfil .agent.md", name)
+        return lambda state, _name=name: run_generic_agent(_name, state)
+
+    @staticmethod
     def compile_graph(flow_sequence: List[str]) -> Any:
-        """Build and compile a StateGraph from the requested flow_sequence."""
+        """Compila el grafo del flujo pedido (SPEC-013 / T8.3).
+
+        El motor ya no conoce a los agentes ni al bucle de AlejandrIA: la forma
+        del pipeline sale de `GraphSpec` y los nodos del registro de agentes. Lo
+        que antes eran tres condiciones con el nombre `"revisor"` escrito dentro
+        del orquestador es ahora la declaración del proyecto.
+        """
         if not flow_sequence:
             raise ValueError("flow_sequence cannot be empty")
 
-        workflow = StateGraph(AgentState)
+        alejandria.register()
+        spec = GraphSpec(sequence=tuple(flow_sequence), loops=alejandria.BUCLES)
 
-        agents_map = {
-            "investigador": make_node_wrapper("investigador", run_investigador),
-            "redactor": make_node_wrapper("redactor", run_redactor),
-            "revisor": make_node_wrapper("revisor", run_revisor),
-            "formateador": make_node_wrapper("formateador", run_formateador),
-            "publicador": make_node_wrapper("publicador", run_publicador),
-        }
+        def node_factory(name: str):
+            runner = resolve_runner(name, Orchestrator._load_dynamic_agent)
+            return make_node_wrapper(name, runner)
 
-        nodes_to_add = set(flow_sequence)
-        if "revisor" in nodes_to_add:
-            nodes_to_add.add("redactor")
-
-        for node_name in nodes_to_add:
-            if node_name in agents_map:
-                workflow.add_node(node_name, agents_map[node_name])
-            else:
-                # Dynamic lookup: check for a custom .agent.md profile
-                profile = load_agent_profile(node_name)
-                if profile is None:
-                    raise ValueError(
-                        f"Unknown agent '{node_name}': no built-in implementation "
-                        f"and no .agent.md profile found."
-                    )
-                logger.info(f"Registering custom agent '{node_name}' from .agent.md profile")
-                runner = lambda s, _name=node_name: run_generic_agent(_name, s)
-                workflow.add_node(node_name, make_node_wrapper(node_name, runner))
-
-        workflow.add_edge(START, flow_sequence[0])
-
-        for i, node_name in enumerate(flow_sequence):
-            is_last = i == len(flow_sequence) - 1
-
-            if node_name == "revisor":
-                path_map = {"redactor": "redactor", "__end__": END}
-                for n in flow_sequence:
-                    path_map[n] = n
-                workflow.add_conditional_edges("revisor", route_after_revisor, path_map)
-            elif is_last:
-                workflow.add_edge(node_name, END)
-            else:
-                workflow.add_edge(node_name, flow_sequence[i + 1])
-
-        # Compile with the shared checkpointer so each completed node is persisted and
-        # the run can be resumed from the last successful step after a failure.
-        return workflow.compile(checkpointer=_pipeline_checkpointer)
+        return build_graph(
+            spec,
+            node_factory=node_factory,
+            state_type=AgentState,
+            checkpointer=_pipeline_checkpointer,
+        )
 
     @classmethod
     async def run(

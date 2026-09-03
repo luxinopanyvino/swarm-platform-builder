@@ -4,6 +4,7 @@ import re
 from typing import Dict, Any
 
 from app.core.config import settings
+from app.platform.capabilities.binding import provider
 from app.platform.llm import call_llm, resolve_agent_model
 
 logger = logging.getLogger(__name__)
@@ -48,7 +49,8 @@ async def run_revisor(state: Dict[str, Any]) -> Dict[str, Any]:
     feedback = []
 
     try:
-        raw_response = await call_llm(prompt, model=model, timeout=45.0, num_ctx=4096, keep_alive=0)
+        evaluar = provider(state, "llm", call_llm)
+        raw_response = await evaluar(prompt, model=model, timeout=45.0, num_ctx=4096, keep_alive=0)
         json_match = re.search(r"\{.*\}", raw_response, re.DOTALL)
         if json_match:
             try:

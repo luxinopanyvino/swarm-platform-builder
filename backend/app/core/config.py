@@ -76,6 +76,18 @@ class Settings(BaseModel):
     # indistinguible de una configuración real y el fallback nunca se activaría.
     REDIS_ENABLED: bool = False
 
+    # Motor de agentes (SPEC-013/T8.3/AC8). Conmuta cómo se resuelve la
+    # infraestructura de cada agente:
+    #   "adapters"     — el agente importa su RAG y su LLM directamente (camino
+    #                    de siempre; es el valor por defecto).
+    #   "capabilities" — el motor resuelve las capacidades que el agente declara
+    #                    y se las inyecta, de modo que un proyecto pueda traer
+    #                    sus propios proveedores.
+    # Los dos caminos deben producir el mismo resultado: hay un test de paridad
+    # que lo comprueba sobre el flujo completo, y nada del camino viejo se borra
+    # hasta que ese test forme parte de la rutina.
+    AGENT_ENGINE: str = "adapters"
+
     # Ollama
     OLLAMA_BASE_URL: str = "http://localhost:11434"
     OLLAMA_MODEL: str = "llama3.2:1b"
@@ -174,6 +186,7 @@ def _build_settings() -> Settings:
     minio = yaml_config.get("minio", {})
     retention = yaml_config.get("retention", {})
     otel = yaml_config.get("otel", {})
+    engine = yaml_config.get("engine", {})
 
     merged: dict[str, Any] = {
         "APP_NAME": app.get("name", "Alejandria Magazine"),
@@ -203,6 +216,7 @@ def _build_settings() -> Settings:
         "DEFAULT_SIGNUP_ROLE": access.get("default_signup_role", "lector"),
         "REDIS_URL": redis.get("url", "redis://:password@localhost:6379/0"),
         "REDIS_ENABLED": redis.get("enabled", False),
+        "AGENT_ENGINE": engine.get("agents", "adapters"),
         # Tracing (SPEC-019/T5.3)
         "OTEL_ENABLED": otel.get("enabled", False),
         "OTEL_SERVICE_NAME": otel.get("service_name", "alejandria-backend"),

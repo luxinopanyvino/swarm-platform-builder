@@ -3,6 +3,7 @@ import re
 from typing import Dict, Any
 
 from app.core.config import settings
+from app.platform.capabilities.binding import provider
 from app.platform.llm import call_llm, resolve_agent_model
 
 logger = logging.getLogger(__name__)
@@ -236,7 +237,8 @@ async def run_formateador(state: Dict[str, Any]) -> Dict[str, Any]:
 
     formatted_body = cleaned_draft
     try:
-        result = await call_llm(prompt, model=model, timeout=300.0, num_ctx=4096, keep_alive=0)
+        formatear = provider(state, "llm", call_llm)
+        result = await formatear(prompt, model=model, timeout=300.0, num_ctx=4096, keep_alive=0)
         result_lower = result.lower() if result else ""
         refused = any(pat in result_lower for pat in _REFUSAL_PATTERNS) if result else True
         if not refused and result and len(result) >= len(cleaned_draft) * 0.5:

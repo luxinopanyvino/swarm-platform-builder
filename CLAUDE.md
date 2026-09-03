@@ -70,16 +70,32 @@ Docker (`docker compose up --build`, backend en `:8080`).
 - **El backend real vive en `backend/app/`** (el `app/` de la raíz está vacío,
   ignóralo). `backend/app/models.py` mezcla ORM SQLAlchemy y DTOs Pydantic en un
   único archivo.
-- **Orquestador**: `backend/app/modules/agents/application/use_cases.py` construye
-  un LangGraph `StateGraph` y pasa un `AgentState` (TypedDict) tipado entre nodos.
+- **Orquestador**: `backend/app/modules/agents/application/use_cases.py` ejecuta el
+  grafo y pasa un `AgentState` (TypedDict) tipado entre nodos. **La forma del
+  pipeline es un dato** (T8.3): `backend/app/platform/engine/` construye el
+  `StateGraph` desde un `GraphSpec` —secuencia + bucles de revisión— y resuelve
+  cada nodo contra un registro de agentes. El motor no menciona a ningún agente
+  concreto; AlejandrIA se declara en
+  `backend/app/modules/agents/domain/alejandria.py` (sus cinco agentes, las
+  capacidades que compone cada uno y el bucle revisor→redactor), que es lo que
+  T8.4 moverá a `template.yaml`. Si añades un agente, regístralo ahí; si cambias
+  el bucle, es un campo de `ReviewLoop`, no un `if`.
   Cada ejecución se registra en la tabla `agent_runs`. El bucle Revisor→Redactor
   (`loop_count`, máx 3) y el **HITL** (`await_decision`, pausa por SSE) viven aquí.
 - **Streaming**: el pipeline emite eventos por **SSE** (`/agents/{id}/stream`):
   `agent_start`, `token`, `await_decision`, `done`, `cancelled`, … La cancelación
   y la decisión humana son endpoints aparte que actúan sobre la ejecución en curso.
-- **LLM**: `backend/app/shared/llm.py` es el dispatcher único Ollama/OpenAI
-  (`LLM_PROVIDER`). Cada agente usa `keep_alive=0` para liberar VRAM al terminar y
-  un `num_ctx` fijo — relevante si tocas tiempos/memoria del pipeline.
+- **LLM**: `backend/app/platform/llm.py` es el dispatcher único
+  Anthropic/Ollama/OpenAI (`LLM_PROVIDER`). Cada agente usa `keep_alive=0` para
+  liberar VRAM al terminar y un `num_ctx` fijo — relevante si tocas
+  tiempos/memoria del pipeline.
+- **Capacidades (T8.3)**: `backend/app/platform/capabilities/registry.py` declara
+  las capacidades del motor (`rag`, `rag_results`, `llm`, `llm_stream`, `search`,
+  `format`, `publish`) y `binding.py` las resuelve para un agente. Con
+  `AGENT_ENGINE=capabilities` el motor inyecta a cada agente las que declara y el
+  agente las usa vía `provider(state, "<nombre>", <import de siempre>)`; con
+  `AGENT_ENGINE=adapters` (por defecto) no se inyecta nada y cada agente usa su
+  import. Los dos caminos deben dar el mismo resultado — hay un test de paridad.
 - **RAG**: `backend/app/platform/capabilities/rag.py` (extracción PDF, chunking,
   embeddings `nomic-embed-text` 768-dim, Qdrant). Busca en el bucket del agente +
   la biblioteca `__library__`. No hay scraping web.
