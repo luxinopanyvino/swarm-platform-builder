@@ -128,7 +128,7 @@ tumba su test.
 
 ```
 DEBUG=true SECRET_KEY=ci-secret-not-for-prod python -m pytest -q
-# → VERIFICACION_SUITE
+# → 771 passed, 15 skipped (los 15 son los de Redis de #170, sin servidor aquí)
 
 npm run build && npm run build:public     # → ambos OK
 python3 scripts/check_design_tokens.py    # → [OK]
