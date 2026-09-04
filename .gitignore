@@ -92,3 +92,7 @@ graphify-out/
 certs/*.pem
 certs/*.key
 certs/*.crt
+
+# Informes del harness EDD (SPEC-014/T9.3): artefacto de una ejecución concreta,
+# no fuente de verdad. En CI (T9.5) se publican como artifact del workflow.
+backend/evals/results/
