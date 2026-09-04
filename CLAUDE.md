@@ -88,11 +88,17 @@ Docker (`docker compose up --build`, backend en `:8080`).
   pipeline es un dato** (T8.3): `backend/app/platform/engine/` construye el
   `StateGraph` desde un `GraphSpec` —secuencia + bucles de revisión— y resuelve
   cada nodo contra un registro de agentes. El motor no menciona a ningún agente
-  concreto; AlejandrIA se declara en
-  `backend/app/modules/agents/domain/alejandria.py` (sus cinco agentes, las
-  capacidades que compone cada uno y el bucle revisor→redactor), que es lo que
-  T8.4 moverá a `template.yaml`. Si añades un agente, regístralo ahí; si cambias
-  el bucle, es un campo de `ReviewLoop`, no un `if`.
+  concreto.
+- **Proyectos en el filesystem (T8.4)**: `backend/projects/<slug>/template.yaml`
+  (esquema v1) define un proyecto entero — sus agentes, las capacidades que
+  compone cada uno, la secuencia y los bucles de revisión — y `agents/*.agent.md`
+  son los perfiles que la siembra clona a BD. `backend/app/platform/projects/`
+  los carga y **los valida** (capacidad inexistente, nodo no declarado, perfil
+  que falta o que apunta fuera del proyecto → error al cargar, no a mitad de la
+  ejecución). **Si añades un agente o cambias el bucle, se hace en el YAML**, no
+  en Python: `alejandria.py` es solo el puente que lo lee. Los `.agent.md` se
+  localizan con `platform/projects/profiles.py`; nunca con rutas relativas al
+  directorio de trabajo (hay un test que lo comprueba).
   Cada ejecución se registra en la tabla `agent_runs`. El bucle Revisor→Redactor
   (`loop_count`, máx 3) y el **HITL** (`await_decision`, pausa por SSE) viven aquí.
 - **Streaming**: el pipeline emite eventos por **SSE** (`/agents/{id}/stream`):

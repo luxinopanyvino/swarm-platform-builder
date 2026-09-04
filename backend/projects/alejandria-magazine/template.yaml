@@ -1,0 +1,73 @@
+# Plantilla de proyecto — esquema v1 (SPEC-013 / T8.4 / AC4, ADR-0005).
+#
+# Este fichero es la definición **completa** de AlejandrIA Magazine: qué agentes
+# tiene, qué capacidades compone cada uno, en qué orden corren y dónde vuelve el
+# bucle de revisión. Hasta T8.3 todo esto vivía en código (primero dentro del
+# orquestador, después en `modules/agents/domain/alejandria.py`); aquí deja de ser
+# código y pasa a ser el dato que el motor lee.
+#
+# Es lo que hace posible un proyecto nuevo sin tocar Python: copiar este
+# directorio, cambiar los agentes y el grafo.
+version: 1
+slug: alejandria-magazine
+name: AlejandrIA Magazine
+description: >-
+  Revista científica con flujo editorial completo: investigación con RAG,
+  redacción, revisión por pares con bucle de corrección, formato académico y
+  publicación.
+use_case_type: alejandria_magazine
+
+# ── Agentes ─────────────────────────────────────────────────────────────────
+# `requires` nombra capacidades del registro del motor. El *loader* comprueba
+# que existan al cargar la plantilla: un proyecto al que le falta una capacidad
+# tiene que enterarse al arrancar y no a mitad del tercer agente.
+#
+# `profile` es el `.agent.md` que se clona a la base de datos al crear un
+# proyecto desde esta plantilla; ahí es donde la persona usuaria lo edita.
+agents:
+  - name: investigador
+    entrypoint: app.modules.agents.adapters.investigador:run_investigador
+    # `rag_results` y no `rag`: construye citas, así que necesita los metadatos
+    # de cada fuente y no un bloque de texto.
+    requires: [rag_results, llm]
+    profile: agents/investigador.agent.md
+    description: Busca fuentes en la base de conocimiento y sintetiza el material.
+
+  - name: redactor
+    entrypoint: app.modules.agents.adapters.redactor:run_redactor
+    requires: [rag, llm, llm_stream]
+    profile: agents/redactor.agent.md
+    description: Escribe el borrador a partir de la investigación y del feedback.
+
+  - name: revisor
+    entrypoint: app.modules.agents.adapters.revisor:run_revisor
+    requires: [llm]
+    profile: agents/revisor.agent.md
+    description: Evalúa el borrador y decide si vuelve al redactor.
+
+  - name: formateador
+    entrypoint: app.modules.agents.adapters.formateador:run_formateador
+    requires: [llm]
+    profile: agents/formateador.agent.md
+    description: Aplica el formato científico y construye las referencias.
+
+  - name: publicador
+    entrypoint: app.modules.agents.adapters.publicador:run_publicador
+    requires: [format]
+    profile: agents/publicador.agent.md
+    description: Persiste el artículo final y genera la maquetación imprimible.
+
+# ── Grafo ───────────────────────────────────────────────────────────────────
+graph:
+  sequence: [investigador, redactor, revisor, formateador, publicador]
+  review_loops:
+    # El bucle editorial. `threshold` y `max_loops` son de este proyecto: otro
+    # puede exigir 90 y dar una sola vuelta, o no tener revisión.
+    - reviewer: revisor
+      on_reject: redactor
+      threshold: 80
+      max_loops: 3
+      # A dónde volver cuando alguien sube una fuente nueva. Al investigador si
+      # está en el flujo, para que la fuente entre en la investigación y en las
+      # citas; si no, al redactor, que al menos la usará como contexto.
+      retry_targets: [investigador, redactor]

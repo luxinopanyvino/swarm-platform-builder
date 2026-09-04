@@ -302,20 +302,20 @@ def make_node_wrapper(agent_name: str, run_fn):
     return wrapper
 
 
-#: Compatibilidad: el bucle de revisión pasó a ser un dato del proyecto
-#: (`alejandria.BUCLE_REVISION`) y el enrutado lo fabrica el motor. Se mantienen
-#: estos nombres porque hay código y tests que los importan, pero delegan.
-MAX_REVIEW_LOOPS = alejandria.BUCLE_REVISION.max_loops
+#: Compatibilidad: el bucle de revisión es un dato de la plantilla del proyecto
+#: (`template.yaml`) y el enrutado lo fabrica el motor. Se mantienen estos nombres
+#: porque hay código y tests que los importan, pero delegan.
+MAX_REVIEW_LOOPS = alejandria.review_loop().max_loops
 
 
 def _next_after_revisor(flow: List[str]) -> str:
-    """Nodo que sigue a 'revisor' en el flujo, o el final."""
-    return next_after(flow, alejandria.BUCLE_REVISION.reviewer)
+    """Nodo que sigue al revisor en el flujo, o el final."""
+    return next_after(flow, alejandria.review_loop().reviewer)
 
 
 def route_after_revisor(state: AgentState) -> str:
     """Arista condicional tras el revisor, construida desde el bucle del proyecto."""
-    return make_review_router(alejandria.BUCLE_REVISION)(state)
+    return make_review_router(alejandria.review_loop())(state)
 
 
 class Orchestrator:
@@ -342,7 +342,9 @@ class Orchestrator:
             raise ValueError("flow_sequence cannot be empty")
 
         alejandria.register()
-        spec = GraphSpec(sequence=tuple(flow_sequence), loops=alejandria.BUCLES)
+        # La secuencia la pide quien lanza el pipeline (puede ser un subconjunto:
+        # reejecutar solo revisor+formateador); los bucles los pone la plantilla.
+        spec = GraphSpec(sequence=tuple(flow_sequence), loops=alejandria.loops())
 
         def node_factory(name: str):
             runner = resolve_runner(name, Orchestrator._load_dynamic_agent)

@@ -1,68 +1,77 @@
 """Agent seeding utilities: each project type gets its own set of default agents."""
+import logging
+
 import yaml
-from pathlib import Path
 
 from sqlalchemy import select
 
 from app.models import AgentProfileModel, ProjectUseCaseType
 from app.core.database import AsyncSessionLocal
 
+logger = logging.getLogger(__name__)
+
 
 # ── Agent templates per use-case type ─────────────────────────────────────────
 
-def _alejandria_magazine_agents() -> list[dict]:
-    """Try to load from .agent.md files; fall back to hardcoded."""
-    search_paths = [Path("app/agents"), Path("../app/agents")]
-    agents_dir = next((p for p in search_paths if p.exists()), None)
-    if agents_dir:
-        results = []
-        for filepath in agents_dir.glob("*.agent.md"):
-            try:
-                raw = filepath.read_text(encoding="utf-8")
-                frontmatter: dict = {}
-                content = raw
-                if raw.startswith("---"):
-                    parts = raw.split("---", 2)
-                    if len(parts) >= 3:
-                        frontmatter = yaml.safe_load(parts[1]) or {}
-                        content = parts[2].lstrip()
-                slug = filepath.stem.replace(".agent", "")
-                results.append({
-                    "slug": slug,
-                    "name": slug.replace("-", " ").title(),
-                    "content": content,
-                    "model": frontmatter.get("model") or "llama3.2:1b",
-                    "temperature": float(frontmatter.get("temperature") or 0.7),
-                    "rag_enabled": bool(frontmatter.get("rag_enabled", True)),
-                    "rag_collection": frontmatter.get("rag_collection") or "rag_docs",
-                    "rag_chunk_size": int(frontmatter.get("rag_chunk_size") or 500),
-                    "rag_chunk_overlap": int(frontmatter.get("rag_chunk_overlap") or 50),
-                    "prompt_template": frontmatter.get("prompt_template") or "",
-                    "is_builtin": True,
-                })
-            except Exception:
-                pass
-        if results:
-            return results
+def _agents_from_template(slug: str) -> list[dict]:
+    """Clona los agentes que **declara** la plantilla del proyecto (T8.4 / AC4).
 
-    # Fallback hardcoded
-    return [
-        {"slug": "investigador", "name": "Investigador", "is_builtin": True,
-         "content": "# Investigador\n\n## Rol\nInvestiga fuentes académicas y extrae información relevante.\n",
-         "model": "llama3.2:1b", "temperature": 0.3},
-        {"slug": "redactor", "name": "Redactor", "is_builtin": True,
-         "content": "# Redactor\n\n## Rol\nRedacta el artículo científico a partir de la investigación.\n",
-         "model": "llama3.2:1b", "temperature": 0.7},
-        {"slug": "revisor", "name": "Revisor", "is_builtin": True,
-         "content": "# Revisor\n\n## Rol\nEvalúa el borrador con un score 0-100 y genera feedback.\n",
-         "model": "llama3.2:1b", "temperature": 0.4},
-        {"slug": "formateador", "name": "Formateador", "is_builtin": True,
-         "content": "# Formateador\n\n## Rol\nReformatea citas en APA, IEEE o Vancouver.\n",
-         "model": "llama3.2:1b", "temperature": 0.2},
-        {"slug": "publicador", "name": "Publicador", "is_builtin": True,
-         "content": "# Publicador\n\n## Rol\nGuarda el artículo final y lo marca como PUBLISHED.\n",
-         "model": "llama3.2:1b", "temperature": 0.1},
-    ]
+    Antes esto hacía `glob("*.agent.md")` sobre `app/agents/`, con dos
+    consecuencias:
+
+    * dependía del directorio de trabajo (`Path("app/agents")` relativo), y si no
+      encontraba nada caía a una lista escrita a mano en este mismo fichero, que
+      llevaba tiempo divergiendo de los perfiles reales;
+    * sembraba **todo** lo que hubiera en el directorio. Ahí vivían también
+      `pepe.agent.md` —cuyo propio frontmatter dice
+      `prompt_template: flow-designer-persist-test`— y `flowskill.agent.md`, así
+      que cada proyecto nuevo nacía con dos agentes de serie que no son del
+      producto.
+
+    Ahora se clona lo que la plantilla declara, ni más ni menos. Los `.agent.md`
+    que estén en el directorio sin declarar siguen siendo cargables como agentes
+    dinámicos; simplemente ya no se siembran.
+    """
+    from app.platform.projects import loader
+
+    try:
+        paquete = loader.load(slug)
+    except Exception as error:   # plantilla ausente o inválida
+        logger.warning("No se pudo cargar la plantilla '%s': %s", slug, error)
+        return []
+
+    agentes: list[dict] = []
+    for spec in paquete.agents:
+        ruta = paquete.profile_path(spec.name)
+        frontmatter: dict = {}
+        contenido = ""
+        if ruta is not None:
+            crudo = ruta.read_text(encoding="utf-8")
+            contenido = crudo
+            if crudo.startswith("---"):
+                partes = crudo.split("---", 2)
+                if len(partes) >= 3:
+                    frontmatter = yaml.safe_load(partes[1]) or {}
+                    contenido = partes[2].lstrip()
+
+        agentes.append({
+            "slug": spec.name,
+            "name": spec.name.replace("-", " ").title(),
+            "content": contenido,
+            "model": frontmatter.get("model") or "llama3.2:1b",
+            "temperature": float(frontmatter.get("temperature") or 0.7),
+            "rag_enabled": bool(frontmatter.get("rag_enabled", True)),
+            "rag_collection": frontmatter.get("rag_collection") or "rag_docs",
+            "rag_chunk_size": int(frontmatter.get("rag_chunk_size") or 500),
+            "rag_chunk_overlap": int(frontmatter.get("rag_chunk_overlap") or 50),
+            "prompt_template": frontmatter.get("prompt_template") or "",
+            "is_builtin": True,
+        })
+    return agentes
+
+
+def _alejandria_magazine_agents() -> list[dict]:
+    return _agents_from_template("alejandria-magazine")
 
 
 def _desarrollo_agents() -> list[dict]:

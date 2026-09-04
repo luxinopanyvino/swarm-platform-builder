@@ -8,10 +8,9 @@ import yaml
 from app.platform.capabilities.rag import fetch_agent_context
 from app.platform.project_context import collection_for_state
 from app.platform.llm import call_llm, get_default_model
+from app.platform.projects.profiles import find as find_profile
 
 logger = logging.getLogger(__name__)
-
-_AGENTS_DIRS = [Path("app/agents"), Path("../app/agents")]
 
 _DEFAULT_TEMPLATE = (
     "You are a specialized AI assistant called {agent_name}.\n\n"
@@ -23,21 +22,15 @@ _DEFAULT_TEMPLATE = (
 )
 
 
-def _find_agents_dir() -> Optional[Path]:
-    for p in _AGENTS_DIRS:
-        if p.exists() and p.is_dir():
-            return p
-    return None
-
-
 def load_agent_profile(agent_name: str) -> Optional[Dict[str, Any]]:
-    """Read and parse the .agent.md file for the given agent name. Returns None if not found."""
-    agents_dir = _find_agents_dir()
-    if not agents_dir:
-        return None
+    """Read and parse the .agent.md file for the given agent name, or None.
 
-    filepath = agents_dir / f"{agent_name}.agent.md"
-    if not filepath.exists():
+    La ruta la resuelve `platform/projects/profiles` desde los proyectos
+    empaquetados (T8.4): antes se adivinaba con rutas relativas al directorio de
+    trabajo, y no encontrarlas no fallaba — caía a un modelo por defecto.
+    """
+    filepath = find_profile(agent_name)
+    if filepath is None:
         return None
 
     try:
