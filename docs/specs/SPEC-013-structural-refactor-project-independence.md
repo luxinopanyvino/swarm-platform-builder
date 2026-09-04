@@ -61,16 +61,26 @@ y cada proyecto nuevo seguiría exigiendo código.
   `platform/capabilities/registry.py` con capacidades tipadas (rag/search/scrape/
   format/publish/llm) y la infraestructura (`rag`, `scraper`, `tools`, `llm`) vive
   bajo `platform/`, no bajo `modules/agents/adapters/`.
-- [ ] **AC4** — *Given* la estructura de proyectos, *When* se arranca en limpio,
+- [x] **AC4** — *Given* la estructura de proyectos, *When* se arranca en limpio,
   *Then* existe `projects/alejandria-magazine/` con `template.yaml` y `agents/*.agent.md`,
   y un *loader* lo carga; `app/agents/` ya no se referencia por ruta relativa.
-- [ ] **AC5** — *Given* un proyecto nuevo creado desde el *template* AlejandrIA,
+  <br>*T8.4 (#210)*: `backend/projects/alejandria-magazine/` con su
+  `template.yaml` (esquema v1) y los cinco perfiles.
+  `platform/projects/loader.py` lo lee, **lo valida** y lo traduce a `GraphSpec` +
+  `AgentSpec`. `app/agents/` ya no existe: las cuatro rutas relativas que lo
+  buscaban —runner genérico, siembra, resolutor de modelos y router— se
+  sustituyeron por una resolución basada en el paquete, y hay un test AST que
+  impide que vuelvan.
+- [x] **AC5** — *Given* un proyecto nuevo creado desde el *template* AlejandrIA,
   *When* se ejecuta su pipeline, *Then* produce el mismo resultado que el AlejandrIA
   actual (test de **paridad** input→output sobre el flujo investigador→…→publicador).
-  <br>*T8.3 (#209)*: hecha la mitad que corresponde a esta tarea — el test de
-  paridad sobre el flujo completo existe y compara los dos caminos del motor. La
-  otra mitad —«creado desde el *template*»— necesita `template.yaml`, que es
-  T8.4 (#210); AC5 queda por tanto **sin marcar** hasta entonces.
+  <br>*T8.3 (#209)*: el test de paridad sobre el flujo completo, comparando los
+  dos caminos del motor.
+  <br>*T8.4 (#210)*: el pipeline sale ya de la plantilla. La paridad se fija
+  comparando el `GraphSpec` y las capacidades que produce `template.yaml` con los
+  que AlejandrIA tenía escritos en Python, y comprobando que la siembra clona lo
+  que la plantilla declara con el modelo y la temperatura del perfil (no los del
+  fallback).
 - [x] **AC6** — *Given* dos proyectos con documentos RAG distintos, *When* uno ejecuta
   su pipeline, *Then* solo recupera documentos de **su** proyecto (RAG con *namespace*
   por proyecto); ningún documento de otro proyecto ni del *seed* de demo se filtra.
@@ -115,9 +125,9 @@ Sigue ADR-0005. Resumen por área:
   - `agents/generic_runner.py` (desde `generic.py`) — pendiente (T8.3).
 - **`modules/`**: hexagonal consistente (`domain/application/infrastructure/interface`);
   partir `models.py` *(hecho — T8.1)*; nuevo módulo `templates/`.
-- **`projects/<slug>/`** (filesystem): `template.yaml` (agentes, grafo, routing, rag,
-  canales), `agents/*.agent.md`, `capabilities/` opcional, `assets/`. *Loader* que
-  registra el paquete y *seed* que clona a BD.
+- **`projects/<slug>/`** (filesystem) *(hecho — T8.4, #210)*: `template.yaml`
+  (agentes, grafo y bucles de revisión), `agents/*.agent.md`. *Loader* que valida
+  y registra el paquete, y *seed* que clona a BD lo que la plantilla declara.
 - **Independencia**: `ProjectContext` en el runtime; repos con *project scoping*;
   colección/namespace RAG por proyecto (`rag_<project_id>` o filtro `project_id`).
 - **Frontend**: extraer `platform/` (builder) de `projects/` (consumer).

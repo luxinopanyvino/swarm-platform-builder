@@ -140,8 +140,6 @@ def get_default_model() -> str:
 # Per-agent, provider-aware model resolution (SPEC-023 / T12.3)
 # ---------------------------------------------------------------------------
 
-_AGENTS_DIRS = [Path("app/agents"), Path("../app/agents")]
-
 # Prefix → provider namespace. Used to decide whether a model id "belongs" to the
 # active provider, so a legacy Ollama value (e.g. seeded in the DB) never gets sent
 # to Anthropic/OpenAI as if it were one of their models.
@@ -166,24 +164,29 @@ def _namespace_matches(model: str, provider: str) -> bool:
 
 
 def _load_agent_frontmatter(agent_name: str) -> dict:
-    """Parse the YAML frontmatter of ``<agent_name>.agent.md`` (empty dict if absent)."""
-    for base in _AGENTS_DIRS:
-        filepath = base / f"{agent_name}.agent.md"
-        if not filepath.exists():
-            continue
-        try:
-            raw = filepath.read_text(encoding="utf-8")
-        except Exception:
-            return {}
-        if raw.startswith("---"):
-            parts = raw.split("---", 2)
-            if len(parts) >= 3:
-                try:
-                    import yaml
-                    return yaml.safe_load(parts[1]) or {}
-                except Exception:
-                    return {}
+    """Parse the YAML frontmatter of ``<agent_name>.agent.md`` (empty dict if absent).
+
+    La ruta la resuelve `platform/projects/profiles` (T8.4). El import es local
+    para no crear un ciclo: el *loader* de proyectos valida capacidades y estas
+    acaban importando este módulo.
+    """
+    from app.platform.projects.profiles import find as find_profile
+
+    filepath = find_profile(agent_name)
+    if filepath is None:
         return {}
+    try:
+        raw = filepath.read_text(encoding="utf-8")
+    except Exception:
+        return {}
+    if raw.startswith("---"):
+        parts = raw.split("---", 2)
+        if len(parts) >= 3:
+            try:
+                import yaml
+                return yaml.safe_load(parts[1]) or {}
+            except Exception:
+                return {}
     return {}
 
 

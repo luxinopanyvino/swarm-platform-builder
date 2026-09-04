@@ -50,6 +50,7 @@ from app.platform.project_access import (
     get_project_context, load_project_context, usuario_actual,
 )
 from app.platform.project_context import ProjectContext, bucket_of
+from app.platform.projects.profiles import agents_dir as project_agents_dir
 
 router = APIRouter(prefix="/api/v1/agents", tags=["agents"])
 
@@ -57,15 +58,11 @@ logger = logging.getLogger(__name__)
 
 
 def get_claude_agents_dir() -> Path:
-    # Agent profile .agent.md files live in backend/app/agents/
-    paths = [
-        Path("app/agents"),
-        Path("../app/agents"),
-    ]
-    for p in paths:
-        if p.exists() and p.is_dir():
-            return p
-    return Path("app/agents")
+    """Directorio de perfiles del proyecto empaquetado (T8.4).
+
+    Antes probaba `app/agents` y `../app/agents` según el directorio de trabajo.
+    """
+    return project_agents_dir()
 
 
 def get_agent_profile_id(filepath: Path) -> str:
