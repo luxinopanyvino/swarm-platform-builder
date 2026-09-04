@@ -29,6 +29,14 @@ class DatasetError(ValueError):
     """El dataset no es utilizable. El mensaje dice qué línea y por qué."""
 
 
+#: Cómo se obtuvieron las salidas grabadas. `recorded` es evidencia del modelo;
+#: `handwritten` es evidencia de la métrica. Confundirlas es el mismo error que
+#: presentar un `replay` como medición real, así que el dataset lo declara y el
+#: informe lo repite.
+PROCEDENCIAS = ("recorded", "handwritten", "mixed")
+SIN_DECLARAR = "no declarada"
+
+
 @dataclass(frozen=True)
 class Dataset:
     id: str
@@ -36,6 +44,7 @@ class Dataset:
     sha256: str
     path: Path
     cases: Tuple[EvalCase, ...]
+    provenance: str = SIN_DECLARAR
 
     def for_agent(self, agent: str) -> Tuple[EvalCase, ...]:
         return tuple(caso for caso in self.cases if caso.agent == agent)
@@ -92,6 +101,10 @@ def load(path: Path) -> Dataset:
     _exigir("id" in cabecera and "version" in cabecera,
             f"{path.name}:{numero} la primera línea debe ser la cabecera con 'id' y 'version'")
 
+    procedencia = str(cabecera.get("provenance") or SIN_DECLARAR)
+    _exigir(procedencia in PROCEDENCIAS or procedencia == SIN_DECLARAR,
+            f"{path.name}:{numero} 'provenance' debe ser una de {', '.join(PROCEDENCIAS)}")
+
     casos: List[EvalCase] = []
     vistos: set[str] = set()
     for numero, cruda in lineas[1:]:
@@ -117,6 +130,8 @@ def load(path: Path) -> Dataset:
             expect=espera,
             recorded_output=datos.get("recorded_output"),
             recorded_usage=_campo(datos, "recorded_usage", dict, {}, donde),
+            recorded_decision=_campo(datos, "recorded_decision", dict, None, donde),
+            recorded_judgement=_campo(datos, "recorded_judgement", dict, None, donde),
         ))
 
     _exigir(bool(casos), f"{path.name} no tiene ningún caso")
@@ -126,6 +141,7 @@ def load(path: Path) -> Dataset:
         sha256=sha,
         path=path,
         cases=tuple(casos),
+        provenance=procedencia,
     )
 
 

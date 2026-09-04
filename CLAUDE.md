@@ -211,7 +211,17 @@ prueba de que el agente va bien es el peor fallo posible aquí. El harness **no
 llama al LLM por su cuenta**: ejecuta el agente real por el `resolve_runner` del
 motor y le lee tokens y fuentes por la traza de T9.1. Añadir una métrica es añadir
 un módulo en `metrics/` que se registre; el runner no se toca. Los informes de
-`evals/results/` están ignorados por git. Ver `evals/agent_behavior/README.md`.
+`evals/results/` están ignorados por git.
+
+Hay dos familias de dataset y **no son intercambiables**: `<agente>-golden` pasa
+entero y es la línea base que usará el gate de T9.5; `<agente>-regressions` falla a
+propósito y documenta qué se detecta. Cada dataset declara `provenance`: hoy son
+todos `handwritten` —salidas escritas a mano—, así que un verde dice que **la
+métrica** funciona, no que el modelo se comporte así; el informe lo avisa. La
+métrica `coherence` la juzga un modelo de la plataforma con rúbrica fija y
+`temperature=0`, y **el juez lo pide el runner, no la métrica**: por eso en
+`replay` no se llama a nadie y sin veredicto grabado la métrica se salta con
+motivo. Ver `evals/agent_behavior/README.md`.
 
 ## graphify (grafo de conocimiento — tooling local)
 

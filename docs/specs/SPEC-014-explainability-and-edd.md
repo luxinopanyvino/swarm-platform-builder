@@ -97,12 +97,26 @@ los convierte en criterio de desarrollo.
   comparables dos informes va en el encabezado: modelo, proveedor, parámetros,
   versión **y hash** del dataset, y el commit. Las métricas de AC4 quedan para T9.4;
   aquí van tres deterministas que dan sentido al armazón.
-- [ ] **AC4** — *Given* el harness, *Then* existen **datasets *golden* versionados**
+- [x] **AC4** — *Given* el harness, *Then* existen **datasets *golden* versionados**
   en el repo y se computan **métricas de comportamiento** sobre los agentes de la
   plataforma: fidelidad de citas (las fuentes citadas existen en el RAG, no
   alucinadas), cumplimiento de formato (estructura APA/IEEE/… verificable),
   calibración del score del Revisor frente a referencia, coherencia, y presupuesto
   de tokens/latencia por agente.
+  <br>*T9.4 (#225)*: un `<agente>-golden` por agente evaluable —investigador,
+  redactor, revisor y formateador— que **pasa entero**, para que T9.5 pueda usarlo
+  de línea base, y un `<agente>-regressions` que falla a propósito documentando qué
+  se detecta. Las dos métricas que faltaban son las que no se calculan con una
+  expresión regular: **`reviewer_calibration`** mide la distancia a una referencia
+  humana y, sobre todo, **el lado del umbral de 80** —un 78 frente a un 82 son
+  cuatro puntos y una decisión distinta del pipeline—; y **`coherence`** la juzga un
+  modelo de la plataforma con rúbrica fija y `temperature=0` (§5), que hubo que
+  añadir al dispatcher porque no la aceptaba. El juez lo pide el **runner**, donde
+  se sabe el modo, así que en `replay` no se llama a nadie y sin veredicto la
+  métrica se salta con motivo. El revisor, que decide y no escribe, se evalúa por su
+  `decision`, leída con el mismo `decision_of` de T9.1. Los conjuntos son
+  `handwritten` y el informe lo dice: fija qué mide cada métrica, no cómo se
+  comporta el modelo — regrabarlos en `live` es el paso previo a endurecer T9.5.
 - [ ] **AC5** — *Given* un PR que toca perfiles, *prompts* o modelos de agentes
   (`backend/app/agents/*.agent.md`, `shared/llm.py`, `shared/agents_seed.py`),
   *When* corre la CI, *Then* el **gate EDD** ejecuta la suite de evals y **falla o

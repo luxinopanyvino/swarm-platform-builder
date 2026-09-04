@@ -44,6 +44,16 @@ def to_markdown(informe: EvalReport) -> str:
             "> real, `--mode live`.",
             "",
         ]
+        # Un `replay` sobre salidas escritas a mano evalúa la métrica, no lo que
+        # hace el modelo con este caso. Es evidencia de otra cosa, y callarlo
+        # dejaría creer que es lo mismo (SPEC-014/T9.4).
+        if contexto.dataset_provenance != "recorded":
+            lineas += [
+                f"> **Salidas `{contexto.dataset_provenance or 'no declarada'}`.** No proceden de",
+                "> una ejecución real del agente, así que este informe dice que las",
+                "> métricas funcionan, no que el modelo se comporte así.",
+                "",
+            ]
 
     lineas += [
         "| | |",
@@ -53,6 +63,7 @@ def to_markdown(informe: EvalReport) -> str:
         f"| Proveedor | `{contexto.llm_provider or '—'}` |",
         f"| Modo | `{contexto.provider_mode}` |",
         f"| Dataset | `{contexto.dataset_id}` v`{contexto.dataset_version}` |",
+        f"| Procedencia de las salidas | `{contexto.dataset_provenance or 'no declarada'}` |",
         f"| Hash del dataset | `{contexto.dataset_sha256[:16]}…` |",
         f"| Commit | `{contexto.git_sha or '—'}` |",
         f"| Generado | {informe.generated_at} |",

@@ -24,7 +24,9 @@ import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from evals.agent_behavior import loader, metrics as metricas, providers, report
+from evals.agent_behavior import (
+    judge as jueces, loader, metrics as metricas, providers, report,
+)
 from evals.agent_behavior.models import CaseResult, EvalCase, EvalReport, RunContext
 
 
@@ -63,6 +65,7 @@ async def evaluate_case(
     caso: EvalCase,
     provider: providers.Provider,
     seleccionadas: Optional[List[str]] = None,
+    judge: Optional[jueces.Judge] = None,
 ) -> CaseResult:
     """Ejecuta un caso y le pasa las métricas que le aplican."""
     resultado = CaseResult(case_id=caso.id, agent=caso.agent)
@@ -76,6 +79,22 @@ async def evaluate_case(
     resultado.tokens_in = int(uso.get("tokens_in") or 0)
     resultado.tokens_out = int(uso.get("tokens_out") or 0)
     resultado.latency_ms = float(uso.get("latency_ms") or 0.0)
+    resultado.decision = uso.get("decision")
+
+    # El juez se pide **aquí**, donde se sabe el modo, y no dentro de la métrica:
+    # así `coherence` sigue siendo una función pura y en `replay` no se llama a
+    # ningún modelo. Un juez que falla no tumba el caso — la métrica se saltará
+    # con motivo, que es más honesto que puntuar sin haber mirado.
+    if judge is not None and jueces.needs_judgement(caso):
+        try:
+            resultado.judgement = await judge.assess(caso, resultado)
+        except Exception as error:
+            resultado.judgement = None
+            print(
+                f"[aviso] el juez falló en el caso '{caso.id}': "
+                f"{error.__class__.__name__}: {error}",
+                file=sys.stderr,
+            )
 
     for metrica in metricas.all_metrics():
         if seleccionadas and metrica.name not in seleccionadas:
@@ -133,14 +152,16 @@ async def run(
         dataset_id=dataset.id,
         dataset_version=dataset.version,
         dataset_sha256=dataset.sha256,
+        dataset_provenance=dataset.provenance,
         llm_provider=contexto_agente["llm_provider"],
         git_sha=_git_sha(),
     )
 
     provider = providers.build(mode, objetivo)
+    judge = jueces.build(mode)
     informe = EvalReport(context=contexto)
     for caso in dataset.for_agent(objetivo):
-        informe.cases.append(await evaluate_case(caso, provider, only_metrics))
+        informe.cases.append(await evaluate_case(caso, provider, only_metrics, judge))
     return informe
 
 

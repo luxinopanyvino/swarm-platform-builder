@@ -33,6 +33,14 @@ class EvalCase:
     #: Salida grabada, para el modo `replay`. Ver `providers.py`.
     recorded_output: Optional[str] = None
     recorded_usage: Dict[str, Any] = field(default_factory=dict)
+    #: Decisión grabada de un agente que decide (el revisor): `{score, coherent,
+    #: hitl_outcome}`. Va aparte de `recorded_output` porque el revisor **no
+    #: produce texto**: su salida es esta estructura, y meterla en un campo de
+    #: texto obligaría a cada métrica a parsearla a su manera.
+    recorded_decision: Optional[Dict[str, Any]] = None
+    #: Veredicto grabado del juez, para poder reproducir en `replay` una métrica
+    #: asistida sin llamar a ningún modelo. Ver `judge.py`.
+    recorded_judgement: Optional[Dict[str, Any]] = None
 
 
 @dataclass(frozen=True)
@@ -58,6 +66,14 @@ class CaseResult:
     tokens_in: int = 0
     tokens_out: int = 0
     latency_ms: float = 0.0
+    #: Lo que el agente **decidió**, si decide algo. Lo rellena el runner desde
+    #: el proveedor, igual que los tokens: quien lo sabe lo anota, y la métrica
+    #: solo lo lee. Sin esto el revisor sería inevaluable, porque su salida no es
+    #: texto.
+    decision: Optional[Dict[str, Any]] = None
+    #: Veredicto del juez para las métricas asistidas. Lo pide el runner —donde
+    #: se sabe el modo— y no la métrica, que debe seguir siendo una función pura.
+    judgement: Optional[Dict[str, Any]] = None
     error: Optional[str] = None
 
     @property
@@ -76,6 +92,10 @@ class RunContext:
     dataset_id: str = ""
     dataset_version: str = ""
     dataset_sha256: str = ""
+    #: De dónde salieron las salidas grabadas del dataset: `recorded` (de una
+    #: ejecución real del agente) o `handwritten` (escritas a mano). No es lo
+    #: mismo como evidencia, y un informe que no lo diga deja creer que sí.
+    dataset_provenance: str = ""
     llm_provider: str = ""
     python: str = field(default_factory=lambda: platform.python_version())
     git_sha: str = ""
