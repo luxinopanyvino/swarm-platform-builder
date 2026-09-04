@@ -36,6 +36,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.models.agent_run import AgentRunModel
+from app.models.agent_run_step import AgentRunStepModel
 from app.models.article import ArticleModel
 from app.models.audit_log import AuditLogModel
 from app.models.checkpoint import FlowCheckpointModel
@@ -162,6 +163,8 @@ async def purge(session: AsyncSession, *, apply: bool = False) -> PurgeResult:
          settings.RETENTION_AUDIT_LOG_DAYS, None),
         ("agent_runs", AgentRunModel, AgentRunModel.started_at,
          settings.RETENTION_AGENT_RUNS_DAYS, None),
+        ("agent_run_steps", AgentRunStepModel, AgentRunStepModel.created_at,
+         settings.RETENTION_AGENT_RUN_STEPS_DAYS, None),
         ("flow_checkpoints", FlowCheckpointModel, FlowCheckpointModel.created_at,
          settings.RETENTION_CHECKPOINTS_DAYS, None),
         # Solo las ya leídas: una notificación sin leer sigue siendo pendiente de
