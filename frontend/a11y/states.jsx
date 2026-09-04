@@ -8,7 +8,7 @@
 import React, { useCallback, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { FileText } from 'lucide-react';
-import { AsyncState, EmptyState } from '../src/components/ui/states';
+import { AsyncState, EmptyState } from '../src/platform/components/ui/states';
 import '../src/index.css';
 
 /** Carga simulada: el resultado lo decide el banco, no la red. */

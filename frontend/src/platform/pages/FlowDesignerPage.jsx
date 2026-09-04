@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useRef } from 'react';
+import { runTarget } from '../runTarget';
 import Modal from '../components/ui/Modal';
 import { EmptyState } from '../components/ui/states';
 import {
@@ -8,15 +9,17 @@ import {
 import '@xyflow/react/dist/style.css';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Pencil, Plus, Save, Play, Trash2, GitBranch, Upload } from 'lucide-react';
-import { nodeTypes, AGENT_META } from '../components/flow/AgentNode';
+import { nodeTypes } from '../components/flow/AgentNode';
+import { agentIds, agentMeta, hasOwnRag, listAgents, ragOwner } from '../agentCatalog';
 import { AgentCreateModal, AgentEditorModal } from '../components/agents/AgentEditorModal';
 import { useFlowStore } from '../store/flowStore';
-import { useArticleStore } from '../store/articleStore';
 import { useProjectStore } from '../store/projectStore';
 import { agentsApi } from '../api/agents';
 import toast from 'react-hot-toast';
 
-const BUILTIN_IDS = new Set(['investigador', 'redactor', 'revisor', 'formateador', 'publicador', 'orquestador']);
+//: Agentes de serie: los del proyecto activo, más el orquestador, que no es
+//: un nodo del pipeline (T8.6).
+const builtinIds = () => new Set([...agentIds(), 'orquestador']);
 
 let nodeId = 100;
 const newId = () => `node_${++nodeId}`;
@@ -33,7 +36,9 @@ export default function FlowDesignerPage() {
     saveFlow, saveDraftLocally, loadLocalDraft, clearLocalDraft,
     activeFlow,
   } = useFlowStore();
-  const { createArticle, updateArticle } = useArticleStore();
+  // El objetivo de la ejecución lo aporta el proyecto activo (T8.6): el
+  // builder no sabe cómo se llama lo que produce el pipeline.
+  const target = runTarget();
   const { activeProject } = useProjectStore();
 
   const [nodes, setNodes, onNodesChange] = useNodesState(draftNodes);
@@ -61,7 +66,7 @@ export default function FlowDesignerPage() {
   const [rfInstance, setRfInstance] = React.useState(null);
 
   const buildPaletteAgent = useCallback((agent) => {
-    const meta = AGENT_META[agent.slug] || AGENT_META[agent.id] || {};
+    const meta = agentMeta(agent.slug) || agentMeta(agent.id) || {};
     return {
       id: agent.slug || agent.id,
       slug: agent.slug || agent.id,
@@ -80,6 +85,7 @@ export default function FlowDesignerPage() {
       color: meta.color || 'var(--neutral-60)',
       label: meta.label || agent.name || agent.slug || agent.id,
       desc: meta.desc || `Perfil ${agent.slug || agent.id}`,
+      icon: meta.icon,
     };
   }, []);
 
@@ -87,13 +93,13 @@ export default function FlowDesignerPage() {
     try {
       const projectId = activeProject?.id;
       if (!projectId) {
-        setPaletteAgents(Object.entries(AGENT_META).map(([id, meta]) => ({ id, ...meta })));
+        setPaletteAgents(listAgents());
         return;
       }
       const defs = await agentsApi.getClaudeDefs(projectId);
       setPaletteAgents(defs.map(buildPaletteAgent));
     } catch {
-      setPaletteAgents(Object.entries(AGENT_META).map(([id, meta]) => ({ id, ...meta })));
+      setPaletteAgents(listAgents());
     }
   }, [buildPaletteAgent, activeProject?.id]);
 
@@ -168,6 +174,8 @@ export default function FlowDesignerPage() {
           emoji: paletteAgent.emoji,
           color: paletteAgent.color,
           desc: paletteAgent.desc,
+          icon: paletteAgent.icon ?? agentMeta(node.data?.agentId)?.icon,
+          ownRag: hasOwnRag(node.data?.agentId),
           model: paletteAgent.model,
           ragEnabled: paletteAgent.rag_enabled,
           scientificFormat: paletteAgent.scientific_format,
@@ -206,10 +214,14 @@ export default function FlowDesignerPage() {
       position,
       data: {
         agentId,
-        label: agent?.label || AGENT_META[agentId]?.label || agentId,
-        emoji: agent?.emoji,
-        color: agent?.color,
-        desc: agent?.desc,
+        label: agent?.label || agentMeta(agentId)?.label || agentId,
+        emoji: agent?.emoji ?? agentMeta(agentId)?.emoji,
+        color: agent?.color ?? agentMeta(agentId)?.color,
+        desc: agent?.desc ?? agentMeta(agentId)?.desc,
+        // El icono y la insignia de RAG los pinta el nodo con lo que reciba: es
+        // el precio de que `AgentNode` ya no conozca a los agentes de nadie.
+        icon: agent?.icon ?? agentMeta(agentId)?.icon,
+        ownRag: hasOwnRag(agentId),
         model: agent?.model,
         ragEnabled: agent?.rag_enabled,
         scientificFormat: agent?.scientific_format,
@@ -260,7 +272,9 @@ export default function FlowDesignerPage() {
     setUploadingDoc(true);
     try {
       // Upload to the investigador bucket so it's available as a source
-      const res = await agentsApi.uploadRagDocument('investigador', file);
+      // A qué agente pertenecen las fuentes que se suben desde el lienzo lo
+      // dice el proyecto: en AlejandrIA es el investigador (T8.6).
+      const res = await agentsApi.uploadRagDocument(ragOwner(), file);
       toast.success(
         res?.title
           ? `Añadido: "${res.title}"${res.authors ? ` — ${res.authors}` : ''}`
@@ -285,11 +299,11 @@ export default function FlowDesignerPage() {
         // Re-run on existing article; optionally update the title if user changed it
         articleId = existingArticleId;
         if (titleValue && titleValue !== existingArticleTitle) {
-          await updateArticle(existingArticleId, { title: titleValue });
+          await target.rename(existingArticleId, titleValue);
         }
       } else {
-        const article = await createArticle(titleValue);
-        articleId = article.id;
+        const creado = await target.create(titleValue);
+        articleId = creado.id;
       }
       setShowRunModal(false);
       const agentNodes = nodes.filter(n => n.type === 'agent');
@@ -396,7 +410,7 @@ export default function FlowDesignerPage() {
           <MiniMap
             nodeColor={(n) => {
               if (n.type === 'condition') return 'var(--agent-review)';
-              return n.data?.color || AGENT_META[n.data?.agentId]?.color || 'var(--neutral-60)';
+              return n.data?.color || agentMeta(n.data?.agentId)?.color || 'var(--neutral-60)';
             }}
             maskColor="rgba(244,246,249,0.6)"
           />
@@ -604,7 +618,7 @@ export default function FlowDesignerPage() {
               <div style={{ background: 'var(--bg-elevated)', borderRadius: 'var(--radius-md)', padding: 'var(--space-3)', fontSize: 'var(--font-size-xs)', color: 'var(--text-muted)' }}>
                 <strong style={{ color: 'var(--text-secondary)' }}>Secuencia:</strong>{' '}
                 {nodes.filter(n => n.type === 'agent').map((n) => {
-                  const meta = AGENT_META[n.data?.agentId] || {};
+                  const meta = agentMeta(n.data?.agentId) || {};
                   return `${n.data?.emoji || meta.emoji || '🤖'} ${n.data?.label || meta.label || n.data?.agentId}`;
                 }).join(' → ')}
               </div>
@@ -621,7 +635,7 @@ export default function FlowDesignerPage() {
       {editAgent && (
         <AgentEditorModal
           agent={editAgent}
-          isBuiltin={BUILTIN_IDS.has(editAgent.id)}
+          isBuiltin={builtinIds().has(editAgent.id)}
           models={models}
           onClose={() => setEditAgent(null)}
           onSaved={async () => {
@@ -638,7 +652,7 @@ export default function FlowDesignerPage() {
 
       {showNewAgent && (
         <AgentCreateModal
-          builtInIds={BUILTIN_IDS}
+          builtInIds={builtinIds()}
           onClose={() => setShowNewAgent(false)}
           onCreate={async (payload) => {
             await agentsApi.createClaudeDef(payload);

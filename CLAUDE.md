@@ -61,6 +61,19 @@ Hay **dos** builds Vite: la app principal (`index.html`) y la revista pública
 (`index.public.html` / `vite.public.config.js`). Si tocas el frontend público,
 verifica ambos.
 
+**Dos capas en `frontend/src/` (T8.6)**, con la misma separación que el backend:
+- `platform/` — el *builder* reutilizable: cliente HTTP, stores de sesión y
+  proyectos, componentes, Flow Designer, agentes, documentos, usuarios.
+- `projects/<slug>/` — las vistas de consumo: en AlejandrIA, artículos, revista y
+  maquetación de paper, más su `catalog.jsx`.
+
+**La dependencia va en un solo sentido**: `platform/` **no** importa de
+`projects/`, y hay un test que lo comprueba (`test_frontend_layers.py`). Lo que el
+builder necesita saber del proyecto se registra al arrancar en `main.jsx`
+(`setAgentCatalog`, `setProjectNavItems`, `setRunTarget`, `setNotificationRoute`)
+y el builder pregunta a esos registros. Si el lienzo necesita un dato nuevo del
+proyecto, se añade un registro; no se importa.
+
 Arranque local completo (Windows): `dev-local.cmd` levanta Qdrant + backend
 (`:8000`, SQLite) + frontend (`:5173`) en ventanas separadas. No confundir con
 Docker (`docker compose up --build`, backend en `:8080`).

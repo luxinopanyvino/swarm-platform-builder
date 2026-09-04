@@ -83,9 +83,16 @@ y cada proyecto nuevo seguiría exigiendo código.
   proyecto, con lo que el pipeline podía arrancar con el modelo, el prompt y los
   `rag_doc_ids` del vecino. El *seed* de demo va ahora al espacio del proyecto del
   sistema. `scripts/migrate_rag_namespaces.py` mueve lo heredado.
-- [ ] **AC7** — *Given* el front, *When* se inspecciona `frontend/src`, *Then* el
+- [x] **AC7** — *Given* el front, *When* se inspecciona `frontend/src`, *Then* el
   *builder* reutilizable vive en `platform/` separado de las vistas de consumo en
   `projects/`, y `npm run build` y `npm run build:public` siguen compilando.
+  <br>*T8.6 (#212)*: `src/platform/` (api, stores, componentes y páginas de
+  construcción) y `src/projects/alejandria-magazine/` (artículos, revista, paper
+  y su catálogo de agentes). La dependencia va **en un solo sentido** y hay un
+  test que lo comprueba. El catálogo de los cinco agentes estaba escrito
+  **cuatro veces**, una de ellas dentro de un componente del builder: ahora el
+  proyecto se registra al arrancar (`setAgentCatalog`, `setProjectNavItems`,
+  `setRunTarget`, `setNotificationRoute`) y el builder pregunta.
 - [x] **AC8** — *Given* la migración, *When* se conmuta el *feature flag*
   adapter↔capacidades, *Then* ambos caminos producen el mismo resultado hasta retirar
   los adapters legacy.
@@ -120,7 +127,9 @@ Sigue ADR-0005. Resumen por área:
   registra el paquete y *seed* que clona a BD.
 - **Independencia**: `ProjectContext` en el runtime; repos con *project scoping*;
   colección/namespace RAG por proyecto (`rag_<project_id>` o filtro `project_id`).
-- **Frontend**: extraer `platform/` (builder) de `projects/` (consumer).
+- **Frontend** *(hecho — T8.6, #212)*: `platform/` (builder) separado de
+  `projects/<slug>/` (consumer), con el proyecto registrándose en el builder al
+  arrancar en vez de que el builder lo importe.
 
 Contratos: el `template.yaml` define el esquema de un proyecto (versión `v1`). Las
 capacidades exponen un *schema* de entradas/salidas estable que el grafo conecta.

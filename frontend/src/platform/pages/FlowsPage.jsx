@@ -3,7 +3,7 @@ import { AsyncState, EmptyState } from '../components/ui/states';
 import { useNavigate } from 'react-router-dom';
 import { Zap, Play, Pencil, Trash2, Plus, GitBranch, Clock } from 'lucide-react';
 import { useFlowStore } from '../store/flowStore';
-import { AGENT_META } from '../components/flow/AgentNode';
+import { agentMeta, flowAutoPublishes } from '../agentCatalog';
 import toast from 'react-hot-toast';
 
 export default function FlowsPage() {
@@ -30,8 +30,8 @@ export default function FlowsPage() {
     navigate('/dashboard/flow-designer');
   };
 
-  const hasPublicador = (flow) =>
-    (flow.flow_sequence || []).includes('publicador');
+  // Qué agente publica lo dice el proyecto (T8.6).
+  const hasPublicador = (flow) => flowAutoPublishes(flow.flow_sequence);
 
   return (
     <div className="page-body">
@@ -72,7 +72,7 @@ export default function FlowsPage() {
                 <div style={{ fontWeight: 600, fontSize: 'var(--font-size-base)', marginBottom: 4 }}>{flow.name}</div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
                   {(flow.flow_sequence || []).map((agentId, i) => {
-                    const meta = AGENT_META[agentId];
+                    const meta = agentMeta(agentId);
                     return (
                       <React.Fragment key={i}>
                         <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 3 }}>

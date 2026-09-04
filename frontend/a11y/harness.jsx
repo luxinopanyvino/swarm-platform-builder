@@ -6,7 +6,7 @@
 // depende de qué considera enfocable el navegador y de en qué orden.
 import React, { useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import Modal from '../src/components/ui/Modal';
+import Modal from '../src/platform/components/ui/Modal';
 import '../src/index.css';
 
 function Banco() {

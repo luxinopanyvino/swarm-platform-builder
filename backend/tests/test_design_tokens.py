@@ -26,7 +26,7 @@ sys.path.insert(0, str(ROOT_DIR))
 
 SCRIPT = REPO_DIR / "scripts" / "check_design_tokens.py"
 FUENTE = REPO_DIR / "frontend" / "src"
-PAPER_THEME_JS = FUENTE / "paperTheme.js"
+PAPER_THEME_JS = FUENTE / "projects" / "alejandria-magazine" / "paperTheme.js"
 CI_WORKFLOW = REPO_DIR / ".github" / "workflows" / "ci.yml"
 
 
@@ -162,6 +162,6 @@ def test_paper_theme_js_es_espejo_de_los_acentos_del_backend():
 
 def test_paper_design_page_usa_la_constante_compartida():
     """Y no una copia local que se desincronice en silencio."""
-    pagina = (FUENTE / "pages" / "PaperDesignPage.jsx").read_text(encoding="utf-8")
+    pagina = (FUENTE / "projects" / "alejandria-magazine" / "pages" / "PaperDesignPage.jsx").read_text(encoding="utf-8")
     assert "PAPER_ACCENTS" in pagina
     assert "paperTheme" in pagina

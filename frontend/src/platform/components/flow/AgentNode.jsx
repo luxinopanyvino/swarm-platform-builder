@@ -1,25 +1,24 @@
+// Nodo de agente del lienzo — pieza **del builder** (SPEC-013 / T8.6 / AC7).
+//
+// Aquí vivía el catálogo de los cinco agentes de AlejandrIA, con sus iconos, sus
+// colores y sus descripciones. Es el equivalente en el frontend de lo que T8.3
+// quitó del motor: la pieza reutilizable conociendo por su nombre a los agentes
+// de un proyecto concreto. Con eso, el lienzo de otro proyecto pintaba todos sus
+// nodos grises y sin descripción, y no había forma de arreglarlo sin editar este
+// fichero.
+//
+// Ahora los metadatos llegan en `data` (los pone quien construye el nodo, desde
+// el catálogo de su proyecto) y aquí solo queda el fallback genérico.
 import React, { memo } from 'react';
 import { Handle, Position } from '@xyflow/react';
-import { Search, PenLine, Eye, FileText, Send, Bot, Zap } from 'lucide-react';
-
-const AGENT_META = {
-  investigador: { icon: Search,   color: 'var(--agent-research)', label: 'Investigador', desc: 'Busca contexto en RAG y APIs científicas' },
-  redactor:     { icon: PenLine,  color: 'var(--agent-write)', label: 'Redactor',     desc: 'Genera borrador con Ollama' },
-  revisor:      { icon: Eye,      color: 'var(--agent-review)', label: 'Revisor',      desc: 'Evalúa calidad (score 0-100)' },
-  formateador:  { icon: FileText, color: 'var(--agent-format)', label: 'Formateador',  desc: 'Aplica formato APA/IEEE/Vancouver' },
-  publicador:   { icon: Send,     color: 'var(--agent-publish)', label: 'Publicador',   desc: 'Publica el artículo en DB' },
-};
-
-// Agents that truly query RAG by themselves (not via pipeline state)
-const AGENTS_WITH_OWN_RAG = new Set(['investigador']);
+import { Bot, Zap } from 'lucide-react';
 
 export const AgentNode = memo(({ data, selected }) => {
-  const fallbackMeta = AGENT_META[data.agentId] || {};
   const meta = {
-    Icon:  fallbackMeta.icon  || Bot,
-    color: data.color || fallbackMeta.color || 'var(--neutral-60)',
-    label: data.label || fallbackMeta.label || data.agentId,
-    desc:  data.desc  || fallbackMeta.desc  || '',
+    Icon:  data.icon  || Bot,
+    color: data.color || 'var(--neutral-60)',
+    label: data.label || data.agentId,
+    desc:  data.desc  || '',
   };
 
   return (
@@ -41,14 +40,14 @@ export const AgentNode = memo(({ data, selected }) => {
         style={{ background: `${meta.color}20`, color: meta.color }}>
         agent
       </div>
-      {(data.model || (data.ragEnabled && AGENTS_WITH_OWN_RAG.has(data.agentId))) && (
+      {(data.model || (data.ragEnabled && data.ownRag)) && (
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8 }}>
           {data.model && (
             <div className="agent-node-badge" style={{ marginTop: 0, background: 'var(--blue-05)', color: 'var(--blue-60)' }}>
               {data.model}
             </div>
           )}
-          {data.ragEnabled && AGENTS_WITH_OWN_RAG.has(data.agentId) && (
+          {data.ragEnabled && data.ownRag && (
             <div className="agent-node-badge" style={{ marginTop: 0, background: 'var(--green-05)', color: 'var(--green-60)' }}>
               RAG
             </div>
@@ -84,4 +83,3 @@ export const nodeTypes = {
   condition: ConditionNode,
 };
 
-export { AGENT_META };

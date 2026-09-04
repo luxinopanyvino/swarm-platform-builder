@@ -29,7 +29,7 @@ sys.path.insert(0, str(ROOT_DIR))
 
 FRONT = REPO_DIR / "frontend"
 FUENTE = FRONT / "src"
-ESTADOS = FUENTE / "components" / "ui" / "states.jsx"
+ESTADOS = FUENTE / "platform" / "components" / "ui" / "states.jsx"
 BANCO = FRONT / "a11y"
 LINT = REPO_DIR / "scripts" / "check_async_states.py"
 CI_WORKFLOW = REPO_DIR / ".github" / "workflows" / "ci.yml"
@@ -130,11 +130,18 @@ def test_el_lint_no_confunde_hablar_del_patron_con_usarlo(fichero_sembrado):
 
 # ── Los stores guardan el error, que es lo que permite distinguir ───────────
 
-@pytest.mark.parametrize(
-    "store", ["articleStore.js", "flowStore.js", "projectStore.js"]
-)
+#: Tras T8.6 los stores viven separados: los del builder en `platform/`, los del
+#: proyecto con sus vistas de consumo.
+STORES = {
+    "articleStore.js": FUENTE / "projects" / "alejandria-magazine" / "store",
+    "flowStore.js": FUENTE / "platform" / "store",
+    "projectStore.js": FUENTE / "platform" / "store",
+}
+
+
+@pytest.mark.parametrize("store", sorted(STORES))
 def test_los_stores_guardan_el_error_de_carga(store):
-    fuente = (FUENTE / "store" / store).read_text(encoding="utf-8")
+    fuente = (STORES[store] / store).read_text(encoding="utf-8")
     assert re.search(r"set\(\{[^}]*error:", fuente), (
         f"{store} declara `error` pero nunca lo escribe: la página no puede "
         "distinguir «no hay datos» de «no he podido preguntarlo»"

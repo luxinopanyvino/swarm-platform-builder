@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { LoadingState, ErrorState } from '../components/ui/states';
+import { LoadingState, ErrorState } from '../../../platform/components/ui/states';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Save, Loader, Columns2, Columns3, ImagePlus } from 'lucide-react';
 import { articlesApi } from '../api/articles';

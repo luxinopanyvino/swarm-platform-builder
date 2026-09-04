@@ -1,19 +1,13 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { EmptyState } from '../components/ui/states';
+import { agentMeta } from '../catalog';
+import { EmptyState } from '../../../platform/components/ui/states';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import { CheckCircle, XCircle, Clock, Loader, ArrowRight, ArrowLeft, FileText, UserPlus, Square, Upload, Play, AlertTriangle } from 'lucide-react';
-import { agentsApi } from '../api/agents';
+import { agentsApi } from '../../../platform/api/agents';
 import { useArticleStore } from '../store/articleStore';
 import toast from 'react-hot-toast';
 
-const AGENT_META = {
-  investigador: { label: 'Investigador', color: 'var(--agent-research)' },
-  redactor:     { label: 'Redactor',    color: 'var(--agent-write)' },
-  revisor:      { label: 'Revisor',     color: 'var(--agent-review)' },
-  formateador:  { label: 'Formateador', color: 'var(--agent-format)' },
-  publicador:   { label: 'Publicador',  color: 'var(--agent-publish)' },
-};
 
 const STATUS_ICON = {
   waiting:   <Clock size={16} style={{ color: 'var(--text-muted)' }} />,
@@ -391,7 +385,7 @@ export default function ExecutionPage() {
         {/* Steps */}
         <div className="execution-steps">
           {steps.map((step, i) => {
-            const meta = AGENT_META[step.id] || { emoji: '🤖', label: step.id, color: 'var(--neutral-60)' };
+            const meta = agentMeta(step.id) || { emoji: '🤖', label: step.id, color: 'var(--neutral-60)' };
             return (
               <div key={step.id} className={`step-card ${step.status}`}>
                 <span style={{ fontSize: 18 }}>{meta.emoji}</span>

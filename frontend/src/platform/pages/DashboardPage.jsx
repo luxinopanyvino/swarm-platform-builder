@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { notificationRoute, projectNavItems } from '../navigation';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import {
   GitBranch, Bot, Zap, FileText, Settings, Database,
@@ -38,14 +39,24 @@ const USE_CASE_COLOR = {
   custom:              'var(--neutral-60)',
 };
 
-const NAV_ITEMS = [
+//: Entradas del **builder**. «Artículos» ya no está aquí: la aporta el proyecto
+//: (ver `platform/navigation.js`), porque el objeto que produce el pipeline se
+//: llama artículo en AlejandrIA y otra cosa en cualquier otro proyecto.
+const PLATFORM_NAV_ITEMS = [
   { to: '/dashboard/flow-designer', icon: <GitBranch size={17} />, label: 'Flow Designer', roles: ['admin', 'redactor'] },
   { to: '/dashboard/agents',        icon: <Bot size={17} />,        label: 'Agentes',       roles: ['admin', 'redactor'] },
   { to: '/dashboard/flows',         icon: <Zap size={17} />,        label: 'Flujos',        roles: ['admin', 'redactor'] },
-  { to: '/dashboard/articles',      icon: <FileText size={17} />,   label: 'Artículos',     roles: ['admin', 'redactor', 'lector'] },
   { to: '/dashboard/documents',     icon: <Database size={17} />,   label: 'Documentos',    roles: ['admin', 'redactor'] },
   { to: '/dashboard/users',         icon: <Users size={17} />,      label: 'Usuarios',      roles: ['admin'] },
 ];
+
+//: Builder + proyecto, en el orden en que se leen: las vistas de consumo van
+//: entre las de construcción y las de administración.
+const navItems = () => {
+  const items = [...PLATFORM_NAV_ITEMS];
+  items.splice(3, 0, ...projectNavItems());
+  return items;
+};
 
 export default function DashboardPage() {
   const { user, logout } = useAuthStore();
@@ -90,9 +101,10 @@ export default function DashboardPage() {
       // navegación al artículo sigue siendo lo que la persona ha pedido.
       } catch { /* ignore */ }
     }
-    if (n.article_id) {
+    const destino = n.article_id && notificationRoute(n.article_id);
+    if (destino) {
       setShowNotifs(false);
-      navigate(`/dashboard/articles/${n.article_id}`);
+      navigate(destino);
     }
   };
 
@@ -170,7 +182,7 @@ export default function DashboardPage() {
 
         <nav className="sidebar-nav">
           <div className="nav-section-title">Workspace</div>
-          {NAV_ITEMS.filter(item => item.roles.includes(role)).map(item => (
+          {navItems().filter(item => item.roles.includes(role)).map(item => (
             <NavLink
               key={item.to}
               to={item.to}

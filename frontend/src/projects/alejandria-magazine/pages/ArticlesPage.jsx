@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { AsyncState, EmptyState } from '../components/ui/states';
+import { AsyncState, EmptyState } from '../../../platform/components/ui/states';
 import { useNavigate } from 'react-router-dom';
 import { FileText, Clock, CheckCircle, AlertCircle, Search, Pencil, Trash2, User } from 'lucide-react';
 import { useArticleStore } from '../store/articleStore';
-import { useAuthStore } from '../store/authStore';
+import { useAuthStore } from '../../../platform/store/authStore';
 import toast from 'react-hot-toast';
 
 const TABS = ['Todos', 'Drafts', 'Pendientes', 'Aprobados', 'Publicados'];

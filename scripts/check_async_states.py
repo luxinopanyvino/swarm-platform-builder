@@ -10,7 +10,7 @@ Comprueba dos cosas, y las dos vienen de fallos reales que había en el repo:
 1. **Nadie pinta un estado a mano.** Los `spinner spinner-lg` y `empty-state`
    sueltos son lo que hacía que cada página tuviera su versión: unas con icono y
    otras sin él, unas centradas y otras no, y ninguna con estado de error. Deben
-   venir de `components/ui/states.jsx`.
+   venir de `platform/components/ui/states.jsx`.
 
 2. **Nadie se traga un error de carga.** El patrón que motiva la tarea era
    `.catch(() => {})` seguido de un `toast`: el toast desaparece a los pocos
@@ -35,7 +35,7 @@ from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parents[1]
 FUENTE = RAIZ / "frontend" / "src"
-COMPONENTE = FUENTE / "components" / "ui" / "states.jsx"
+COMPONENTE = FUENTE / "platform" / "components" / "ui" / "states.jsx"
 
 EXTENSIONES = (".jsx", ".js")
 
@@ -125,7 +125,7 @@ def main() -> int:
             print(f"  {ruta}:{numero}  .{clase}")
         print(
             "\nUsa <LoadingState/>, <EmptyState/>, <ErrorState/> o <AsyncState/>\n"
-            "de components/ui/states.jsx. Pintarlo a mano es cómo se acabó con una\n"
+            "de platform/components/ui/states.jsx. Pintarlo a mano es cómo se acabó\n"
             "versión distinta por página y ninguna con estado de error.\n"
         )
 

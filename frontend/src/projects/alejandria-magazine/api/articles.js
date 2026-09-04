@@ -1,4 +1,4 @@
-import api from './client';
+import api from '../../../platform/api/client';
 
 export const articlesApi = {
   list: (params) => api.get('/api/v1/articles', { params }).then(r => r.data),
