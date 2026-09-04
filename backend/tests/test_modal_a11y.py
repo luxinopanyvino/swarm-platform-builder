@@ -32,7 +32,7 @@ sys.path.insert(0, str(ROOT_DIR))
 
 FRONT = REPO_DIR / "frontend"
 FUENTE = FRONT / "src"
-MODAL = FUENTE / "components" / "ui" / "Modal.jsx"
+MODAL = FUENTE / "platform" / "components" / "ui" / "Modal.jsx"
 INDEX_CSS = FUENTE / "index.css"
 BANCO = FRONT / "a11y"
 CI_WORKFLOW = REPO_DIR / ".github" / "workflows" / "ci.yml"

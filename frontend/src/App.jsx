@@ -1,26 +1,26 @@
 import React, { useEffect, useState } from 'react';
-import { LoadingState } from './components/ui/states';
+import { LoadingState } from './platform/components/ui/states';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
-import { useAuthStore } from './store/authStore';
-import { useProjectStore } from './store/projectStore';
+import { useAuthStore } from './platform/store/authStore';
+import { useProjectStore } from './platform/store/projectStore';
 
-import AuthPage          from './pages/AuthPage';
-import ProjectSelectionPage from './pages/ProjectSelectionPage';
-import DashboardPage     from './pages/DashboardPage';
-import FlowDesignerPage  from './pages/FlowDesignerPage';
-import FlowsPage         from './pages/FlowsPage';
-import AgentsPage        from './pages/AgentsPage';
-import ArticlesPage      from './pages/ArticlesPage';
-import ArticleDetailPage from './pages/ArticleDetailPage';
-import ConfigPage        from './pages/ConfigPage';
-import DocumentsPage     from './pages/DocumentsPage';
-import ExecutionPage     from './pages/ExecutionPage';
-import UsersPage         from './pages/UsersPage';
-import MagazinePage      from './pages/MagazinePage';
-import LectorPage        from './pages/LectorPage';
-import PaperViewPage     from './pages/PaperViewPage';
-import PaperDesignPage   from './pages/PaperDesignPage';
+import AuthPage          from './platform/pages/AuthPage';
+import ProjectSelectionPage from './platform/pages/ProjectSelectionPage';
+import DashboardPage     from './platform/pages/DashboardPage';
+import FlowDesignerPage  from './platform/pages/FlowDesignerPage';
+import FlowsPage         from './platform/pages/FlowsPage';
+import AgentsPage        from './platform/pages/AgentsPage';
+import ArticlesPage      from './projects/alejandria-magazine/pages/ArticlesPage';
+import ArticleDetailPage from './projects/alejandria-magazine/pages/ArticleDetailPage';
+import ConfigPage        from './platform/pages/ConfigPage';
+import DocumentsPage     from './platform/pages/DocumentsPage';
+import ExecutionPage     from './projects/alejandria-magazine/pages/ExecutionPage';
+import UsersPage         from './platform/pages/UsersPage';
+import MagazinePage      from './projects/alejandria-magazine/pages/MagazinePage';
+import LectorPage        from './projects/alejandria-magazine/pages/LectorPage';
+import PaperViewPage     from './projects/alejandria-magazine/pages/PaperViewPage';
+import PaperDesignPage   from './projects/alejandria-magazine/pages/PaperDesignPage';
 
 function RouteTitleHandler() {
   const location = useLocation();

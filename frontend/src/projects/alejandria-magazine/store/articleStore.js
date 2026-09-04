@@ -1,8 +1,8 @@
 import { create } from 'zustand';
 import { articlesApi } from '../api/articles';
-import { mensajeDeCarga } from '../api/errors';
-import { useProjectStore } from './projectStore';
-import { useAuthStore } from './authStore';
+import { mensajeDeCarga } from '../../../platform/api/errors';
+import { useProjectStore } from '../../../platform/store/projectStore';
+import { useAuthStore } from '../../../platform/store/authStore';
 
 const getProjectId = () => {
   const role = useAuthStore.getState().user?.role;
