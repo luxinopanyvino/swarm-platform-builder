@@ -185,6 +185,29 @@ dependencias (`pip-audit` + `npm audit`, job `deps-audit`) y escaneo de secretos
 Actions cada semana. Hay además review automática de Claude y un digest diario
 (`.github/workflows/claude-*.yml`).
 
+## Evaluación (`backend/evals/`) — dos harness, dos preguntas
+
+No los confundas; comparten directorio y nada más (ADR-0006):
+- **`evals/agent_behavior/`** (SPEC-014/T9.3) evalúa **los agentes de esta
+  plataforma** —sus perfiles, sus prompts y el modelo que usan con el
+  `LLM_PROVIDER` activo— sobre datasets versionados en `datasets/*.jsonl`.
+- **`evals/model_benchmark/`** (SPEC-025) compara modelos *foundation* entre sí.
+
+```bash
+# Desde backend/. Sale con código 1 si algún caso falla (el gate de T9.5 lo usa así).
+python -m evals.agent_behavior.runner --dataset redactor-smoke --mode replay
+python -m evals.agent_behavior.runner --dataset redactor-smoke --mode live
+```
+
+**`live` mide el agente; `replay` reproduce salidas grabadas y NO evalúa al
+modelo** — es lo que hace la suite ejecutable sin Ollama. El modo va en el informe,
+en el nombre del fichero y en un aviso de la cabecera: presentar un `replay` como
+prueba de que el agente va bien es el peor fallo posible aquí. El harness **no
+llama al LLM por su cuenta**: ejecuta el agente real por el `resolve_runner` del
+motor y le lee tokens y fuentes por la traza de T9.1. Añadir una métrica es añadir
+un módulo en `metrics/` que se registre; el runner no se toca. Los informes de
+`evals/results/` están ignorados por git. Ver `evals/agent_behavior/README.md`.
+
 ## graphify (grafo de conocimiento — tooling local)
 
 Herramienta de desarrollo, no funcionalidad del producto. Construye un grafo de

@@ -71,10 +71,20 @@ los convierte en criterio de desarrollo.
   `GET /api/v1/agents/{article_id}/explain`, *Then* devuelve la traza completa
   estructurada y la UI muestra un panel "Por qué este resultado" con fuentes,
   score y decisiones por paso.
-- [ ] **AC3** — *Given* un perfil de agente de la plataforma y un dataset de
+- [x] **AC3** — *Given* un perfil de agente de la plataforma y un dataset de
   evaluación, *When* se ejecuta el harness EDD, *Then* produce un informe de
   métricas **reproducible** (modelo y parámetros fijados/registrados) sin depender
   de servicios externos no declarados.
+  <br>*T9.3 (#222)*: `backend/evals/agent_behavior/`. El harness **no llama al LLM
+  por su cuenta**: el modo `live` ejecuta el agente real por el mismo
+  `resolve_runner` del motor (T8.3) y le lee tokens y fuentes por la traza de T9.1,
+  porque una copia del prompt mediría algo parecido al agente y las regresiones
+  viven justo en esa diferencia. El modo `replay` reproduce salidas grabadas: es lo
+  que hace la suite ejecutable sin Ollama —y el informe lo grita, porque confundir
+  un `replay` con una medición real es el peor fallo posible aquí—. Lo que hace
+  comparables dos informes va en el encabezado: modelo, proveedor, parámetros,
+  versión **y hash** del dataset, y el commit. Las métricas de AC4 quedan para T9.4;
+  aquí van tres deterministas que dan sentido al armazón.
 - [ ] **AC4** — *Given* el harness, *Then* existen **datasets *golden* versionados**
   en el repo y se computan **métricas de comportamiento** sobre los agentes de la
   plataforma: fidelidad de citas (las fuentes citadas existen en el RAG, no
