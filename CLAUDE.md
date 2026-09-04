@@ -99,7 +99,13 @@ Docker (`docker compose up --build`, backend en `:8080`).
   en Python: `alejandria.py` es solo el puente que lo lee. Los `.agent.md` se
   localizan con `platform/projects/profiles.py`; nunca con rutas relativas al
   directorio de trabajo (hay un test que lo comprueba).
-  Cada ejecución se registra en la tabla `agent_runs`. El bucle Revisor→Redactor
+  Cada ejecución se registra en la tabla `agent_runs`, y **cada paso** deja una
+  traza de explicabilidad en `agent_run_steps` (T9.1): modelo, parámetros,
+  fuentes RAG recuperadas con su score, tokens, latencia y la decisión del
+  revisor. Los tokens y las fuentes los anotan quienes los conocen —el dispatcher
+  del LLM y la capacidad de RAG— en variables de contexto
+  (`platform/explainability.py`); el orquestador las recoge al cerrar el paso, así
+  que un agente nuevo queda trazado sin tocarlo. El bucle Revisor→Redactor
   (`loop_count`, máx 3) y el **HITL** (`await_decision`, pausa por SSE) viven aquí.
 - **Streaming**: el pipeline emite eventos por **SSE** (`/agents/{id}/stream`):
   `agent_start`, `token`, `await_decision`, `done`, `cancelled`, … La cancelación

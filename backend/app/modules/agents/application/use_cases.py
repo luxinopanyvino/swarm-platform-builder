@@ -12,9 +12,11 @@ from langgraph.checkpoint.memory import InMemorySaver
 
 from app.core.config import settings
 from app.core.database import AsyncSessionLocal
-from app.platform.llm import TransientLLMError
+from app.core.logging_config import request_id_ctx
+from app.platform import explainability
+from app.platform.llm import TransientLLMError, resolve_agent_model
 from app.platform.project_context import ProjectContext
-from app.models import AgentRunModel
+from app.models import AgentRunModel, AgentRunStepModel
 from app.modules.agents.domain.entities import AgentState
 from app.modules.agents.domain import alejandria
 from app.platform.engine.agents import MODO_CAPACIDADES, bundle_for, resolve_runner
@@ -206,6 +208,25 @@ async def log_run_end(
         logger.error(f"Error logging run end for run {run_id}: {str(e)}")
 
 
+async def log_run_step(**campos) -> None:
+    """Persiste un paso de la traza de explicabilidad (SPEC-014 / T9.1 / AC1).
+
+    Sesión propia y `try/except`: la traza es observabilidad, y un fallo al
+    guardarla no puede tumbar el pipeline que describe. Se registra en el log —a
+    nivel WARNING, no en silencio— porque una traza que se pierde sin avisar es
+    peor que no tenerla: da confianza infundada.
+    """
+    try:
+        async with AsyncSessionLocal() as session:
+            session.add(AgentRunStepModel(**campos))
+            await session.commit()
+    except Exception as error:
+        logger.warning(
+            "No se pudo persistir el paso de traza de '%s': %s",
+            campos.get("agent_name"), error,
+        )
+
+
 def make_node_wrapper(agent_name: str, run_fn):
     """
     Return an async LangGraph node function that wraps run_fn with logging,
@@ -272,10 +293,38 @@ def make_node_wrapper(agent_name: str, run_fn):
             if bundle is not None:
                 enriched_state[CLAVE_CAPACIDADES] = bundle
 
+        # Acumulador de la traza: la capacidad de RAG y el dispatcher del LLM
+        # anotan aquí lo que solo ellos saben (SPEC-014/T9.1).
+        _traza = explainability.collecting()
+        _acumulador = _traza.__enter__()
+        _paso_comun = {
+            "run_id": run_id,
+            "article_id": article_id,
+            "project_id": state.get("project_id"),
+            "correlation_id": request_id_ctx.get(),
+            "agent_name": agent_name,
+            "step_index": state.get("current_step_index", 0),
+            "iteration": state.get("loop_count", 0),
+            "model": resolve_agent_model(agent_name, state.get("agent_settings")),
+            "params": explainability.params_of(agent_name, state),
+            "input_digest": explainability.input_digest(state),
+        }
+
         try:
             res = await run_fn(enriched_state)
             await log_run_end(run_id, res, "completed")
             _estado_agente = "completed"
+            await log_run_step(
+                **_paso_comun,
+                status="completed",
+                output_text=explainability.output_text(res),
+                rag_sources=_acumulador.rag_sources,
+                tokens_in=_acumulador.tokens_in,
+                tokens_out=_acumulador.tokens_out,
+                latency_ms=(time.perf_counter() - _inicio_agente) * 1000,
+                decision=explainability.decision_of(res),
+                rationale=explainability.rationale_of(res),
+            )
 
             end_event: Dict[str, Any] = {"type": "agent_end", "agent": agent_name, "output": res}
             if res.get("draft_text"):
@@ -290,6 +339,17 @@ def make_node_wrapper(agent_name: str, run_fn):
         except Exception as e:
             logger.error(f"Error executing agent {agent_name}: {str(e)}")
             await log_run_end(run_id, {}, "failed", error_message=str(e))
+            # También se traza el fallo: AC1 pide la traza «cuando termina **o se
+            # cancela**», y un paso que revienta es justo el que hay que explicar.
+            await log_run_step(
+                **_paso_comun,
+                status="failed",
+                error_message=str(e),
+                rag_sources=_acumulador.rag_sources,
+                tokens_in=_acumulador.tokens_in,
+                tokens_out=_acumulador.tokens_out,
+                latency_ms=(time.perf_counter() - _inicio_agente) * 1000,
+            )
             record_error(_span_agente, e)
             publish_event(article_id, {"type": "agent_error", "agent": agent_name, "error": str(e)})
             publish_event(article_id, {"type": "log", "agent": agent_name, "message": f"✗ {agent_name} falló: {str(e)}", "level": "error"})
@@ -297,6 +357,7 @@ def make_node_wrapper(agent_name: str, run_fn):
         finally:
             observe_agent_run(agent_name, time.perf_counter() - _inicio_agente, _estado_agente)
             current_agent_ctx.reset(_token_agente)
+            _traza.__exit__(None, None, None)
             _span_ctx.__exit__(None, None, None)
 
     return wrapper

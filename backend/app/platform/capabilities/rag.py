@@ -685,6 +685,22 @@ async def fetch_agent_context(
         return ""
 
 
+def _anotar_traza(collection: str, resultados: List[Dict[str, Any]]) -> None:
+    """Anota lo recuperado en la traza del paso en curso (SPEC-014 / T9.1 / AC1).
+
+    Aquí y no en el agente: lo que el agente conserva es el texto ya montado, y
+    las citas que acaban en el artículo son una elaboración posterior. La pregunta
+    que responde la traza —«¿de dónde salió esto?»— solo se puede contestar desde
+    donde se hizo la búsqueda.
+    """
+    try:
+        from app.platform.explainability import record_rag_hits
+
+        record_rag_hits(collection, resultados)
+    except Exception:  # pragma: no cover - defensivo
+        logger.debug("No se pudo anotar la traza RAG", exc_info=True)
+
+
 async def _fetch_agent_results(
     qdrant_url: str,
     collection: str,
@@ -718,12 +734,18 @@ async def _fetch_agent_results(
                         "text": text,
                         "filename": data.get("filename", ""),
                         "doc_id": data.get("doc_id", path.stem),
+                        # En el respaldo local no hay identificador de punto: el
+                        # índice del fragmento dentro del documento cumple la
+                        # misma función para la traza.
+                        "chunk_id": chunk.get("chunk_index"),
                         "agent_name": data.get("agent_name", ""),
                         "doc_title": data.get("doc_title", ""),
                         "doc_authors": data.get("doc_authors", ""),
                     })
                 if len(out) >= limit:
+                    _anotar_traza(collection, out)
                     return out
+        _anotar_traza(collection, out)
         return out
 
     headers = {"api-key": api_key} if api_key else {}
@@ -754,10 +776,12 @@ async def _fetch_agent_results(
                         "text": pl.get("text", ""),
                         "filename": pl.get("filename", ""),
                         "doc_id": pl.get("doc_id", ""),
+                        "chunk_id": p.get("id"),
                         "agent_name": pl.get("agent_name", ""),
                         "doc_title": pl.get("doc_title", ""),
                         "doc_authors": pl.get("doc_authors", ""),
                     })
+            _anotar_traza(collection, out)
             return out
     except Exception as error:
         logger.warning(f"_fetch_agent_results failed for agent '{agent_name}': {error}")
@@ -823,12 +847,17 @@ async def semantic_search_results(
                         "text": pl.get("text", ""),
                         "filename": pl.get("filename", ""),
                         "doc_id": pl.get("doc_id", ""),
+                        # Identificador del punto en Qdrant: es el `chunk_id` que
+                        # la traza de explicabilidad necesita para decir **qué**
+                        # fragmento se recuperó y no solo de qué documento.
+                        "chunk_id": r.get("id"),
                         "agent_name": pl.get("agent_name", ""),
                         "doc_title": pl.get("doc_title", ""),
                         "doc_authors": pl.get("doc_authors", ""),
                         "score": r.get("score"),
                     })
             logger.info(f"semantic_search_results: {len(out)} chunks for query '{query[:60]}'")
+            _anotar_traza(collection, out)
             return out
     except Exception as error:
         logger.warning(f"Semantic RAG search failed for agent '{agent_name}': {error}")

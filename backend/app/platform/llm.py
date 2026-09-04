@@ -234,10 +234,14 @@ def resolve_agent_model(agent_name: str, agent_settings: Optional[dict] = None) 
 
 
 def _record_usage(provider: str, model: str, entrada, salida) -> None:
-    """Anotar tokens consumidos (SPEC-019/T5.2).
+    """Anotar tokens consumidos (SPEC-019/T5.2 y SPEC-014/T9.1).
 
     Se llama desde cada proveedor porque es el único sitio donde se conocen: la
     respuesta de la API los trae, y `call_llm` solo ve el texto ya extraído.
+    Van a dos sitios con propósitos distintos: a las métricas, que son agregadas y
+    operativas, y a la traza del paso en curso, que es por ejecución y sirve para
+    explicar **esta** ejecución.
+
     Nunca lanza — medir no puede tumbar una generación.
     """
     try:
@@ -248,6 +252,12 @@ def _record_usage(provider: str, model: str, entrada, salida) -> None:
             input_tokens=int(entrada or 0) or None,
             output_tokens=int(salida or 0) or None,
         )
+    except Exception:  # pragma: no cover - defensivo
+        pass
+    try:
+        from app.platform.explainability import record_tokens
+
+        record_tokens(entrada, salida)
     except Exception:  # pragma: no cover - defensivo
         pass
 

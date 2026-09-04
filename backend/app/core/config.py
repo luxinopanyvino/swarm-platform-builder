@@ -42,6 +42,11 @@ class Settings(BaseModel):
     # deja la política mintiendo.
     RETENTION_AUDIT_LOG_DAYS: int = 365
     RETENTION_AGENT_RUNS_DAYS: int = 90
+    # Traza de explicabilidad (SPEC-014/T9.1). Misma ventana que
+    # `agent_runs`: describe las mismas ejecuciones y con el mismo detalle,
+    # así que conservarla más tiempo alargaría por la puerta de atrás la
+    # retención de lo que el usuario escribió.
+    RETENTION_AGENT_RUN_STEPS_DAYS: int = 90
     RETENTION_CHECKPOINTS_DAYS: int = 30
     RETENTION_NOTIFICATIONS_DAYS: int = 90
     RETENTION_ORPHAN_ASSETS_DAYS: int = 30
@@ -207,6 +212,7 @@ def _build_settings() -> Settings:
         # Retención (SPEC-020/T6.5)
         "RETENTION_AUDIT_LOG_DAYS": retention.get("audit_log_days", 365),
         "RETENTION_AGENT_RUNS_DAYS": retention.get("agent_runs_days", 90),
+        "RETENTION_AGENT_RUN_STEPS_DAYS": retention.get("agent_run_steps_days", 90),
         "RETENTION_CHECKPOINTS_DAYS": retention.get("checkpoints_days", 30),
         "RETENTION_NOTIFICATIONS_DAYS": retention.get("notifications_days", 90),
         "RETENTION_ORPHAN_ASSETS_DAYS": retention.get("orphan_assets_days", 30),

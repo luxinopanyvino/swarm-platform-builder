@@ -34,6 +34,7 @@ explícita de su propietario, no por un proceso automático.
 |---|---|---|---|---|
 | `audit_log` | actor, acción, objetivo, **IP**, correo enmascarado | **Sí** (IP) | **365 días** | `RETENTION_AUDIT_LOG_DAYS` |
 | `agent_runs` | entrada y salida de cada ejecución del pipeline | Posible | **90 días** | `RETENTION_AGENT_RUNS_DAYS` |
+| `agent_run_steps` | traza de explicabilidad: paso a paso de cada ejecución | Posible | **90 días** | `RETENTION_AGENT_RUN_STEPS_DAYS` |
 | `flow_checkpoints` | estado intermedio para reanudar un pipeline | Posible | **30 días** | `RETENTION_CHECKPOINTS_DAYS` |
 | `notifications` (leídas) | avisos en la aplicación | Referencia | **90 días** | `RETENTION_NOTIFICATIONS_DAYS` |
 | Figuras huérfanas | imágenes que ningún artículo referencia | Posible | **30 días** | `RETENTION_ORPHAN_ASSETS_DAYS` |
@@ -47,6 +48,13 @@ Por qué esas ventanas:
 - **`agent_runs`, 90 días.** Guarda literalmente lo que el usuario escribió y lo que
   el modelo respondió. Es lo más sensible que hay fuera de `users`, y su valor
   —depurar una ejecución, revisar consumo— se agota en semanas.
+- **`agent_run_steps`, 90 días.** La traza de explicabilidad (SPEC-014/T9.1)
+  describe **las mismas ejecuciones** que `agent_runs` y con el mismo nivel de
+  detalle: guarda el texto que produjo cada agente y un resumen de su entrada.
+  Darle una ventana más larga alargaría por la puerta de atrás la retención de lo
+  que el usuario escribió, así que va a la par. Guarda **resúmenes recortados**
+  (4.000 caracteres) y no los prompts completos: la traza explica una ejecución,
+  no es un segundo almacén del artículo.
 - **`flow_checkpoints`, 30 días.** Son puntos de reanudación. Un checkpoint de hace
   un mes ya no se va a reanudar; solo ocupa y conserva borradores.
 - **`notifications`, 90 días, solo las leídas.** Una notificación **sin leer** sigue
@@ -98,6 +106,7 @@ Ejemplo (`backend/config.yaml`, o por variable de entorno):
 retention:
   audit_log_days: 365
   agent_runs_days: 90
+  agent_run_steps_days: 90
   checkpoints_days: 30
   notifications_days: 90
   orphan_assets_days: 30

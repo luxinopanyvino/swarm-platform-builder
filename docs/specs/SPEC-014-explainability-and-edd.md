@@ -53,12 +53,20 @@ los convierte en criterio de desarrollo.
 
 ## 3. Criterios de aceptación (Given/When/Then)
 
-- [ ] **AC1** — *Given* una ejecución del pipeline, *When* termina (o se cancela),
+- [x] **AC1** — *Given* una ejecución del pipeline, *When* termina (o se cancela),
   *Then* existe una **traza persistida** con un registro por paso de agente que
   incluye: agente, modelo y parámetros (`temperature`, `num_ctx`), resumen de
   entrada/salida, **fuentes RAG citadas** (`doc_id`, `chunk_ids`, score), tokens
   in/out, latencia y, cuando aplique, **decisión + rationale** (score del Revisor,
   flag de coherencia, resultado del HITL).
+  <br>*T9.1 (#221)*: tabla `agent_run_steps` (migración `0004`), escrita por el
+  orquestador al cerrar cada nodo —también cuando **falla**—. Tres de los datos no
+  están donde se escribe el paso: los tokens solo los conoce el proveedor del LLM,
+  las fuentes solo las conoce la capacidad de RAG, y el agente se queda con el
+  texto ya montado. Se recogen con variables de contexto
+  (`platform/explainability.py`), igual que `current_agent_ctx` en T5.2, así que
+  un agente nuevo queda trazado sin tocarlo. Retención de 90 días, la misma que
+  `agent_runs`.
 - [ ] **AC2** — *Given* un artículo con ejecuciones, *When* se consulta
   `GET /api/v1/agents/{article_id}/explain`, *Then* devuelve la traza completa
   estructurada y la UI muestra un panel "Por qué este resultado" con fuentes,
