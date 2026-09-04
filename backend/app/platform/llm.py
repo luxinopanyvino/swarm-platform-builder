@@ -270,6 +270,7 @@ async def call_llm(
     system_prompt: Optional[str] = None,
     keep_alive: int = -1,
     num_ctx: Optional[int] = None,
+    temperature: Optional[float] = None,
 ) -> str:
     """Call the configured LLM provider and return the generated text.
 
@@ -282,6 +283,13 @@ async def call_llm(
             immediately after the call (frees VRAM/RAM). -1 = Ollama default.
         num_ctx: Override the model context window size. Smaller values
             reduce KV-cache RAM. ``None`` uses the model's default.
+        temperature: Sampling temperature. ``None`` (default) sends nothing and
+            leaves the provider's own default in place, so existing callers are
+            unaffected. Added for the EDD judge (SPEC-014/T9.4), which the spec
+            requires to run at ``temperature=0``: a judge that changes its mind
+            between runs turns the T9.5 gate into a random red-light generator,
+            because the metric stops measuring the agent and starts measuring
+            the judge.
 
     Returns:
         The generated text, stripped of leading/trailing whitespace.
@@ -321,6 +329,7 @@ async def call_llm(
                 model=resolved_model,
                 timeout=timeout,
                 system_prompt=system_prompt,
+                temperature=temperature,
             ),
             what=f"Anthropic call ({resolved_model})",
         ))
@@ -332,6 +341,7 @@ async def call_llm(
                 model=resolved_model,
                 timeout=timeout,
                 system_prompt=system_prompt,
+                temperature=temperature,
             ),
             what=f"OpenAI call ({resolved_model})",
         ))
@@ -344,6 +354,7 @@ async def call_llm(
             timeout=timeout,
             keep_alive=keep_alive,
             num_ctx=num_ctx,
+            temperature=temperature,
         ),
         what=f"Ollama call ({resolved_model})",
     ))
@@ -405,6 +416,7 @@ async def _call_ollama(
     timeout: float,
     keep_alive: int = -1,
     num_ctx: Optional[int] = None,
+    temperature: Optional[float] = None,
 ) -> str:
     """Send a generation request to the local Ollama /api/generate endpoint."""
     from app.core.config import settings
@@ -413,6 +425,8 @@ async def _call_ollama(
     options: dict = {}
     if num_ctx is not None:
         options["num_ctx"] = num_ctx
+    if temperature is not None:
+        options["temperature"] = temperature
     if options:
         payload["options"] = options
     if keep_alive != -1:
@@ -449,6 +463,7 @@ async def _call_openai(
     model: str,
     timeout: float,
     system_prompt: Optional[str] = None,
+    temperature: Optional[float] = None,
 ) -> str:
     """Send a chat completion request via the OpenAI Python SDK.
 
@@ -484,10 +499,10 @@ async def _call_openai(
     try:
         client = AsyncOpenAI(**client_kwargs)
         try:
-            response = await client.chat.completions.create(
-                model=model,
-                messages=messages,
-            )
+            crear_kwargs: dict = {"model": model, "messages": messages}
+            if temperature is not None:
+                crear_kwargs["temperature"] = temperature
+            response = await client.chat.completions.create(**crear_kwargs)
         finally:
             await client.close()
 
@@ -735,6 +750,7 @@ async def _call_anthropic(
     timeout: float,
     system_prompt: Optional[str] = None,
     max_tokens: Optional[int] = None,
+    temperature: Optional[float] = None,
 ) -> str:
     """Send a single generation request to Claude via the official SDK.
 
@@ -755,6 +771,8 @@ async def _call_anthropic(
     }
     if system_prompt:
         create_kwargs["system"] = system_prompt
+    if temperature is not None:
+        create_kwargs["temperature"] = temperature
 
     client = AsyncAnthropic(**_anthropic_client_kwargs(api_key, timeout))
     try:

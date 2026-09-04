@@ -48,6 +48,11 @@ class ReplayProvider:
     mode = MODO_REPLAY
 
     async def run(self, caso: EvalCase) -> Tuple[str, Dict[str, Any]]:
+        # Un agente que decide y no escribe —el revisor— no tiene salida de
+        # texto: su caso graba `recorded_decision` y `recorded_output` vacío.
+        if caso.recorded_output is None and caso.recorded_decision is not None:
+            return "", {**dict(caso.recorded_usage), "latency_ms": 0.0,
+                        "decision": caso.recorded_decision}
         if caso.recorded_output is None:
             raise RuntimeError(
                 f"El caso '{caso.id}' no trae `recorded_output`: no se puede reproducir. "
@@ -57,6 +62,7 @@ class ReplayProvider:
         # La latencia de leer un fichero no es la del agente: se deja a 0 y la
         # métrica de presupuesto se salta en vez de puntuar un número inventado.
         uso.setdefault("latency_ms", 0.0)
+        uso["decision"] = caso.recorded_decision
         return caso.recorded_output, uso
 
 
@@ -102,6 +108,10 @@ class PlatformProvider:
             "tokens_in": acumulador.tokens_in,
             "tokens_out": acumulador.tokens_out,
             "latency_ms": latencia,
+            # La decisión sale por el mismo lector que usa la traza de T9.1, no
+            # por uno propio: si el revisor cambia de forma, cambia en un sitio.
+            # Sin esto el revisor sería inevaluable — no produce texto.
+            "decision": explainability.decision_of(salida),
             "raw_output": salida,
         }
 

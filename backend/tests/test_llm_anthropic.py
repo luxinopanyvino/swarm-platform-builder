@@ -152,9 +152,11 @@ async def test_call_llm_routes_to_anthropic_and_uses_default_model(monkeypatch):
 
     seen = {}
 
-    async def fake_call(prompt, model, timeout, system_prompt=None):
+    # `temperature` la añadió SPEC-014/T9.4: el doble refleja la firma real.
+    async def fake_call(prompt, model, timeout, system_prompt=None, temperature=None):
         seen["model"] = model
         seen["prompt"] = prompt
+        seen["temperature"] = temperature
         return "routed-ok"
 
     monkeypatch.setattr(llm, "_call_anthropic", fake_call)
@@ -162,6 +164,8 @@ async def test_call_llm_routes_to_anthropic_and_uses_default_model(monkeypatch):
     out = await llm.call_llm("hola")
 
     assert out == "routed-ok"
+    # Y sin pedirla, no se fija: el defecto del proveedor se respeta.
+    assert seen["temperature"] is None
     # get_default_model() resolves to ANTHROPIC_MODEL when the provider is anthropic.
     assert seen["model"] == "claude-opus-5"
 
@@ -331,3 +335,40 @@ async def test_empty_response_is_transient(monkeypatch):
 
     with pytest.raises(TransientLLMError):
         await llm._call_anthropic(prompt="P", model="m", timeout=30.0)
+
+
+# --------------------------------------------------------------------------- #
+# temperature — añadida en SPEC-014/T9.4 para el juez de las evals
+# --------------------------------------------------------------------------- #
+
+@pytest.mark.asyncio
+async def test_temperature_no_se_envia_cuando_no_se_pide(monkeypatch):
+    """El defecto tiene que ser invisible: los agentes ya en producción no
+    pueden cambiar de comportamiento porque el harness necesitara un parámetro."""
+    fake = _make_fake_anthropic()
+    recorder = {}
+    fake.AsyncAnthropic = _client_factory(
+        on_create=lambda **kw: _FakeMessage([_TextBlock("ok")]), recorder=recorder
+    )
+    _install(monkeypatch, fake)
+
+    await llm._call_anthropic(prompt="P", model="claude-opus-5", timeout=30.0)
+    assert "temperature" not in recorder["create"]
+
+
+@pytest.mark.asyncio
+async def test_temperature_llega_al_proveedor_cuando_se_pide(monkeypatch):
+    """SPEC-014 §5 exige el juez a `temperature=0`. Antes de esto el dispatcher
+    no aceptaba el parámetro: los perfiles lo guardaban y nunca llegaba a nadie."""
+    from app.core import config
+    monkeypatch.setattr(config.settings, "LLM_PROVIDER", "anthropic", raising=False)
+
+    fake = _make_fake_anthropic()
+    recorder = {}
+    fake.AsyncAnthropic = _client_factory(
+        on_create=lambda **kw: _FakeMessage([_TextBlock("ok")]), recorder=recorder
+    )
+    _install(monkeypatch, fake)
+
+    await llm.call_llm("P", model="claude-opus-5", temperature=0)
+    assert recorder["create"]["temperature"] == 0

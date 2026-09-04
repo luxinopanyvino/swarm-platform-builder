@@ -57,10 +57,28 @@ dataset crece por líneas, y así el diff de una PR enseña qué caso se añadi�
 
 | Dataset | Para qué |
 |---|---|
-| `redactor-smoke` | Pasa. Comprueba que el harness funciona de extremo a extremo. |
-| `redactor-regressions` | **Falla a propósito**: un caso por regresión detectable. Documentación ejecutable de qué se mide. |
+| `<agente>-golden` | **Línea base.** Pasa entero, así que sirve de gate (T9.5). Uno por agente evaluable: investigador, redactor, revisor y formateador. |
+| `<agente>-regressions` | **Falla a propósito**: un caso por regresión detectable. Documentación ejecutable de qué se mide, no un gate. |
+| `redactor-smoke` | El mínimo de extremo a extremo, de T9.3. |
 
-Los conjuntos *golden* de verdad llegan con **T9.4 (#225)**.
+El publicador no tiene conjunto: publica, no genera texto ni decide, así que no
+hay comportamiento probabilístico que medir.
+
+### De dónde salen las salidas grabadas
+
+La cabecera declara `provenance`, y el informe la repite:
+
+| Valor | Qué significa |
+|---|---|
+| `recorded` | Salidas de una ejecución real del agente. Es evidencia del modelo. |
+| `handwritten` | Salidas escritas a mano. Es evidencia de que **la métrica** funciona, no de cómo se comporta el modelo. |
+
+Los conjuntos de este repo son **`handwritten`**: se escribieron para fijar qué
+mide cada métrica, sin un modelo disponible donde se construyeron. Regrabarlos
+con `--mode live` contra el modelo de la plataforma es lo primero que conviene
+hacer antes de endurecer el gate de T9.5, y entonces la cabecera pasa a
+`recorded`. El aviso del informe está para que nadie confunda las dos cosas
+mientras tanto — mismo criterio que el aviso de `replay`.
 
 Campos de un caso:
 
@@ -99,6 +117,39 @@ naturalezas distintas y permite declarar umbrales (T9.5) sin traducir unidades.
 | `citation_fidelity` | Que cada `[Fuente: X]` exista en el corpus del caso. | El caso no trae corpus. |
 | `format_compliance` | Que aparezca el estilo de cita pedido y las secciones exigidas. | El caso no declara ninguno. |
 | `budget` | Margen frente al presupuesto de tokens y latencia. | El caso no declara presupuesto. |
+| `reviewer_calibration` | Distancia del score del revisor a una referencia humana, **y si cae del mismo lado del umbral de 80**. | El caso no declara `reference_score`. |
+| `coherence` | Coherencia interna del texto, según un juez con rúbrica fija. | El caso no declara `min_coherence`, o no hay veredicto. |
+
+Las tres primeras son deterministas. Las dos últimas son las **asistidas** de
+AC4, y son las que cazan lo que una expresión regular no ve: un revisor que
+puntúa 85 lo que merece 62 rompe el pipeline con un número perfectamente formado,
+y un texto puede citar bien, cumplir APA, caber en el presupuesto y contradecirse
+entre la metodología y los resultados.
+
+### El juez
+
+`coherence` necesita un juicio, y ahí hay tres reglas que vienen de la spec:
+
+* **El juez es un modelo de la plataforma** (§4.2), llamado por el mismo
+  dispatcher que los agentes. No es un servicio externo de evaluación.
+* **Rúbrica fija y `temperature=0`** (§5). Un juez que cambia de criterio entre
+  ejecuciones convierte el gate en un generador de rojos aleatorios: la métrica
+  dejaría de medir al agente para medir al juez. La rúbrica está versionada
+  (`RUBRICA_VERSION`): cambiarla cambia lo que significan los números anteriores.
+* **En `replay` no se llama a nadie.** El veredicto se graba en el caso
+  (`recorded_judgement`) igual que la salida; sin él, la métrica **se salta con
+  motivo**. Ni puntúa 100 —aprobar por no haber mirado— ni 0 —hacer fallar el
+  gate por una evaluación que no se hizo—.
+
+Quien llama al juez es el runner, no la métrica: ahí es donde se sabe el modo, y
+así las métricas siguen siendo funciones puras. Es el mismo reparto que en T9.1.
+
+### El revisor no escribe: decide
+
+Su salida no es texto, así que `output` queda vacío y su caso graba
+`recorded_decision` (`{score, coherent, hitl_outcome}`). El runner la pone en
+`CaseResult.decision` leyéndola por el mismo `explainability.decision_of` que usa
+la traza: si el revisor cambia de forma, cambia en un sitio.
 
 Una métrica que no aplica **se salta con motivo**, no puntúa 100: aprobar por no
 haber mirado es mentir con buena nota.
@@ -108,6 +159,9 @@ se toca.
 
 ## Qué **no** hace todavía
 
-- Las métricas **asistidas** (calibración del score del revisor, coherencia con
-  juez) son T9.4.
-- El **gate en CI** con umbrales por agente es T9.5.
+- El **gate en CI** con umbrales por agente es T9.5 (#226). El JSON del informe ya
+  trae `scores` y `passed`, y el runner ya sale con código 1, para no tener que
+  parsear prosa.
+- Los conjuntos aún no se han **grabado contra un modelo real** (ver
+  «procedencia»): mientras sean `handwritten`, un verde dice que las métricas
+  funcionan, no que el agente se comporte bien.
