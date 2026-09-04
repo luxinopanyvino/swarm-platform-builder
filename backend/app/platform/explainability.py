@@ -206,3 +206,92 @@ def params_of(agent_name: str, state: Dict[str, Any]) -> Dict[str, Any]:
         "semantic_search_enabled",
     )
     return {clave: ajustes[clave] for clave in interesantes if clave in ajustes}
+
+
+# ── Lectura de la traza (SPEC-014 / T9.2 / AC2) ─────────────────────────────
+#
+# La otra mitad del módulo. Escribir la traza es anotar lo que solo sabe quien lo
+# produce; leerla es contestar «por qué salió esto», y esa pregunta no se responde
+# con la tabla en crudo: hay que separar ejecuciones y agregar fuentes.
+#
+# Funciones puras sobre una lista de pasos, a propósito: es la lógica que más
+# fácil se equivoca y así se prueba sin base de datos ni pipeline.
+
+def group_executions(pasos: List[Any]) -> List[List[Any]]:
+    """Parte los pasos —en orden cronológico— en ejecuciones del pipeline.
+
+    Un artículo se puede reejecutar, y entonces su traza tiene los pasos de
+    varias ejecuciones **en la misma tabla**. Ordenarlos por `step_index` los
+    entrelazaría: dos ejecuciones tienen las dos un paso 0, un paso 1… y el panel
+    contaría una historia que no ocurrió.
+
+    Lo que las separa es que `step_index` **vuelve a 0**: el orquestador lo
+    reinicia en cada ejecución nueva. Una reanudación (`resume`) no reinicia
+    —continúa desde el checkpoint—, así que sigue la numeración y aparece como lo
+    que es: la misma ejecución, terminada en un segundo intento.
+
+    No se agrupa por `run_id` porque no es lo que se cree: `log_run_start` mina
+    uno **por paso**, no por ejecución. Ni por `correlation_id`, que puede faltar.
+    """
+    ejecuciones: List[List[Any]] = []
+    for paso in pasos:
+        if not ejecuciones or (paso.step_index == 0 and ejecuciones[-1]):
+            ejecuciones.append([])
+        ejecuciones[-1].append(paso)
+    return ejecuciones
+
+
+def aggregate_sources(pasos: Iterable[Any]) -> List[Dict[str, Any]]:
+    """Fuentes RAG de todos los pasos, agrupadas por documento.
+
+    Mismo criterio que al recogerlas dentro de un paso: se conserva el **mejor**
+    score y se unen los fragmentos, porque la pregunta es «¿de qué documentos
+    salió esto?». Se añade `used_by`: qué agentes lo recuperaron, que es lo que
+    distingue una fuente que solo vio el investigador de una que además usó el
+    redactor al ampliar el borrador.
+    """
+    agregadas: Dict[str, Dict[str, Any]] = {}
+    for paso in pasos:
+        for fuente in (paso.rag_sources or []):
+            if not isinstance(fuente, dict):
+                continue
+            doc_id = str(fuente.get("doc_id") or "")
+            if not doc_id:
+                continue
+            actual = agregadas.setdefault(doc_id, {
+                "doc_id": doc_id, "title": None, "authors": None,
+                "collection": None, "score": 0.0, "chunk_ids": [], "used_by": [],
+            })
+            for clave in ("title", "authors", "collection"):
+                if actual[clave] is None and fuente.get(clave):
+                    actual[clave] = fuente[clave]
+            try:
+                puntuacion = float(fuente.get("score") or 0.0)
+            except (TypeError, ValueError):
+                puntuacion = 0.0
+            actual["score"] = max(actual["score"], puntuacion)
+            for chunk in (fuente.get("chunk_ids") or []):
+                if chunk not in actual["chunk_ids"]:
+                    actual["chunk_ids"].append(chunk)
+            if paso.agent_name not in actual["used_by"]:
+                actual["used_by"].append(paso.agent_name)
+
+    # De mejor a peor score: la fuente que más pesó, primero.
+    return sorted(agregadas.values(), key=lambda f: f["score"], reverse=True)
+
+
+def totals_of(pasos: List[Any]) -> Dict[str, Any]:
+    """Lo que costó lo que se está leyendo."""
+    agentes: List[str] = []
+    for paso in pasos:
+        if paso.agent_name not in agentes:
+            agentes.append(paso.agent_name)
+    return {
+        "steps": len(pasos),
+        "agents": agentes,
+        "tokens_in": sum(paso.tokens_in or 0 for paso in pasos),
+        "tokens_out": sum(paso.tokens_out or 0 for paso in pasos),
+        "latency_ms": round(sum(paso.latency_ms or 0.0 for paso in pasos), 2),
+        "loops": max((paso.iteration or 0 for paso in pasos), default=0),
+        "failed_steps": sum(1 for paso in pasos if paso.status != "completed"),
+    }

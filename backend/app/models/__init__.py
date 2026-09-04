@@ -56,6 +56,9 @@ from app.models.agent_run import (
 from app.models.agent_run_step import (
     AgentRunStepModel,
     AgentRunStepResponse,
+    ArticleExplainResponse,
+    ExplainSource,
+    ExplainTotals,
 )
 from app.models.saved_flow import (
     CreateSavedFlowDTO,
@@ -117,6 +120,9 @@ __all__ = [
     "AgentRunModel",
     "AgentRunStepModel",
     "AgentRunStepResponse",
+    "ArticleExplainResponse",
+    "ExplainSource",
+    "ExplainTotals",
     "AgentRunRequest",
     "AgentRunDetailResponse",
     "AgentRunListResponse",

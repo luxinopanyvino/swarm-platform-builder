@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { AGENT_CATALOG, agentMeta } from '../catalog';
 import Modal from '../../../platform/components/ui/Modal';
 import { EmptyState, ErrorState, LoadingState } from '../../../platform/components/ui/states';
+import ExplainPanel from '../../../platform/components/explain/ExplainPanel';
 import { useParams, useNavigate } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import { ArrowLeft, CheckCircle, XCircle, UserPlus, Clock, AlertCircle, Pencil, Save, X, GitBranch, FileText, Plus, Trash2, Palette } from 'lucide-react';
@@ -370,8 +371,15 @@ export default function ArticleDetailPage() {
           )}
         </div>
 
+        {/* Por qué este resultado (SPEC-014 / T9.2). Debajo del cuerpo y no en la
+            barra lateral: la traza es contenido ancho —línea de tiempo, fuentes,
+            comentarios del revisor— y en 280 px no se lee. */}
+        <div style={{ gridColumn: '1', display: 'flex', flexDirection: 'column' }}>
+          <ExplainPanel articleId={id} />
+        </div>
+
         {/* Sidebar actions */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+        <div style={{ gridRow: '1', gridColumn: '2', display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
           {/* Direct publish — admin / redactor on draft articles */}
           {canPublishDirect && (
             <div className="card">

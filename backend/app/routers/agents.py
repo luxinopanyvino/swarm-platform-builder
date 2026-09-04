@@ -30,6 +30,7 @@ from app.models import (
     ArticleModel, AgentRunModel, AgentRunRequest,
     AgentRunListResponse, AgentRunDetailResponse,
     AgentProfileModel, AgentProfileResponse,
+    AgentRunStepModel, AgentRunStepResponse, ArticleExplainResponse,
 )
 from app.core.database import get_session
 from app.platform.bus import get_bus
@@ -47,10 +48,12 @@ from app.platform.capabilities.rag import (
 )
 from app.modules.agents.adapters.doc_metadata import extract_doc_metadata
 from app.platform.project_access import (
-    get_project_context, load_project_context, usuario_actual,
+    get_optional_project_context, get_project_context, load_project_context,
+    usuario_actual,
 )
 from app.platform.project_context import ProjectContext, bucket_of
 from app.platform.projects.profiles import agents_dir as project_agents_dir
+from app.platform import explainability
 
 router = APIRouter(prefix="/api/v1/agents", tags=["agents"])
 
@@ -918,6 +921,76 @@ async def get_article_agent_runs(
     
     return AgentRunListResponse(
         runs=[AgentRunDetailResponse.model_validate(r) for r in runs]
+    )
+
+
+@router.get("/{article_id}/explain", response_model=ArticleExplainResponse)
+async def explain_article_run(
+    article_id: UUID,
+    scope: str = "last",
+    token_data=Depends(get_current_user),
+    project: ProjectContext | None = Depends(get_optional_project_context),
+    session: AsyncSession = Depends(get_session),
+):
+    """Traza de explicabilidad del artículo (SPEC-014 / T9.2 / AC2).
+
+    Contesta «por qué salió esto»: qué agentes corrieron y en qué orden, con qué
+    modelo y parámetros, qué documentos recuperaron y con qué puntuación, qué
+    decidió el revisor y por qué, y qué costó cada paso.
+
+    `scope=last` (por defecto) devuelve **la ejecución que produjo el texto que
+    se está leyendo**, que es la pregunta que trae a alguien al panel. Un
+    artículo reejecutado tiene varias en la misma tabla, y mezclarlas contaría
+    una historia que no ocurrió; `scope=all` las devuelve todas para auditar.
+    """
+    if scope not in ("last", "all"):
+        raise HTTPException(status_code=400, detail="scope debe ser 'last' o 'all'")
+
+    # Mismo control de acceso que `/runs`: la unidad de acceso es el artículo, y
+    # la traza no dice nada que su dueño no pueda ver ya. Deliberadamente **no**
+    # se exige `X-Project-Id`: los endpoints de artículo no la piden en este
+    # repo, y volverla obligatoria solo aquí es una trampa para el siguiente
+    # cliente. Pero si viene, se comprueba —ver más abajo—, que es lo que hace
+    # `get_optional_project_context`: tolerar la ausencia no es tolerar que
+    # alguien apunte a un proyecto que no es suyo.
+    res = await session.execute(select(ArticleModel).where(ArticleModel.id == article_id))
+    article = res.scalars().first()
+    if not article:
+        raise HTTPException(status_code=404, detail="Article not found")
+    if str(article.author_id) != token_data["user_id"] and token_data.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Forbidden: You do not own this article")
+
+    # Con proyecto activo, el artículo tiene que ser de ese proyecto. 404 y no
+    # 403: la respuesta no debe distinguir «existe pero es de otro proyecto» de
+    # «no existe». Un artículo heredado (sin proyecto) no se bloquea por esto.
+    if project is not None and article.project_id is not None:
+        if article.project_id != project.project_id:
+            raise HTTPException(status_code=404, detail="Article not found")
+
+    # Cronológico: es el orden en el que ocurrieron. `step_index` desempata dos
+    # pasos con la misma marca de tiempo, que en SQLite es posible.
+    stmt = (
+        select(AgentRunStepModel)
+        .where(AgentRunStepModel.article_id == article_id)
+        .order_by(AgentRunStepModel.created_at.asc(), AgentRunStepModel.step_index.asc())
+    )
+    pasos = list((await session.execute(stmt)).scalars().all())
+
+    ejecuciones = explainability.group_executions(pasos)
+    visibles = ejecuciones[-1] if (scope == "last" and ejecuciones) else pasos
+
+    return ArticleExplainResponse(
+        article_id=article_id,
+        title=article.title,
+        executions=len(ejecuciones),
+        scope=scope,
+        # Que el artículo exista no implica que haya traza: puede ser anterior a
+        # T9.1 o estar purgada por retención. La interfaz necesita distinguirlo
+        # de «no se ha ejecutado nunca», que se arregla de otra manera.
+        available=bool(visibles),
+        steps=[AgentRunStepResponse.model_validate(paso) for paso in visibles],
+        sources=explainability.aggregate_sources(visibles),
+        totals=explainability.totals_of(visibles),
     )
 
 

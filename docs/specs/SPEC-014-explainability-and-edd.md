@@ -67,10 +67,22 @@ los convierte en criterio de desarrollo.
   (`platform/explainability.py`), igual que `current_agent_ctx` en T5.2, así que
   un agente nuevo queda trazado sin tocarlo. Retención de 90 días, la misma que
   `agent_runs`.
-- [ ] **AC2** — *Given* un artículo con ejecuciones, *When* se consulta
+- [x] **AC2** — *Given* un artículo con ejecuciones, *When* se consulta
   `GET /api/v1/agents/{article_id}/explain`, *Then* devuelve la traza completa
   estructurada y la UI muestra un panel "Por qué este resultado" con fuentes,
   score y decisiones por paso.
+  <br>*T9.2 (#224)*: el endpoint y el panel
+  (`platform/components/explain/ExplainPanel.jsx`, montado en el detalle del
+  artículo). Lo que no es evidente es **qué** se devuelve: un artículo se puede
+  reejecutar, y entonces su traza tiene varias ejecuciones en la misma tabla;
+  devolverlas mezcladas contaría una historia que no ocurrió, con el revisor
+  aprobando un borrador que ya no existe. Se separan por el reinicio de
+  `step_index` —una reanudación no reinicia, así que sigue siendo la misma
+  ejecución— y por defecto se explica la última, la que produjo el texto que se
+  está leyendo; `?scope=all` las devuelve todas. Las fuentes se agregan por
+  documento a través de los pasos, porque la pregunta del panel es «¿en qué se
+  apoya esto?» y la traza las guarda por paso. Mismo control de acceso que
+  `/runs`, más la comprobación del proyecto activo cuando la cabecera viene.
 - [x] **AC3** — *Given* un perfil de agente de la plataforma y un dataset de
   evaluación, *When* se ejecuta el harness EDD, *Then* produce un informe de
   métricas **reproducible** (modelo y parámetros fijados/registrados) sin depender

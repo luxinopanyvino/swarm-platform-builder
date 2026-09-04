@@ -23,6 +23,11 @@ export const agentsApi = {
   getRuns: (articleId) =>
     api.get(`/api/v1/agents/${articleId}/runs`).then(r => r.data),
 
+  // Traza de explicabilidad: por qué salió lo que salió (SPEC-014 / T9.2).
+  // `scope` es 'last' (la ejecución que produjo el texto actual) o 'all'.
+  getExplain: (articleId, scope = 'last') =>
+    api.get(`/api/v1/agents/${articleId}/explain`, { params: { scope } }).then(r => r.data),
+
   // Agent definitions
   getDefinitions: () =>
     api.get('/api/v1/agents/definitions').then(r => r.data),

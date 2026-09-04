@@ -109,3 +109,59 @@ class AgentRunStepResponse(BaseModel):
     decision: dict | None = None
     rationale: str | None = None
     created_at: datetime
+
+
+class ExplainSource(BaseModel):
+    """Una fuente del RAG, agregada a través de todos los pasos que la usaron.
+
+    La traza guarda las fuentes **por paso**, que es lo correcto para explicar un
+    paso concreto. Pero la pregunta que trae a alguien al panel suele ser la otra:
+    «¿en qué documentos se apoya este artículo?». Reconstruirlo en el cliente
+    obliga a recorrer los pasos y desduplicar, y cada cliente lo haría distinto.
+    """
+
+    doc_id: str
+    title: str | None = None
+    authors: str | None = None
+    collection: str | None = None
+    #: El **mejor** score con el que se recuperó en cualquier paso.
+    score: float = 0.0
+    chunk_ids: list = []
+    #: Agentes que la recuperaron, en orden de aparición.
+    used_by: list[str] = []
+
+
+class ExplainTotals(BaseModel):
+    """Lo que costó la ejecución. Es la mitad de «por qué este resultado»: la
+    otra mitad son las fuentes y las decisiones."""
+
+    steps: int = 0
+    agents: list[str] = []
+    tokens_in: int = 0
+    tokens_out: int = 0
+    latency_ms: float = 0.0
+    #: Vueltas del bucle revisor→redactor (0 = el borrador se aprobó a la primera).
+    loops: int = 0
+    failed_steps: int = 0
+
+
+class ArticleExplainResponse(BaseModel):
+    """Traza de explicabilidad de un artículo (SPEC-014 / T9.2 / AC2)."""
+
+    article_id: UUID
+    title: str
+    #: Cuántas ejecuciones del pipeline tiene el artículo. Más de una significa
+    #: que lo que se está leyendo lo produjo la última, y el panel lo dice.
+    executions: int = 0
+    #: Qué se está devolviendo: `last` (la ejecución que produjo el texto actual)
+    #: o `all` (todas). Va en la respuesta y no solo en la petición para que un
+    #: informe guardado siga diciendo de qué habla.
+    scope: str = "last"
+    #: `False` cuando el artículo existe pero no hay traza: una ejecución anterior
+    #: a T9.1, o purgada por retención. La interfaz necesita distinguirlo de «este
+    #: artículo no se ha ejecutado nunca», que es otra cosa y se arregla de otra
+    #: manera.
+    available: bool = False
+    steps: list[AgentRunStepResponse] = []
+    sources: list[ExplainSource] = []
+    totals: ExplainTotals = ExplainTotals()
