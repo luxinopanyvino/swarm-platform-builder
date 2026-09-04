@@ -105,8 +105,13 @@ Docker (`docker compose up --build`, backend en `:8080`).
   revisor. Los tokens y las fuentes los anotan quienes los conocen —el dispatcher
   del LLM y la capacidad de RAG— en variables de contexto
   (`platform/explainability.py`); el orquestador las recoge al cerrar el paso, así
-  que un agente nuevo queda trazado sin tocarlo. El bucle Revisor→Redactor
-  (`loop_count`, máx 3) y el **HITL** (`await_decision`, pausa por SSE) viven aquí.
+  que un agente nuevo queda trazado sin tocarlo. Esa traza se lee por
+  `GET /agents/{article_id}/explain` (T9.2), que la sirve al panel «Por qué este
+  resultado». **Ojo al leerla**: un artículo se puede reejecutar y sus ejecuciones
+  conviven en la misma tabla; se separan porque `step_index` vuelve a 0 —una
+  reanudación no reinicia— y por defecto se explica la última, la que produjo el
+  texto actual. El bucle Revisor→Redactor (`loop_count`, máx 3) y el **HITL**
+  (`await_decision`, pausa por SSE) viven aquí.
 - **Streaming**: el pipeline emite eventos por **SSE** (`/agents/{id}/stream`):
   `agent_start`, `token`, `await_decision`, `done`, `cancelled`, … La cancelación
   y la decisión humana son endpoints aparte que actúan sobre la ejecución en curso.
