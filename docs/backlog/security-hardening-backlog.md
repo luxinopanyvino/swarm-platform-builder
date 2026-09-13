@@ -164,6 +164,62 @@ Labels: `epic`, `task`, `area/*`, `sev/{high,medium,low}`.
 | T15.4 | Dataset golden con procedencia `recorded` para el agente con RAG | 🟠 |
 | T15.5 | Umbrales en modo aviso y disciplina escrita en `edd-discipline.md` | 🟠 |
 
+## E16 — Portada de plataforma  · `area/observability`
+> `/dashboard` redirige hoy al listado de artículos: no hay portada. Definición en
+> [SPEC-028](../specs/SPEC-028-dashboard-swarm-status.md). Ojo: «métricas globales»
+> en una plataforma multi-tenant es una fuga de T8.5 con aspecto de resumen.
+
+| ID | Tarea | Sev |
+|----|-------|-----|
+| T16.1 | Definir las magnitudes de la portada (qué cuenta y de dónde sale) | 🟠 |
+| T16.2 | `GET /dashboard/summary` por proyecto, con aislamiento probado | 🔴 |
+| T16.3 | Definir y calcular las anomalías sobre la traza de explicabilidad | 🔴 |
+| T16.4 | Estado del enjambre derivado de los pasos abiertos | 🟠 |
+| T16.5 | Portada en el frontend y fin de la redirección del index | 🟠 |
+| T16.6 | Degradación por tarjeta cuando una fuente no responde | 🟡 |
+
+## E17 — Trazabilidad auditable  · `area/observability`
+> El sustrato existe (`agent_run_steps`, T9.1); la vista, la exportación y la
+> integridad no. Definición en
+> [SPEC-029](../specs/SPEC-029-traceability-view-and-integrity.md). La cadena de
+> hashes debe decir **qué no** garantiza: un sello que promete de más es peor que
+> ninguno.
+
+| ID | Tarea | Sev |
+|----|-------|-----|
+| T17.1 | Vista de trazabilidad del proyecto sobre `agent_run_steps` | 🔴 |
+| T17.2 | Cadena de hashes SHA-256 por paso, canónica y versionada | 🔴 |
+| T17.3 | Verificación que localiza el paso alterado, borrado o insertado | 🔴 |
+| T17.4 | Exportación JSONL con esquema versionado y respeto a la retención | 🟠 |
+| T17.5 | Log en vivo por proyecto, filtrado en servidor | 🔴 |
+| T17.6 | Pestaña de integridad que declara su alcance y sus límites | 🟠 |
+
+## E18 — Entrada de referencia y control de la ejecución  · `area/ux`
+> Definición en [SPEC-030](../specs/SPEC-030-reference-input-and-run-control.md).
+> Tres piezas que no son interfaz: la referencia no puede contaminar `__library__`,
+> «agentes participantes» es una variante validada del `GraphSpec`, y un porcentaje
+> de progreso sin unidades reales está prohibido.
+
+| ID | Tarea | Sev |
+|----|-------|-----|
+| T18.1 | Alcance de documento por ejecución (la referencia no contamina la biblioteca) | 🔴 |
+| T18.2 | Agentes participantes como variante validada del `GraphSpec` | 🔴 |
+| T18.3 | Notas del enjambre acotadas, como dato, y registradas en la traza | 🟠 |
+| T18.4 | Evento SSE de progreso para agentes con unidades de trabajo reales | 🟠 |
+| T18.5 | Pantalla de subida de referencia y configuración de la ejecución | 🟠 |
+| T18.6 | Seguimiento con bucle de revisión, pausa humana y progreso honesto | 🟠 |
+
+## E19 — Fine-tune local  · `area/backend` · **spec en `Draft`, no sembrada**
+> [SPEC-031](../specs/SPEC-031-format-learning-finetune.md) está en `Draft` a
+> propósito: RAG se puede deshacer borrando un documento y un fine-tune no, así que
+> la retención, el aislamiento por proyecto y la VRAM se deciden **antes** de
+> escribir código. Sin ADR no hay tareas.
+
+| ID | Tarea | Sev |
+|----|-------|-----|
+| T19.1 | Spike acotado: viabilidad en el hardware real | 🟠 |
+| T19.2 | ADR de fine-tune local (retención, aislamiento, alcance, reversibilidad) | 🔴 |
+
 ---
 
 ### Orden recomendado de ejecución
