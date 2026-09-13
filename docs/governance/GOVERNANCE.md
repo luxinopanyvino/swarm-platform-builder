@@ -135,6 +135,15 @@ Una tarea/épica está *Ready* cuando:
 
 - El backlog operativo vive en el **GitHub Project**; épicas y tareas etiquetadas
   por `epic`/`task`, `area/*` y `sev/*`.
+- **Colocar los issues en el tablero** es un paso aparte de crearlos, porque
+  Projects v2 solo habla GraphQL mientras los issues viven en REST.
+  [`scripts/seed_project_board.py`](../../scripts/seed_project_board.py) lo hace
+  leyendo las specs (dry-run por defecto, `--apply` para aplicar) y **no crea ni
+  cierra issues**: eso es de `/sdd-sync`. No confundir con
+  `seed_github_project.py`, que es el bootstrap de un solo uso con las épicas
+  escritas a mano y que sobre un Project existente solo corre de forma destructiva.
+  Lo duradero es activar en el Project la workflow *Auto-add to project* con filtro
+  `label:epic,task`, que quita la necesidad de ejecutar nada.
 - La **definición** de épicas/tareas se declara en el bloque estructurado
   `sdd-sync` de cada spec (sección 8 del [TEMPLATE](../specs/TEMPLATE.md)). El
   agente [`sdd-sync`](../../.claude/agents/sdd-sync.md) (comando `/sdd-sync`)
