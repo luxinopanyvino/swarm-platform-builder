@@ -149,7 +149,7 @@ tasks:
     depends_on: [T11.3]
     acceptance: [AC3, AC4]
   - id: T11.5
-    title: "Imágenes/figuras: subida validada (magic bytes) + insercion + render en la maqueta"
+    title: "Imágenes/figuras: subida validada (magic bytes) + inserción + render en la maqueta"
     sev: medium
     depends_on: [T11.4, "#161"]
     acceptance: [AC5]
