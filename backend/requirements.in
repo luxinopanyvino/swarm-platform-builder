@@ -28,7 +28,7 @@ pydantic-settings>=2.4.0
 sqlalchemy>=2.0.30
 asyncpg>=0.30.0
 aiosqlite>=0.20.0
-alembic>=1.12.0
+alembic>=1.19.2
 
 # Auth
 python-jose[cryptography]>=3.3.0
@@ -59,18 +59,18 @@ python-dotenv>=1.0.0
 PyYAML>=6.0.1
 
 # Document parsing (RAG)
-pypdf>=4.0.0
+pypdf>=6.18.0
 
 # Graph utilities (RAG)
 networkx>=3.0
 
 # AI orchestration
 langgraph>=0.2.0
-langchain-core>=0.3.0
+langchain-core>=1.6.2
 
 # LLM providers
-anthropic>=0.40.0
-openai>=1.0.0
+anthropic>=1.5.0
+openai>=3.13.0
 
 # Testing
 pytest>=8.0.0
