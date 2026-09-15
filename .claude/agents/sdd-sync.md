@@ -104,11 +104,30 @@ Con `--apply`, en dos pasadas para resolver dependencias por número real de iss
    `task-runner`). Si una dependencia apunta a una tarea inexistente, déjala como
    `Bloqueada por: T1.2 (sin issue)` y avísalo.
 3. **Añadir al Project board (pertenencia, no estado):** cada issue creado o
-   adoptado debe aparecer en el GitHub Project del backlog para ser visible.
-   - Descubre el Project: `gh project list --owner <owner>` y toma el de título
-     `Hardening & Platform Backlog` (su `number`).
-   - Añade cada issue: `gh project item-add <number> --owner <owner> --url <url-del-issue>`.
+   adoptado debe aparecer en el GitHub Project **que le toca a su épica** para ser
+   visible. Hay dos tableros, y la épica decide cuál:
+
+   | Épicas | Project (título exacto) |
+   |--------|-------------------------|
+   | E1–E12 | `Hardening & Platform Backlog` |
+   | E13 y de E14 en adelante | `Roadmap: calidad, evaluación y vistas agénticas` |
+
+   Una tarea va siempre al tablero de su épica. El primero es el backlog del
+   bootstrap y del hardening; el roadmap reúne la evaluación y selección de modelos
+   (E13, E15), la calidad (E14), las vistas agénticas y la trazabilidad (E16–E18) y
+   el fine-tune (E19). Una épica nueva va al roadmap salvo que esta tabla diga otra
+   cosa.
+   - Descubre los Projects: `gh project list --owner <owner>` y toma el `number`
+     de cada título. Si falta alguno, **no** caigas en el otro: repórtalo y deja
+     esos issues fuera del tablero (aviso del Paso 5).
+   - Añade cada issue: `gh project item-add <number> --owner <owner> --url <url-del-issue> --format json`.
+   - Rellena el campo `Epic` (single-select) con el id de la épica, `E<n>`:
+     `gh project item-edit --project-id <id> --id <item-id> --field-id <campo> --single-select-option-id <opción>`.
+     Si la opción `E<n>` no existe en ese tablero, no la crees: avísalo (añadir
+     una opción regenera las demás y borra los valores ya puestos).
    - Es idempotente: si el issue ya es item del Project, `item-add` no duplica.
+   - **Drift de tablero:** en dry-run, informa también de los issues con marcador
+     que estén en el tablero equivocado o en ninguno, con el comando de arreglo.
 
    > ⚠️ **Este paso es el único que puede quedar sin aplicar, y es fácil que pase
    > inadvertido: el issue existe en el repo pero NO aparece en el tablero.**
@@ -142,10 +161,12 @@ Con `--apply`, en dos pasadas para resolver dependencias por número real de iss
    > tablero, se ejecute desde donde se ejecute.
 
 Restricciones absolutas en apply: **solo** `issue create`, `issue edit` (título,
-body, labels), `addSubIssue` y `project item-add` (pertenencia al board).
-Prohibido `issue close`, `issue reopen`, `issue delete`, reasignar y **cambiar
-campos del Project** (Status, prioridad, columnas): el estado de ejecución es del
-humano, no del agente.
+body, labels), `addSubIssue`, `project item-add` (pertenencia al board) y
+`project item-edit` **únicamente sobre el campo `Epic`** (clasificación que sale
+de la spec, no estado). Prohibido `issue close`, `issue reopen`, `issue delete`,
+reasignar, sacar items de un tablero y **cambiar cualquier otro campo del
+Project** (Status, prioridad, columnas): el estado de ejecución es del humano, no
+del agente.
 
 ## Paso 5 — Reportar
 
@@ -157,8 +178,8 @@ Imprime un resumen claro:
 - **Estado del Project board (obligatorio en `--apply`)**: una línea explícita que
   diga si los issues quedaron **añadidos al tablero** o **solo creados en el repo**.
   Si el paso 4.3 se omitió, dilo como **aviso destacado** (no enterrado en un
-  párrafo): *«⚠️ N issues creados pero NO añadidos al Project “Hardening &
-  Platform Backlog” — falta `gh` con scope `project` en este entorno»*, seguido de
+  párrafo): *«⚠️ N issues creados pero NO añadidos al Project “<título del tablero
+  de su épica>” — falta `gh` con scope `project` en este entorno»*, seguido de
   la lista de números y el comando de arreglo. Sin esta línea el usuario cree que
   el backlog está al día cuando el tablero está desactualizado.
 
