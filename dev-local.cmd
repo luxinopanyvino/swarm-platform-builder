@@ -111,6 +111,13 @@ set ENABLE_DEV_ROLE_PROMOTION=true
 REM Siembra de demo (SPEC-015/T1.6): crea admin@admin y los usuarios de
 REM prueba. Sin este flag el arranque no siembra credenciales debiles.
 set ENABLE_DEV_SEED=true
+REM Motor LLM en local: Ollama. El default del repo es Anthropic (SPEC-023 /
+REM ADR-0009), pero sin ANTHROPIC_API_KEY el pipeline falla en el redactor.
+REM Si ya definiste LLM_PROVIDER / OLLAMA_MODEL en tu entorno, se respetan.
+if not defined LLM_PROVIDER set LLM_PROVIDER=ollama
+REM Modelo de respaldo para agentes sin modelo propio; el de config.yaml
+REM (mistral:7b) puede no estar descargado. Cambialo por uno de `ollama list`.
+if not defined OLLAMA_MODEL set OLLAMA_MODEL=olmo-3:7b
 start "Alex Backend" /D "%BACKEND_DIR%" "%UVICORN_EXE%" app.main:app --reload --port 8000
 
 echo Iniciando frontend en una nueva ventana...
