@@ -17,6 +17,8 @@
 #
 # Regenerar: python scripts/build_onboarding.py   (ver docs/onboarding/README.md)
 epicas:
+  E13:
+    corto: Modelos
   E14:
     corto: QA
   E15:
@@ -36,8 +38,10 @@ epicas:
       (T18.5) el modo aparece como no disponible.
 reparto:
 - nombre: Persona A
-  foco: backend y datos
+  foco: backend, datos y evaluación
   tareas:
+  - T13.1
+  - T13.2
   - T14.1
   - T14.3
   - T14.2
@@ -53,6 +57,8 @@ reparto:
   - T15.3
   - T15.5
   - T15.4
+  - T13.3
+  - T13.4
 - nombre: Persona B
   foco: interfaz, tiempo real y QA
   tareas:
@@ -72,6 +78,76 @@ reparto:
   - T14.6
   - T14.7
 tareas:
+  T13.1:
+    corto: Harness de benchmark
+    estado: implementada
+    alcance: >-
+      Ya está hecha (commit <code>d70c67f</code>): <code>backend/evals/model_benchmark/</code> compara
+      modelos de Ollama en los cuatro roles del pipeline y tiene tests de humo. Se cierra con la
+      PR de su bitácora, sin código nuevo.
+    archivos:
+    - backend/evals/model_benchmark/dataset.py
+    - backend/evals/model_benchmark/run_benchmark.py
+    - docs/bitacora/tarea-382.md
+    ojo_con: >-
+      El benchmark compara modelos <em>foundation</em> y no es el gate EDD: no mezcles sus
+      métricas con las de <code>evals/agent_behavior/</code>.
+    rama: docs/cerrar-t13-1-t13-2
+    componentes:
+    - evals
+    - providers
+  T13.2:
+    corto: Informe de benchmark
+    estado: implementada
+    alcance: >-
+      Ya está hecha: el informe <code>docs/reports/model-benchmark-scientific-writing.md</code> compara
+      8 modelos por calidad y cómputo. Se cierra con la PR de su bitácora, sin código nuevo.
+    archivos:
+    - docs/reports/model-benchmark-scientific-writing.md
+    - docs/bitacora/tarea-383.md
+    ojo_con: >-
+      Lee las limitaciones del informe antes de las tablas: una sola muestra por celda y un
+      portátil sin GPU.
+    rama: docs/cerrar-t13-1-t13-2
+    componentes:
+    - evals
+  T13.3:
+    corto: Ratificar selección
+    alcance: >-
+      Convertir la selección en borrador del informe en una decisión: repetir la prueba del
+      <strong>revisor</strong> varias veces, revisar a mano 1-2 salidas del <strong>formateador</strong>
+      y llevar el resultado a la comisión. La decisión (ratificada o ajustada, con fecha y
+      motivo) queda escrita en la sección «Selección» del informe.
+    archivos:
+    - docs/reports/model-benchmark-scientific-writing.md
+    - backend/evals/model_benchmark/
+    ojo_con: >-
+      Necesita Ollama con los modelos candidatos. La corrida original fue en un portátil sin
+      GPU; si repites en la RTX 3070 Ti, dilo en el informe, porque las latencias no son
+      comparables. La métrica de citas APA dio 0 en todos los modelos: no decidas por ella
+      sin mirar salidas reales.
+    rama: docs/384-ratificar-seleccion-modelos
+    revision: Decisión de la comisión
+    componentes:
+    - evals
+    - providers
+  T13.4:
+    corto: Confirmar selección aplicada
+    alcance: >-
+      La selección ya está aplicada de forma provisional en <code>models.ollama</code>
+      (investigador <code>gemma2:2b</code>, revisor <code>llama3.2:1b</code>, formateador
+      <code>llama3.2:3b</code>). Cuando T13.3 la ratifique, ajusta los perfiles si cambió y deja
+      evidencia de una ejecución completa con <code>LLM_PROVIDER=ollama</code>.
+    archivos:
+    - backend/projects/alejandria-magazine/agents/*.agent.md
+    ojo_con: >-
+      Los perfiles ya sembrados en la base no cambian solos al editar el <code>.agent.md</code>, y
+      el modelo del nodo del Flow Designer manda sobre el perfil. Toca agentes: corre el gate EDD.
+    rama: feat/385-aplicar-seleccion-modelos
+    componentes:
+    - template
+    - providers
+    - llm
   T14.1:
     corto: Alta area/qa (hecha)
     alcance: >-
