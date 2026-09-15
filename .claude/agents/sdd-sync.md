@@ -109,13 +109,14 @@ Con `--apply`, en dos pasadas para resolver dependencias por número real de iss
 
    | Épicas | Project (título exacto) |
    |--------|-------------------------|
-   | E1–E13 | `Hardening & Platform Backlog` |
-   | E14 en adelante | `Roadmap: calidad, evaluación y vistas agénticas` |
+   | E1–E12 | `Hardening & Platform Backlog` |
+   | E13 y de E14 en adelante | `Roadmap: calidad, evaluación y vistas agénticas` |
 
    Una tarea va siempre al tablero de su épica. El primero es el backlog del
-   bootstrap y del hardening; el roadmap reúne las épicas nuevas (QA, evaluación,
-   vistas agénticas y trazabilidad). Una épica nueva va al roadmap salvo que esta
-   tabla diga otra cosa.
+   bootstrap y del hardening; el roadmap reúne la evaluación y selección de modelos
+   (E13, E15), la calidad (E14), las vistas agénticas y la trazabilidad (E16–E18) y
+   el fine-tune (E19). Una épica nueva va al roadmap salvo que esta tabla diga otra
+   cosa.
    - Descubre los Projects: `gh project list --owner <owner>` y toma el `number`
      de cada título. Si falta alguno, **no** caigas en el otro: repórtalo y deja
      esos issues fuera del tablero (aviso del Paso 5).

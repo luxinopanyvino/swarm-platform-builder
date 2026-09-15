@@ -134,8 +134,8 @@ Una tarea/épica está *Ready* cuando:
 | `docs/backlog/*.md` | **Overview** humano de alto nivel | A mano, refleja el alcance vigente |
 
 - El backlog operativo vive en **dos GitHub Projects**, y la épica decide cuál:
-  **E1–E13** en `Hardening & Platform Backlog` (bootstrap y hardening) y **E14 en
-  adelante** en `Roadmap: calidad, evaluación y vistas agénticas`. Una tarea va
+  **E1–E12** en `Hardening & Platform Backlog` (bootstrap y hardening), y **E13 y de
+  E14 en adelante** en `Roadmap: calidad, evaluación y vistas agénticas`. Una tarea va
   siempre al tablero de su épica. Épicas y tareas se etiquetan por `epic`/`task`,
   `area/*` y `sev/*`, y cada tablero tiene un campo `Epic` que rellena `/sdd-sync`.
   La tabla que asigna épicas a tableros vive en el agente
