@@ -229,7 +229,9 @@ def construir(specs, issues, editorial, arq, avisos):
 
     borradores = []
     for s in specs:
-        if s["estado"] == "draft" and s["epica"].get("id"):
+        # Un Draft que amplía una épica ya activa (p. ej. SPEC-024 sobre E2) no es
+        # una «épica en borrador»: sus tareas entrarán en esa épica al sincronizar.
+        if s["estado"] == "draft" and s["epica"].get("id") and s["epica"]["id"] not in epicas:
             eid = s["epica"]["id"]
             borradores.append(dict(id=eid, nombre=s["epica"].get("title", eid), spec=SPEC_URL + s["archivo"], specid=s["id"],
                                    tareas=[dict(id=t["id"], title=t["title"]) for t in s["tareas"]],
