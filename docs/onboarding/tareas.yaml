@@ -59,6 +59,8 @@ reparto:
   - T15.4
   - T13.3
   - T13.4
+  - T19.1
+  - T19.2
 - nombre: Persona B
   foco: interfaz, tiempo real y QA
   tareas:
@@ -148,6 +150,48 @@ tareas:
     - template
     - providers
     - llm
+  T19.1:
+    corto: Spike de fine-tune
+    alcance: >-
+      Probar un fine-tune ligero (LoRA o similar) en el equipo de desarrollo (RTX 3070 Ti, 8 GB de
+      VRAM) con un modelo base de la selección de E13 y un <strong>corpus curado y con licencia</strong>.
+      Medir tiempo, VRAM pico y tamaño del resultado, y comparar sus salidas con RAG sobre los mismos
+      prompts. El resultado es un informe, no código de producto.
+    archivos:
+    - docs/reports/ (informe nuevo del spike)
+    - fuera de backend/app (código del spike)
+    ojo_con: >-
+      <strong>Nunca uses documentos subidos por usuarios</strong> ni datos de producción: está decidido
+      en la spec. Si el entrenamiento no cabe en 8 GB, eso también es un resultado válido: el informe
+      debe decir qué cifra lo impide. Cierra antes el resto de procesos que usan la GPU (Ollama con
+      <code>keep_alive</code>) para no falsear la medida de VRAM.
+    rama: docs/389-spike-finetune
+    revision: Decisión con datos de producto
+    componentes:
+    - providers
+    - evals
+  T19.2:
+    corto: ADR de fine-tune
+    alcance: >-
+      Con el informe del spike, escribir el ADR en <code>docs/adr/</code> que decide si se hace fine-tune y
+      cómo: sin datos de usuario, un modelo por proyecto y su lugar en la cascada de resolución de
+      modelo, dónde se entrena, base y técnica, criterio de adopción (métricas de E15 y revisión de la
+      comisión) y cómo volver a RAG sin reentrenar.
+    hecha_cuando_extra:
+    - Si el ADR se acepta, SPEC-031 incluye ya las tareas de implementación, y <code>/sdd-sync --apply</code> las crea.
+    archivos:
+    - docs/adr/ (ADR nuevo, desde 0000-template.md)
+    - docs/specs/SPEC-031-format-learning-finetune.md
+    - docs/governance/data-retention.md
+    ojo_con: >-
+      Un ADR decide, no describe: cada punto del criterio necesita una opción elegida y el motivo.
+      El criterio de adopción depende de las métricas de E15; si E15 no está lista, dilo como condición.
+    rama: docs/390-adr-finetune
+    revision: Aprobación del ADR por maintainers
+    componentes:
+    - llm
+    - template
+    - evals
   T14.1:
     corto: Alta area/qa (hecha)
     alcance: >-

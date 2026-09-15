@@ -61,8 +61,13 @@ def md_a_html(texto: str) -> str:
 
 
 def criterios(texto: str) -> dict[str, str]:
-    """AC de la sección 3 de una spec: `- [ ] **AC1** — texto` con líneas de continuación."""
-    m = re.search(r"^## 3\..*?$(.*?)^## ", texto, re.S | re.M)
+    """AC de la sección 3 de una spec: `- [ ] **AC1** — texto` con líneas de continuación.
+
+    La sección es `## 3. Criterios…`, no cualquier `## 3.x`: SPEC-031 tiene un
+    `## 3.0 Preguntas abiertas` antes, y tomar el primer «3.» dejaba sin criterios.
+    """
+    m = (re.search(r"^## 3\.\s+Criterios.*?$(.*?)(?=^## |\Z)", texto, re.S | re.M)
+         or re.search(r"^## 3\.\s.*?$(.*?)(?=^## |\Z)", texto, re.S | re.M))
     if not m:
         return {}
     acs: dict[str, str] = {}

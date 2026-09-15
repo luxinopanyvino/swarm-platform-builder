@@ -261,11 +261,11 @@
  },
  "T13.1": {
   "n": 382,
-  "estado": "open"
+  "estado": "closed"
  },
  "T13.2": {
   "n": 383,
-  "estado": "open"
+  "estado": "closed"
  },
  "T13.3": {
   "n": 384,
@@ -413,6 +413,18 @@
  },
  "T18.6": {
   "n": 369,
+  "estado": "open"
+ },
+ "E19": {
+  "n": 388,
+  "estado": "open"
+ },
+ "T19.1": {
+  "n": 389,
+  "estado": "open"
+ },
+ "T19.2": {
+  "n": 390,
   "estado": "open"
  }
 }
