@@ -201,6 +201,10 @@ async def run_investigador(state: Dict[str, Any]) -> Dict[str, Any]:
         # (Ollama) concern only — cloud providers have no local VRAM, and the
         # fallback string is an Ollama model, so it must not be sent elsewhere.
         _SYNTHESIS_FALLBACK_MODEL = "llama3.2:1b"
+        # Tope de salida de la síntesis. Es un resumen: ~1000 tokens sobran. Sin
+        # tope, Ollama no para nunca por su cuenta, y un modelo pequeño que entra
+        # en bucle repitiendo frases llenaba el timeout de 600 s en cada intento.
+        _SYNTHESIS_MAX_TOKENS = 1024
 
         if research_chunks:
             log(f"🧠 Etapa 2/2 — Síntesis con LLM ({model}) de {len(research_chunks)} fragmento(s)...")
@@ -241,6 +245,7 @@ async def run_investigador(state: Dict[str, Any]) -> Dict[str, Any]:
             keep_alive=0,   # unload after synthesis — frees VRAM before redactor loads its model
             num_ctx=8192 if research_chunks else 2048,   # more context for multi-source synthesis
             temperature=temperature,
+            max_tokens=_SYNTHESIS_MAX_TOKENS,
         )
         if synthesis and len(synthesis.split()) > 30:
             research_chunks.append(f"[Síntesis] {synthesis}")
