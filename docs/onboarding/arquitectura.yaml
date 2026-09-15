@@ -1,0 +1,458 @@
+# Arquitectura, recorrido de una ejecución y agentes del pipeline para la guía.
+# capa: 0 Navegador · 1 API · 2 Plataforma · 3 Datos y servicios · 4 Transversal
+# nuevo: true → el componente aún no existe (se dibuja con borde discontinuo).
+# Los ids de componente son los que usan las tareas en docs/onboarding/tareas.yaml.
+# pie: texto opcional bajo el agente en el dibujo del pipeline.
+capas:
+- Navegador
+- API · FastAPI
+- Plataforma
+- Datos y servicios
+- Transversal
+componentes:
+- id: fe-platform
+  capa: 0
+  nombre: Builder
+  ruta: frontend/src/platform/
+  que: >-
+    La parte reutilizable del frontend: Flow Designer (React Flow), agentes, documentos, usuarios, configuración,
+    cliente HTTP y stores de Zustand.
+  reglas:
+  - >-
+    <code>platform/</code> <strong>nunca</strong> importa de <code>projects/</code>; lo vigila <code>test_frontend_layers.py</code>.
+  - >-
+    Lo que necesita saber del proyecto lo pregunta a registros (<code>setAgentCatalog</code>, <code>setRunTarget</code>…)
+    que <code>main.jsx</code> rellena al arrancar.
+  relaciones:
+  - con: api-agents
+    como: lanza ejecuciones y escucha su SSE
+  - con: api-core
+    como: sesión y proyecto activo en X-Project-Id
+- id: fe-project
+  capa: 0
+  nombre: AlejandrIA
+  ruta: frontend/src/projects/alejandria-magazine/
+  que: >-
+    Las vistas de consumo de este proyecto: artículos, seguimiento de la ejecución (<code>ExecutionPage</code>),
+    revista y maquetación del paper. <code>catalog.jsx</code> declara sus agentes y su navegación.
+  reglas:
+  - >-
+    Aquí vive el vocabulario del proyecto («artículo», «paper»); el builder no lo escribe a mano.
+  relaciones:
+  - con: fe-platform
+    como: se registra en el builder desde main.jsx
+  - con: api-articles
+    como: lee y edita artículos
+  - con: api-agents
+    como: sigue la ejecución por SSE
+- id: fe-public
+  capa: 0
+  nombre: Revista pública
+  ruta: vite.public.config.js · index.public.html
+  que: >-
+    Un segundo build de Vite, independiente de la app, que sirve la revista a lectores sin sesión.
+  reglas:
+  - >-
+    Si tocas algo que comparte, comprueba <code>npm run build</code> <strong>y</strong> <code>npm run
+    build:public</code>.
+  relaciones:
+  - con: api-articles
+    como: lee la revista publicada
+- id: api-core
+  capa: 1
+  nombre: Auth y proyectos
+  ruta: routers/auth.py · projects.py
+  que: >-
+    Login con JWT, rate limit y bloqueo tras intentos fallidos, usuarios, proyectos y acceso por proyecto.
+  reglas:
+  - 'El bloqueo del login es deliberado: en pruebas de carga no es un error.'
+  relaciones:
+  - con: ctx
+    como: autoriza el acceso a cada proyecto
+  - con: sql
+    como: usuarios y proyectos
+- id: api-agents
+  capa: 1
+  nombre: Agentes y ejecución
+  ruta: routers/agents.py
+  que: >-
+    Lanza el pipeline y expone <code>/{id}/stream</code> (SSE, con stream-ticket), <code>/decision</code>
+    (pausa humana), la cancelación, <code>/{id}/explain</code> y la subida de documentos al RAG.
+  reglas:
+  - >-
+    Toda ruta que lee o escribe datos del proyecto pide la dependencia <code>get_project_context</code>
+    (hay un test que lo comprueba).
+  relaciones:
+  - con: ctx
+    como: resuelve el proyecto de la petición
+  - con: engine
+    como: lanza el grafo
+  - con: bus
+    como: se suscribe a los eventos de la ejecución
+  - con: rag
+    como: indexa documentos subidos
+  - con: trace
+    como: sirve /explain
+- id: api-articles
+  capa: 1
+  nombre: Artículos, flujos y revista
+  ruta: routers/articles.py · flows.py · magazine.py
+  que: CRUD de artículos, flujos guardados del Flow Designer y la API de la revista pública.
+  reglas:
+  - >-
+    Los estados de artículo pueden quedarse desfasados respecto a la ejecución; el estado real está en
+    <code>agent_runs</code>.
+  relaciones:
+  - con: sql
+    como: artículos y flujos
+- id: api-dashboard
+  capa: 1
+  nombre: Portada
+  ruta: routers/dashboard.py
+  que: >-
+    <strong>Todavía no existe.</strong> Servirá <code>GET /dashboard/summary</code>: las magnitudes de
+    la portada, solo del proyecto activo.
+  nuevo: true
+  reglas:
+  - No reutilizar <code>/metrics</code>, que es anónima y sin proyecto.
+  relaciones:
+  - con: ctx
+    como: filtra por proyecto
+  - con: trace
+    como: agrega agent_run_steps
+- id: api-health
+  capa: 1
+  nombre: Salud y métricas
+  ruta: routers/health.py
+  que: >-
+    <code>/health</code> y <code>/metrics</code> en formato Prometheus para el recolector de operación.
+  reglas:
+  - 'Sin autenticación ni proyecto: no sirve para vistas de producto.'
+  relaciones: []
+- id: ctx
+  capa: 2
+  nombre: Aislamiento por proyecto
+  ruta: platform/project_context.py · project_access.py
+  que: >-
+    Resuelve y autoriza el proyecto de cada petición (cabecera <code>X-Project-Id</code>) y deriva el
+    nombre de la colección de Qdrant: <code>p_&lt;project_id&gt;__&lt;bucket&gt;</code>.
+  reglas:
+  - >-
+    El nombre de la colección se <strong>deriva</strong>, nunca se recibe ni se compone a mano.
+  - >-
+    Una fuga entre proyectos no rompe nada visible: por eso cada tarea que agrega datos lleva un test
+    con dos proyectos.
+  relaciones:
+  - con: qdrant
+    como: colección por proyecto
+- id: engine
+  capa: 2
+  nombre: Motor del pipeline
+  ruta: platform/engine/ · modules/agents/application/use_cases.py
+  que: >-
+    Construye el <code>StateGraph</code> de LangGraph a partir de un <code>GraphSpec</code> (secuencia
+    + bucles de revisión) y ejecuta los nodos pasándose un <code>AgentState</code>. Aquí viven el bucle
+    revisor→redactor y la pausa humana.
+  reglas:
+  - El motor <strong>no nombra</strong> a ningún agente concreto.
+  - >-
+    Si añades un agente o cambias el bucle, se hace en <code>template.yaml</code>, no en Python.
+  relaciones:
+  - con: template
+    como: lee la secuencia y los bucles
+  - con: caps
+    como: inyecta a cada agente sus capacidades
+  - con: trace
+    como: cierra cada paso
+  - con: bus
+    como: publica eventos de la ejecución
+- id: caps
+  capa: 2
+  nombre: Capacidades
+  ruta: platform/capabilities/registry.py · binding.py
+  que: >-
+    Registro de lo que un agente puede usar: <code>rag</code>, <code>rag_results</code>, <code>llm</code>,
+    <code>llm_stream</code>, <code>search</code>, <code>format</code>, <code>publish</code>. Con <code>AGENT_ENGINE=capabilities</code>
+    se inyectan; con <code>adapters</code> cada agente usa su import.
+  reglas:
+  - 'Los dos caminos deben dar el mismo resultado: hay un test de paridad.'
+  relaciones:
+  - con: llm
+    como: llm · llm_stream
+  - con: rag
+    como: rag · rag_results
+  - con: egress
+    como: search
+- id: trace
+  capa: 2
+  nombre: Traza de explicabilidad
+  ruta: platform/explainability.py
+  que: >-
+    Una fila en <code>agent_run_steps</code> por paso: modelo, parámetros, fuentes RAG con su score, tokens,
+    latencia y decisión del revisor. <code>group_executions</code> separa las ejecuciones de un mismo
+    artículo.
+  reglas:
+  - >-
+    Tokens y fuentes los anotan quienes los conocen (dispatcher y RAG) en variables de contexto: un agente
+    nuevo queda trazado sin tocarlo.
+  - >-
+    <code>step_index</code> vuelve a 0 al empezar una ejecución nueva; una reanudación no reinicia.
+  relaciones:
+  - con: sql
+    como: agent_runs · agent_run_steps
+- id: llm
+  capa: 2
+  nombre: Dispatcher LLM
+  ruta: platform/llm.py
+  que: >-
+    La única puerta a los modelos: Anthropic, Ollama u OpenAI según <code>LLM_PROVIDER</code>. Resuelve
+    modelo y temperatura por cascada (ejecución → <code>.agent.md</code> → proveedor), reintenta errores
+    transitorios y admite <code>max_tokens</code>.
+  reglas:
+  - Nada llama a un proveedor por su cuenta; tampoco las librerías de evaluación.
+  - >-
+    Con Ollama pide <code>think: false</code>: los modelos que razonan gastaban el contexto pensando.
+  relaciones:
+  - con: providers
+    como: una llamada por paso, o en streaming
+- id: rag
+  capa: 2
+  nombre: RAG
+  ruta: platform/capabilities/rag.py
+  que: >-
+    Extrae texto de PDF, trocea, vectoriza con <code>EMBED_PROVIDER</code> (independiente del de generación)
+    y busca en el bucket del agente más la biblioteca <code>__library__</code> del proyecto.
+  reglas:
+  - >-
+    La dimensión del índice sale de <code>embed_vector_size()</code>; si no cuadra, la indexación se corta
+    con 409.
+  relaciones:
+  - con: qdrant
+    como: vectores por colección
+  - con: providers
+    como: embeddings
+  - con: ctx
+    como: pide la colección derivada
+- id: egress
+  capa: 2
+  nombre: Egress
+  ruta: platform/egress.py
+  que: >-
+    La única salida hacia destinos que elige la persona usuaria o el modelo (<code>fetch_url</code>, búsqueda
+    académica). Bloquea por IP resuelta y revalida cada redirección.
+  reglas:
+  - Todo fetch saliente influido por usuario o modelo sale por <code>safe_get</code>.
+  relaciones:
+  - con: internet
+    como: IP resuelta y validada
+- id: bus
+  capa: 2
+  nombre: Bus de eventos
+  ruta: platform/bus.py
+  que: >-
+    Lleva los eventos de la ejecución (<code>agent_start</code>, <code>token</code>, <code>await_decision</code>,
+    <code>done</code>…) al SSE y las señales de control entre workers. En memoria por defecto; Redis con
+    <code>REDIS_ENABLED</code>.
+  reglas:
+  - >-
+    Con varios workers, el SSE y el pipeline pueden estar en procesos distintos: por eso existe.
+  relaciones:
+  - con: redis
+    como: pub/sub si hay varios workers
+  - con: api-agents
+    como: entrega eventos al SSE
+- id: sql
+  capa: 3
+  nombre: Base de datos
+  ruta: SQLAlchemy async · Alembic
+  que: >-
+    SQLite en local (<code>backend/data/dev.db</code>) y Postgres en Docker. El esquema se versiona con
+    Alembic y el arranque aplica <code>upgrade head</code>.
+  reglas:
+  - 'Nunca cambies el esquema con SQL a mano: siempre una migración revisada.'
+  - <code>tests/conftest.py</code> aborta si los tests apuntan a la base de desarrollo.
+  relaciones: []
+- id: qdrant
+  capa: 3
+  nombre: Qdrant
+  ruta: colecciones p_<proyecto>__<bucket>
+  que: 'Base vectorial de los documentos: una colección por proyecto y bucket.'
+  reglas: []
+  relaciones: []
+- id: providers
+  capa: 3
+  nombre: Modelos
+  ruta: Anthropic · Ollama · OpenAI
+  que: >-
+    Anthropic es el motor por defecto del repo; en local se usa Ollama (<code>dev-local.cmd</code> lo
+    fija). OpenAI cubre servidores compatibles.
+  reglas:
+  - 'Para trabajo con modelo real en local: <code>qwen3.5:4b</code> o <code>9b</code>.'
+  relaciones: []
+- id: redis
+  capa: 3
+  nombre: Redis
+  ruta: opcional · REDIS_ENABLED
+  que: Solo hace falta con varios workers del backend.
+  reglas: []
+  relaciones: []
+- id: internet
+  capa: 3
+  nombre: Internet
+  ruta: búsqueda académica · fetch_url
+  que: Destinos externos, siempre a través de Egress.
+  reglas: []
+  relaciones: []
+- id: template
+  capa: 4
+  nombre: Proyecto como dato
+  ruta: backend/projects/<slug>/template.yaml
+  que: >-
+    Define un proyecto entero: agentes, capacidades de cada uno, secuencia y bucles de revisión. Los <code>agents/*.agent.md</code>
+    son los perfiles que se clonan a la base.
+  reglas:
+  - >-
+    Se valida al cargar: una capacidad inexistente o un nodo no declarado fallan al arrancar, no a mitad
+    de la ejecución.
+  relaciones:
+  - con: engine
+    como: lo lee el motor
+- id: evals
+  capa: 4
+  nombre: Evaluación
+  ruta: backend/evals/
+  que: >-
+    <code>agent_behavior/</code> evalúa a los agentes de la plataforma sobre datasets versionados (gate
+    EDD con <code>thresholds.yaml</code>). <code>model_benchmark/</code> compara modelos entre sí.
+  reglas:
+  - >-
+    <code>replay</code> reproduce salidas grabadas y <strong>no</strong> evalúa al modelo; solo <code>live</code>
+    lo hace.
+  relaciones:
+  - con: engine
+    como: ejecuta el agente real
+  - con: trace
+    como: lee tokens y fuentes
+  - con: llm
+    como: el juez llama por el dispatcher
+- id: ci
+  capa: 4
+  nombre: CI y calidad
+  ruta: .github/workflows/ · backend/tests/
+  que: >-
+    En cada PR a <code>develop</code>: pytest del backend, build del frontend, validación de specs, auditoría
+    de dependencias y escaneo de secretos. El gate EDD corre en PRs que tocan agentes.
+  reglas:
+  - Un check obligatorio con filtro de rutas bloquea PRs para siempre.
+  relaciones: []
+recorrido:
+- componentes:
+  - fe-platform
+  texto: >-
+    Pulsas <strong>Ejecutar</strong> en el Flow Designer. El builder crea el artículo con el registro
+    <code>runTarget</code> y navega a la ejecución con la secuencia de agentes del lienzo.
+- componentes:
+  - fe-project
+  - api-agents
+  texto: >-
+    <code>ExecutionPage</code> pide un stream-ticket, abre el SSE de <code>/agents/{id}/stream</code>
+    y lanza el pipeline.
+- componentes:
+  - api-agents
+  - ctx
+  texto: >-
+    La API resuelve y autoriza el proyecto de la cabecera <code>X-Project-Id</code>. Desde aquí, el proyecto
+    viaja en <code>AgentState.project_id</code>.
+- componentes:
+  - engine
+  - template
+  texto: >-
+    El motor construye el <code>StateGraph</code> desde el <code>GraphSpec</code> de <code>template.yaml</code>
+    y empieza por el primer nodo.
+- componentes:
+  - engine
+  - caps
+  texto: >-
+    Cada agente recibe las capacidades que declara (el investigador, <code>rag_results</code> y <code>llm</code>).
+- componentes:
+  - rag
+  - ctx
+  - qdrant
+  texto: >-
+    El investigador busca fragmentos en su bucket y en <code>__library__</code>, dentro de la colección
+    derivada del proyecto.
+- componentes:
+  - llm
+  - providers
+  texto: >-
+    Sintetiza con el modelo resuelto por la cascada. El redactor hace lo mismo en streaming, token a token.
+- componentes:
+  - trace
+  - sql
+  texto: >-
+    Al cerrar cada paso se escribe una fila en <code>agent_run_steps</code>: modelo, fuentes, tokens,
+    latencia.
+- componentes:
+  - bus
+  - api-agents
+  - fe-project
+  texto: >-
+    Los eventos (<code>agent_start</code>, <code>token</code>, <code>await_decision</code>…) viajan por
+    el bus hasta el SSE y la pantalla los pinta.
+- componentes:
+  - engine
+  texto: >-
+    El revisor puntúa. Por debajo de 80 el grafo vuelve al redactor, como mucho 3 veces. La ejecución
+    puede pausarse para una decisión humana.
+- componentes:
+  - engine
+  - sql
+  - fe-project
+  texto: >-
+    El formateador aplica el formato y el publicador persiste el artículo final. Llega <code>done</code>,
+    y <code>/explain</code> puede reconstruir por qué salió ese resultado.
+agentes:
+- id: investigador
+  nombre: Investigador
+  desc: Busca fuentes en la base de conocimiento (su bucket y la biblioteca compartida del proyecto) y
+    sintetiza el material con sus citas.
+  requires:
+  - rag_results
+  - llm
+  entry: modules/agents/adapters/investigador.py
+  perfil: projects/alejandria-magazine/agents/investigador.agent.md
+  pie: RAG · Qdrant
+- id: redactor
+  nombre: Redactor
+  desc: Escribe el borrador a partir de la investigación y, en las vueltas siguientes, del feedback del
+    revisor. Emite el texto token a token por SSE.
+  requires:
+  - rag
+  - llm
+  - llm_stream
+  entry: modules/agents/adapters/redactor.py
+  perfil: projects/alejandria-magazine/agents/redactor.agent.md
+  pie: RAG · streaming SSE
+- id: revisor
+  nombre: Revisor
+  desc: Puntúa el borrador. Por debajo de 80 lo devuelve al redactor, como mucho 3 veces; si aprueba,
+    sigue el flujo.
+  requires:
+  - llm
+  entry: modules/agents/adapters/revisor.py
+  perfil: projects/alejandria-magazine/agents/revisor.agent.md
+- id: formateador
+  nombre: Formateador
+  desc: Aplica el formato científico elegido (APA, IEEE, Vancouver…) y construye las referencias.
+  requires:
+  - llm
+  entry: modules/agents/adapters/formateador.py
+  perfil: projects/alejandria-magazine/agents/formateador.agent.md
+- id: publicador
+  nombre: Publicador
+  desc: Persiste el artículo final y genera la maquetación imprimible del paper.
+  requires:
+  - format
+  entry: modules/agents/adapters/publicador.py
+  perfil: projects/alejandria-magazine/agents/publicador.agent.md
+  pie: artículo + paper maquetado

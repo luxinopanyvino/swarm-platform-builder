@@ -1,0 +1,398 @@
+{
+ "E1": {
+  "n": 147,
+  "estado": "closed"
+ },
+ "T1.1": {
+  "n": 153,
+  "estado": "closed"
+ },
+ "T1.2": {
+  "n": 154,
+  "estado": "closed"
+ },
+ "T1.3": {
+  "n": 155,
+  "estado": "closed"
+ },
+ "T1.4": {
+  "n": 156,
+  "estado": "closed"
+ },
+ "T1.5": {
+  "n": 157,
+  "estado": "closed"
+ },
+ "T1.6": {
+  "n": 158,
+  "estado": "closed"
+ },
+ "E2": {
+  "n": 148,
+  "estado": "closed"
+ },
+ "T2.1": {
+  "n": 159,
+  "estado": "closed"
+ },
+ "T2.2": {
+  "n": 160,
+  "estado": "closed"
+ },
+ "T2.3": {
+  "n": 161,
+  "estado": "closed"
+ },
+ "T2.4": {
+  "n": 162,
+  "estado": "closed"
+ },
+ "E3": {
+  "n": 149,
+  "estado": "closed"
+ },
+ "T3.1": {
+  "n": 163,
+  "estado": "closed"
+ },
+ "T3.2": {
+  "n": 164,
+  "estado": "closed"
+ },
+ "T3.3": {
+  "n": 165,
+  "estado": "closed"
+ },
+ "T3.4": {
+  "n": 166,
+  "estado": "closed"
+ },
+ "T3.5": {
+  "n": 167,
+  "estado": "closed"
+ },
+ "E4": {
+  "n": 150,
+  "estado": "closed"
+ },
+ "T4.1": {
+  "n": 168,
+  "estado": "closed"
+ },
+ "T4.2": {
+  "n": 169,
+  "estado": "closed"
+ },
+ "T4.3": {
+  "n": 170,
+  "estado": "closed"
+ },
+ "E5": {
+  "n": 151,
+  "estado": "closed"
+ },
+ "T5.1": {
+  "n": 171,
+  "estado": "closed"
+ },
+ "T5.2": {
+  "n": 172,
+  "estado": "closed"
+ },
+ "T5.3": {
+  "n": 173,
+  "estado": "closed"
+ },
+ "T5.4": {
+  "n": 174,
+  "estado": "closed"
+ },
+ "E6": {
+  "n": 152,
+  "estado": "closed"
+ },
+ "T6.1": {
+  "n": 175,
+  "estado": "closed"
+ },
+ "T6.2": {
+  "n": 176,
+  "estado": "closed"
+ },
+ "T6.3": {
+  "n": 177,
+  "estado": "closed"
+ },
+ "T6.4": {
+  "n": 178,
+  "estado": "closed"
+ },
+ "T6.5": {
+  "n": 179,
+  "estado": "closed"
+ },
+ "T6.6": {
+  "n": 180,
+  "estado": "closed"
+ },
+ "E7": {
+  "n": 191,
+  "estado": "closed"
+ },
+ "T7.1": {
+  "n": 192,
+  "estado": "closed"
+ },
+ "T7.2": {
+  "n": 193,
+  "estado": "closed"
+ },
+ "T7.3": {
+  "n": 194,
+  "estado": "closed"
+ },
+ "E8": {
+  "n": 206,
+  "estado": "closed"
+ },
+ "T8.1": {
+  "n": 207,
+  "estado": "closed"
+ },
+ "T8.2": {
+  "n": 208,
+  "estado": "closed"
+ },
+ "T8.3": {
+  "n": 209,
+  "estado": "closed"
+ },
+ "T8.4": {
+  "n": 210,
+  "estado": "closed"
+ },
+ "T8.5": {
+  "n": 211,
+  "estado": "closed"
+ },
+ "T8.6": {
+  "n": 212,
+  "estado": "closed"
+ },
+ "E9": {
+  "n": 220,
+  "estado": "closed"
+ },
+ "T9.1": {
+  "n": 221,
+  "estado": "closed"
+ },
+ "T9.2": {
+  "n": 224,
+  "estado": "closed"
+ },
+ "T9.3": {
+  "n": 222,
+  "estado": "closed"
+ },
+ "T9.4": {
+  "n": 225,
+  "estado": "closed"
+ },
+ "T9.5": {
+  "n": 226,
+  "estado": "closed"
+ },
+ "T9.6": {
+  "n": 223,
+  "estado": "closed"
+ },
+ "E11": {
+  "n": 246,
+  "estado": "closed"
+ },
+ "T11.1": {
+  "n": 247,
+  "estado": "closed"
+ },
+ "T11.2": {
+  "n": 248,
+  "estado": "closed"
+ },
+ "T11.3": {
+  "n": 249,
+  "estado": "closed"
+ },
+ "T11.4": {
+  "n": 250,
+  "estado": "closed"
+ },
+ "T11.5": {
+  "n": 251,
+  "estado": "closed"
+ },
+ "E12": {
+  "n": 253,
+  "estado": "closed"
+ },
+ "T12.1": {
+  "n": 254,
+  "estado": "closed"
+ },
+ "T12.2": {
+  "n": 255,
+  "estado": "closed"
+ },
+ "T12.3": {
+  "n": 256,
+  "estado": "closed"
+ },
+ "T12.4": {
+  "n": 257,
+  "estado": "closed"
+ },
+ "T12.5": {
+  "n": 258,
+  "estado": "closed"
+ },
+ "E14": {
+  "n": 333,
+  "estado": "open"
+ },
+ "T14.1": {
+  "n": 335,
+  "estado": "open"
+ },
+ "T14.2": {
+  "n": 336,
+  "estado": "open"
+ },
+ "T14.3": {
+  "n": 337,
+  "estado": "open"
+ },
+ "T14.4": {
+  "n": 338,
+  "estado": "open"
+ },
+ "T14.5": {
+  "n": 339,
+  "estado": "open"
+ },
+ "T14.6": {
+  "n": 340,
+  "estado": "open"
+ },
+ "T14.7": {
+  "n": 341,
+  "estado": "open"
+ },
+ "E15": {
+  "n": 334,
+  "estado": "open"
+ },
+ "T15.1": {
+  "n": 342,
+  "estado": "open"
+ },
+ "T15.2": {
+  "n": 343,
+  "estado": "open"
+ },
+ "T15.3": {
+  "n": 344,
+  "estado": "open"
+ },
+ "T15.4": {
+  "n": 345,
+  "estado": "open"
+ },
+ "T15.5": {
+  "n": 346,
+  "estado": "open"
+ },
+ "E16": {
+  "n": 349,
+  "estado": "open"
+ },
+ "T16.1": {
+  "n": 352,
+  "estado": "open"
+ },
+ "T16.2": {
+  "n": 353,
+  "estado": "open"
+ },
+ "T16.3": {
+  "n": 354,
+  "estado": "open"
+ },
+ "T16.4": {
+  "n": 355,
+  "estado": "open"
+ },
+ "T16.5": {
+  "n": 356,
+  "estado": "open"
+ },
+ "T16.6": {
+  "n": 357,
+  "estado": "open"
+ },
+ "E17": {
+  "n": 350,
+  "estado": "open"
+ },
+ "T17.1": {
+  "n": 358,
+  "estado": "open"
+ },
+ "T17.2": {
+  "n": 359,
+  "estado": "open"
+ },
+ "T17.3": {
+  "n": 360,
+  "estado": "open"
+ },
+ "T17.4": {
+  "n": 361,
+  "estado": "open"
+ },
+ "T17.5": {
+  "n": 362,
+  "estado": "open"
+ },
+ "T17.6": {
+  "n": 363,
+  "estado": "open"
+ },
+ "E18": {
+  "n": 351,
+  "estado": "open"
+ },
+ "T18.1": {
+  "n": 364,
+  "estado": "open"
+ },
+ "T18.2": {
+  "n": 365,
+  "estado": "open"
+ },
+ "T18.3": {
+  "n": 366,
+  "estado": "open"
+ },
+ "T18.4": {
+  "n": 367,
+  "estado": "open"
+ },
+ "T18.5": {
+  "n": 368,
+  "estado": "open"
+ },
+ "T18.6": {
+  "n": 369,
+  "estado": "open"
+ }
+}

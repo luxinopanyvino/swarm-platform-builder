@@ -1,0 +1,611 @@
+# Contenido editorial de la guía «AlejandrIA por dentro».
+#
+# Lo que NO va aquí, porque sale solo de las specs y de GitHub al regenerar:
+# título, severidad, dependencias, criterios de aceptación, número y estado del issue.
+# Lo que SÍ va aquí: lo que ayuda a ejecutar una tarea y no está en la spec.
+#
+# Campos por tarea (todos opcionales; sin ficha, la tarea sale con lo mínimo):
+#   corto              nombre breve para el diagrama (≤ 24 caracteres)
+#   alcance            qué entra, en HTML sencillo (<code>, <strong>, <em>)
+#   hecha_cuando_extra criterios que se añaden a los AC de la spec
+#   archivos           rutas que toca
+#   ojo_con            lo que suele salir mal
+#   rama               rama sugerida, con prefijo
+#   componentes        ids de docs/onboarding/arquitectura.yaml
+#   revision           motivo para pedir revisión de alguien con experiencia
+#   estado: implementada   hecha pero con el issue aún abierto
+#
+# Regenerar: python scripts/build_onboarding.py   (ver docs/onboarding/README.md)
+epicas:
+  E14:
+    corto: QA
+  E15:
+    corto: deepeval
+  E16:
+    corto: Portada
+  E17:
+    corto: Trazabilidad
+  E18:
+    corto: Referencia
+  E19:
+    corto: Fine-tune
+    nota_borrador: >-
+      RAG se puede deshacer y un fine-tune no: el contenido queda en los pesos, y eso choca con la retención
+      de datos y el aislamiento por proyecto. Antes de abrirla hay que responder las preguntas de la spec
+      y escribir un ADR. Su criterio de éxito depende de las métricas de E15; en la pantalla de subida
+      (T18.5) el modo aparece como no disponible.
+reparto:
+- nombre: Persona A
+  foco: backend y datos
+  tareas:
+  - T14.1
+  - T14.3
+  - T14.2
+  - T16.1
+  - T16.3
+  - T16.2
+  - T16.4
+  - T17.2
+  - T17.3
+  - T17.4
+  - T15.1
+  - T15.2
+  - T15.3
+  - T15.5
+  - T15.4
+- nombre: Persona B
+  foco: interfaz, tiempo real y QA
+  tareas:
+  - T14.4
+  - T17.1
+  - T17.5
+  - T18.4
+  - T18.6
+  - T18.1
+  - T18.2
+  - T16.5
+  - T16.6
+  - T17.6
+  - T18.3
+  - T18.5
+  - T14.5
+  - T14.6
+  - T14.7
+tareas:
+  T14.1:
+    corto: Alta area/qa (hecha)
+    alcance: >-
+      Dar de alta la etiqueta <code>area/qa</code> en los cuatro sitios que la usan. <strong>Ya está hecho</strong>
+      en el commit <code>c058fd4</code>: el validador la acepta, el seed la tiene, GOVERNANCE y el backlog
+      la nombran y <code>test_qa_area_registration.py</code> pasa. Queda verificarlo y cerrar la tarea
+      por el flujo normal.
+    archivos:
+    - scripts/validate_specs.py
+    - scripts/seed_github_project.py
+    - docs/governance/GOVERNANCE.md
+    ojo_con: >-
+      Buena primera tarea para aprender el flujo (rama, PR, bitácora) sin riesgo. No rehagas lo que ya
+      funciona.
+    rama: docs/335-area-qa
+    componentes:
+    - ci
+    hecha_cuando_extra:
+    - >-
+      <code>test_qa_area_registration.py</code> y <code>test_spec_plan_coherence.py</code> en verde.
+    - <code>scripts/validate_specs.py</code> acepta specs con <code>area/qa</code>.
+    - >-
+      Bitácora <code>docs/bitacora/tarea-335.md</code> con la verificación, en una PR <code>Closes #335</code>.
+    estado: implementada
+  T14.2:
+    corto: Doc. estrategia QA
+    alcance: >-
+      Escribir <code>docs/governance/qa-strategy.md</code>: qué es aquí una prueba unitaria, de integración
+      y de estrés, dónde vive cada una, cuál bloquea una PR, <strong>qué se decide no probar y por qué</strong>,
+      y la frontera con EDD (QA mide lo determinista; EDD, el comportamiento probabilístico). Enlazarlo
+      desde GOVERNANCE §6 y añadir un test que cruce el documento con el repositorio.
+    archivos:
+    - docs/governance/qa-strategy.md
+    - docs/governance/GOVERNANCE.md
+    - backend/tests/test_qa_strategy.py
+    ojo_con: >-
+      Cuando escribas el documento, <code>backend/tests/integration/</code> y <code>qa/load/</code> aún
+      no existen (los crean T14.5 y T14.6). Márcalos como planificados de forma que el test lo entienda,
+      en vez de nombrar rutas que lo harían fallar. Inspírate en <code>test_sdd_governance.py</code>.
+    rama: docs/336-estrategia-qa
+    componentes:
+    - ci
+  T14.3:
+    corto: Suelo de cobertura
+    alcance: >-
+      Añadir <code>pytest-cov</code>, medir la cobertura actual de <code>app</code> y fijar <code>--cov-fail-under</code>
+      <strong>al número medido</strong> en el job de backend de <code>ci.yml</code>.
+    archivos:
+    - backend/requirements-dev.in (nuevo)
+    - .github/workflows/ci.yml
+    ojo_con: >-
+      No existe fichero de dependencias de desarrollo: la spec habla de <code>requirements-dev.in</code>
+      y hay que crearlo con el mismo lock con hashes que <code>requirements.txt</code> (ver CLAUDE.md,
+      «Dependencias»). Coordina con T15.1, que también añade una dependencia de desarrollo. El suelo es
+      anti-regresión, no una meta.
+    rama: chore/337-cobertura
+    componentes:
+    - ci
+  T14.4:
+    corto: Vitest en frontend
+    alcance: >-
+      Vitest en <code>frontend/</code> (script <code>npm test</code>, <code>vitest.config.js</code>) y
+      primeras pruebas donde hay lógica: el cliente HTTP (cabecera <code>X-Project-Id</code>, logout ante
+      401), los stores de sesión y proyectos, y los registros de <code>platform/</code> (<code>setAgentCatalog</code>,
+      <code>setProjectNavItems</code>, <code>setRunTarget</code>, <code>setNotificationRoute</code>).
+      Un job de CI que lo ejecute y bloquee.
+    archivos:
+    - frontend/package.json
+    - frontend/vitest.config.js
+    - frontend/src/platform/**/*.test.js
+    - .github/workflows/ci.yml
+    ojo_con: >-
+      Hay dos builds de Vite: <code>npm run build</code> y <code>npm run build:public</code> deben seguir
+      pasando. Las pruebas de <code>platform/</code> no pueden importar de <code>projects/</code> (lo
+      vigila <code>test_frontend_layers.py</code>). Ninguna prueba necesita el backend encendido.
+    rama: feat/338-vitest
+    componentes:
+    - fe-platform
+    - ci
+  T14.5:
+    corto: Integración real
+    alcance: >-
+      <code>docker-compose.test.yml</code> con Qdrant y Postgres, una marca <code>integration</code> que
+      la suite rápida excluye por defecto, y en <code>backend/tests/integration/</code> los casos que
+      <strong>solo</strong> se pueden probar con el servicio real. Job propio en CI.
+    archivos:
+    - docker-compose.test.yml (nuevo)
+    - backend/tests/integration/ (nuevo)
+    - .github/workflows/ci.yml
+    ojo_con: >-
+      <code>backend/tests/conftest.py</code> <strong>aborta pytest</strong> si <code>DATABASE_URL</code>
+      no es SQLite o apunta a <code>backend/data/</code>: es la guarda que evita que un test vacíe la
+      base de desarrollo, y ya ocurrió. La suite de integración necesita un opt-in explícito para Postgres
+      <em>sin debilitar esa guarda</em>. Pide revisión de ese cambio. Candidato claro a fallar distinto
+      en Postgres: el ciclo de claves foráneas <code>users</code> ↔ <code>projects</code>.
+    rama: feat/339-integracion
+    componentes:
+    - sql
+    - qdrant
+    - rag
+    - ci
+    revision: Toca la guarda de la base de datos de tests
+  T14.6:
+    corto: Carga con k6
+    alcance: >-
+      Scripts de <code>k6</code> en <code>qa/load/</code> para los tres caminos caros: ejecución del pipeline
+      por SSE (conexiones abiertas simultáneas), indexación RAG (lotes al proveedor de embeddings) y login
+      (rate limit y bloqueo). Presupuestos escritos en <code>qa/load/budgets.yaml</code>.
+    archivos:
+    - qa/load/ (nuevo)
+    - qa/load/budgets.yaml (nuevo)
+    ojo_con: >-
+      La carga es informativa: un runner compartido da cifras ruidosas, así que deja margen en los presupuestos
+      y compara solo ejecuciones del mismo perfil. El login bloquea cuentas tras varios fallos a propósito:
+      no lo confundas con un error. Acordad qué modelo usa el escenario de pipeline (la VRAM es el recurso
+      escaso).
+    rama: feat/340-carga-k6
+    componentes:
+    - bus
+    - api-core
+    - rag
+  T14.7:
+    corto: Tres niveles en CI
+    alcance: >-
+      Reorganizar <code>ci.yml</code> en tres niveles: unitarias (backend y frontend) bloqueantes y rápidas,
+      integración bloqueante en job aparte, carga informativa y <strong>no obligatoria</strong>. Si integración
+      pasa a check requerido, reimportar el ruleset de <code>branch-protection.md</code>.
+    archivos:
+    - .github/workflows/ci.yml
+    - .github/rulesets/develop.json
+    - docs/governance/branch-protection.md
+    ojo_con: >-
+      Un check requerido con filtro de rutas o duración variable bloquea PRs para siempre (lo documenta
+      <code>branch-protection.md</code>). Nunca añadas el de carga a los obligatorios.
+    rama: chore/341-niveles-ci
+    componentes:
+    - ci
+  T15.1:
+    corto: Adoptar deepeval
+    alcance: >-
+      Añadir deepeval como dependencia de <strong>desarrollo</strong> (nada de <code>backend/app/</code>
+      la importa), desactivar su telemetría y documentarlo en <code>.env.example</code>, y registrar un
+      primer módulo de métrica en <code>evals/agent_behavior/metrics/</code>.
+    archivos:
+    - backend/requirements-dev.in
+    - backend/evals/agent_behavior/metrics/
+    - backend/.env.example
+    ojo_con: >-
+      Confirma en la documentación de deepeval el nombre exacto de la variable de opt-out de telemetría;
+      no la supongas. Coordina el fichero de dependencias de desarrollo con T14.3. Añadir una métrica
+      es añadir un módulo: el runner no se toca.
+    rama: feat/342-deepeval
+    componentes:
+    - evals
+  T15.2:
+    corto: Puente del juez
+    alcance: >-
+      Un <code>DeepEvalBaseLLM</code> propio que sirve los veredictos con el juez de la plataforma: <code>PlatformJudge</code>
+      (que llama a <code>call_llm</code> con <code>temperature=0</code> y el modelo de la cascada) en
+      <code>live</code>, y <code>RecordedJudge</code> en <code>replay</code>.
+    archivos:
+    - backend/evals/agent_behavior/judge.py
+    ojo_con: >-
+      El test estructural debe mirar el <strong>AST</strong>, no buscar texto: la búsqueda de texto tropieza
+      con los docstrings que explican el propio defecto (error ya cometido en #159, #264 y #265). Si deepeval
+      abre su propio cliente, se salta la política de egress y la cascada de modelo.
+    rama: feat/343-puente-juez
+    componentes:
+    - evals
+    - llm
+    revision: Única puerta hacia los proveedores de LLM
+  T15.3:
+    corto: Métricas de RAG
+    alcance: >-
+      Métricas de fidelidad al contexto y de relevancia de lo recuperado, alimentadas por las <code>rag_sources</code>
+      que la traza de T9.1 ya guarda en <code>agent_run_steps</code>, sin que el agente tenga que colaborar.
+    archivos:
+    - backend/evals/agent_behavior/metrics/
+    ojo_con: >-
+      Si el caso no trae fuentes, la métrica se salta con motivo; no puntúa cero. En <code>replay</code>
+      no se llama a ningún juez.
+    rama: feat/344-metricas-rag
+    componentes:
+    - evals
+    - trace
+  T15.4:
+    corto: Golden recorded
+    alcance: >-
+      Grabar una ejecución real del agente que usa RAG y versionarla como <code>&lt;agente&gt;-golden</code>
+      con <code>provenance: recorded</code>, más su pareja <code>&lt;agente&gt;-regressions</code>, que
+      falla a propósito y documenta qué detecta.
+    archivos:
+    - backend/evals/agent_behavior/datasets/
+    ojo_con: >-
+      <strong>Es la única tarea que necesita un modelo de verdad</strong> (Ollama local o clave de API).
+      En este equipo Ollama funciona con <code>qwen3.5:4b</code> o <code>9b</code>; evita <code>olmo-3:7b</code>,
+      que razona aunque se le pida que no. Nunca presentes un <code>replay</code> como prueba de que el
+      agente va bien.
+    rama: feat/345-golden-recorded
+    componentes:
+    - evals
+    - providers
+  T15.5:
+    corto: Umbrales en aviso
+    alcance: >-
+      Umbrales de las métricas nuevas en <code>thresholds.yaml</code> en <strong>modo aviso</strong>,
+      y la disciplina escrita en <code>docs/governance/edd-discipline.md</code>, incluida la frontera
+      con <code>model_benchmark</code>.
+    archivos:
+    - backend/evals/agent_behavior/thresholds.yaml
+    - docs/governance/edd-discipline.md
+    ojo_con: >-
+      El modo lo decide <code>thresholds.yaml</code>, no el workflow. No marques el check <code>edd-gate</code>
+      como obligatorio: tiene filtro de rutas.
+    rama: feat/346-umbrales-aviso
+    componentes:
+    - evals
+  T16.1:
+    corto: Definir magnitudes
+    alcance: >-
+      Un documento con cada tarjeta de la portada: qué cuenta, sobre qué ventana temporal, de qué tabla
+      y columna sale y con qué estadístico. Las tarjetas son: papers generados, agentes activos, latencia,
+      anomalías, papers recientes y estado del enjambre.
+    archivos:
+    - documento de magnitudes (ubicación a acordar en la PR)
+    ojo_con: >-
+      Es la base de T16.2 y T16.3: si una magnitud queda ambigua aquí, llega ambigua al código. El test
+      de gobernanza que cruza el documento con el código solo puede completarse cuando exista <code>platform/summary.py</code>
+      (T16.2).
+    rama: docs/352-magnitudes-portada
+    componentes:
+    - api-dashboard
+    - trace
+  T16.2:
+    corto: GET /dashboard/summary
+    alcance: >-
+      <code>backend/app/routers/dashboard.py</code> y <code>platform/summary.py</code>: <code>GET /dashboard/summary</code>
+      compone una consulta por magnitud y responde todo junto, autenticado y resuelto por <code>get_project_context</code>.
+      Los papers recientes muestran el estado real del pipeline y los tokens desde <code>agent_runs</code>.
+    archivos:
+    - backend/app/routers/dashboard.py (nuevo)
+    - backend/app/platform/summary.py (nuevo)
+    ojo_con: >-
+      Es la tarea con más riesgo de fuga de E16: una portada «global» rompería el aislamiento entre proyectos
+      por la puerta de atrás. <code>/metrics</code> es anónima y sin proyecto. Acota la ventana temporal
+      por defecto y apóyate en los índices existentes. Pide revisión.
+    rama: feat/353-dashboard-summary
+    componentes:
+    - api-dashboard
+    - ctx
+    revision: Aislamiento entre proyectos
+  T16.3:
+    corto: Anomalías enumeradas
+    alcance: >-
+      Un conjunto <strong>enumerado</strong> de condiciones sobre <code>agent_run_steps</code>, cada una
+      con su cuenta: paso con estado de fallo, bucle de revisión agotado (<code>iteration</code> en el
+      máximo), latencia por encima del presupuesto declarado y paso con RAG que no recuperó nada.
+    archivos:
+    - backend/app/platform/summary.py
+    - configuración del presupuesto de latencia
+    ojo_con: >-
+      El presupuesto de latencia va en configuración, no dentro de la consulta (mismo patrón que <code>thresholds.yaml</code>).
+      Escribe un test por condición, para que un fallo diga <em>cuál</em> dejó de detectarse.
+    rama: feat/354-anomalias
+    componentes:
+    - api-dashboard
+    - trace
+  T16.4:
+    corto: Estado del enjambre
+    alcance: >-
+      Estado de cada agente del proyecto derivado de hechos: <em>ejecutando un paso ahora</em> (fila de
+      <code>agent_run_steps</code> sin cerrar), <em>disponible</em> o <em>no configurado</em>, con el
+      criterio escrito. Sin tabla de estado nueva.
+    archivos:
+    - backend/app/platform/summary.py
+    ojo_con: >-
+      Un proceso que muere deja el paso abierto para siempre: sin el umbral, la portada mentiría justo
+      cuando algo se ha roto. Pasado el umbral, se muestra como incierto. No guardes el estado en una
+      tabla: sería una segunda verdad que se desincroniza.
+    rama: feat/355-estado-enjambre
+    componentes:
+    - api-dashboard
+    - trace
+  T16.5:
+    corto: Portada frontend
+    alcance: >-
+      <code>OverviewPage.jsx</code> en <code>frontend/src/platform/pages/</code>, su cliente en <code>platform/api/</code>,
+      y el <code>index</code> de <code>App.jsx</code> deja de redirigir a artículos. Una sola petición;
+      las tarjetas enseñan qué miden y las anomalías se desglosan.
+    archivos:
+    - frontend/src/platform/pages/OverviewPage.jsx (nuevo)
+    - frontend/src/App.jsx
+    - frontend/src/platform/api/
+    ojo_con: >-
+      La portada vive en <code>platform/</code>, que no puede importar de <code>projects/</code>: «papers»
+      es vocabulario de AlejandrIA, así que el texto sale de los registros (<code>runTargetLabel</code>),
+      no escrito a mano. Comprueba las dos builds. Si T14.4 ya está, añade pruebas.
+    rama: feat/356-portada
+    componentes:
+    - fe-platform
+    hecha_cuando_extra:
+    - <code>/dashboard</code> abre la portada en vez de redirigir a artículos.
+  T16.6:
+    corto: Degradación por tarjeta
+    alcance: >-
+      Si la base o Qdrant no responden, las tarjetas que dependen de esa fuente se muestran indisponibles
+      y el resto sigue funcionando. El backend informa del estado por magnitud en vez de fallar entero.
+    archivos:
+    - backend/app/platform/summary.py
+    - frontend/src/platform/pages/OverviewPage.jsx
+    ojo_con: >-
+      El error por tarjeta tiene que decir qué falta y que el resto es fiable: una tarjeta vacía sin explicación
+      parece un cero.
+    rama: feat/357-degradacion
+    componentes:
+    - fe-platform
+    - api-dashboard
+  T17.1:
+    corto: Vista de trazas
+    alcance: >-
+      Endpoint y página en <code>frontend/src/platform/</code> que listan las ejecuciones del proyecto
+      con sus pasos, estado y coste, leyendo <code>agent_run_steps</code>. Las ejecuciones se separan
+      con <code>group_executions</code> (<code>platform/explainability.py</code>), el mismo criterio que
+      <code>/explain</code>.
+    archivos:
+    - backend/app/routers/agents.py
+    - frontend/src/platform/pages/
+    ojo_con: >-
+      No construyas nada sobre los spans de OpenTelemetry: están apagados por defecto y la vista quedaría
+      vacía en todos los despliegues. Un artículo reejecutado tiene varias ejecuciones en la misma tabla:
+      <code>step_index</code> vuelve a 0 al empezar una nueva, y una reanudación no reinicia.
+    rama: feat/358-vista-trazas
+    componentes:
+    - api-agents
+    - trace
+    - fe-platform
+    - ctx
+    revision: Aislamiento entre proyectos
+  T17.2:
+    corto: Cadena SHA-256
+    alcance: >-
+      Migración que añade <code>content_hash</code>, <code>prev_hash</code> y la versión de serialización
+      a <code>agent_run_steps</code>. Al cerrar cada paso, <code>platform/explainability.py</code> calcula
+      <code>sha256(canónico(paso) || hash_anterior)</code>.
+    archivos:
+    - backend/app/models/agent_run_step.py
+    - backend/alembic/versions/ (migración nueva)
+    - backend/app/platform/explainability.py
+    - docs/governance/data-retention.md
+    ojo_con: >-
+      <strong>Nunca cambies el esquema con SQL a mano</strong>: migración con <code>alembic revision --autogenerate</code>
+      y revisa lo que genera (hay un ciclo de claves foráneas que no sabe ordenar); <code>test_migrations.py</code>
+      compara. «Canónico» significa orden de claves y formato de números fijos. Hay que mencionar las
+      columnas nuevas en <code>data-retention.md</code> (un test lo exige). Las trazas anteriores no tienen
+      cadena.
+    rama: feat/359-cadena-hashes
+    componentes:
+    - trace
+    - sql
+    revision: Integridad y migración de esquema
+    hecha_cuando_extra:
+    - >-
+      La versión de la serialización queda en la fila, para que las cadenas viejas se sigan verificando
+      si cambia.
+  T17.3:
+    corto: Verificar integridad
+    alcance: >-
+      Un verificador que recorre la cadena de una ejecución y un endpoint que lo expone. Informa de <em>qué</em>
+      paso falla y en qué posición, y distingue «sin cadena» de «cadena rota».
+    archivos:
+    - backend/app/platform/explainability.py
+    - backend/app/routers/agents.py
+    ojo_con: >-
+      Las trazas anteriores a T17.2 no tienen cadena: si las marcas como rotas tienes un falso positivo
+      garantizado. Reutiliza <code>group_executions</code>; otro criterio de agrupación haría que dos
+      ejecuciones del mismo artículo parecieran una cadena rota.
+    rama: feat/360-verificar-integridad
+    componentes:
+    - trace
+    - api-agents
+    revision: Integridad
+  T17.4:
+    corto: Export JSONL
+    alcance: >-
+      Exportar una ejecución como JSONL, una línea por paso, a partir del mismo modelo de respuesta que
+      <code>/explain</code>, con los hashes incluidos para que el export se pueda verificar fuera de la
+      plataforma.
+    archivos:
+    - backend/app/routers/agents.py
+    - documentación del esquema JSONL
+    ojo_con: >-
+      Compara el JSONL generado contra su esquema declarado en el test. Si dudas de si un campo se puede
+      exportar, consulta <code>docs/governance/data-retention.md</code> antes de incluirlo.
+    rama: feat/361-export-jsonl
+    componentes:
+    - api-agents
+    - trace
+  T17.5:
+    corto: Log en vivo
+    alcance: >-
+      Una suscripción SSE por proyecto sobre los eventos que ya emite el pipeline, filtrada en <strong>servidor</strong>
+      por el <code>project_id</code> resuelto, y en la vista un filtro por nivel (INFO, OK, WARN, ERROR).
+    archivos:
+    - emisor SSE del pipeline
+    - backend/app/core/stream_auth.py
+    - frontend/src/platform/
+    ojo_con: >-
+      Es el punto con más riesgo de fuga de E17: filtrar en el navegador sería una fuga aunque no se vea.
+      Mira cómo autentica hoy <code>/agents/{id}/stream</code> antes de diseñar el flujo por proyecto.
+      Toca el mismo emisor SSE que T18.4.
+    rama: feat/362-log-en-vivo
+    componentes:
+    - bus
+    - api-agents
+    - fe-platform
+    - ctx
+    revision: Aislamiento entre proyectos
+  T17.6:
+    corto: Pestaña integridad
+    alcance: >-
+      Pestaña de integridad en la vista de trazabilidad: muestra el resultado de la verificación y dice
+      <strong>en la propia interfaz</strong> qué garantiza la cadena y qué no.
+    archivos:
+    - frontend/src/platform/pages/
+    ojo_con: >-
+      Un sello que promete más de lo que da es peor que no tenerlo. Evita textos como «38 hashes íntegros»
+      sin contexto: di qué se comprobó y cuál es el límite.
+    rama: feat/363-pestana-integridad
+    componentes:
+    - fe-platform
+  T18.1:
+    corto: Referencia acotada
+    alcance: >-
+      Al indexar la referencia de un paper, etiquetar sus fragmentos con ese artículo; la recuperación
+      prefiere y filtra por ella cuando la ejecución declara una referencia, y la excluye de los demás
+      papers. Es un filtro dentro del espacio del proyecto, no una colección nueva.
+    archivos:
+    - backend/app/platform/capabilities/rag.py
+    - backend/app/routers/agents.py
+    ojo_con: >-
+      El nombre de la colección se <strong>deriva</strong> en <code>platform/project_context.py</code>
+      y nunca se compone a mano: no abras otra vía. Hoy toda subida va a <code>__library__</code>, que
+      leen todos los agentes del proyecto; ese es justo el caso que el test debe hacer fallar antes del
+      cambio. Pide revisión.
+    rama: feat/364-referencia-acotada
+    componentes:
+    - rag
+    - qdrant
+    - ctx
+    revision: Aislamiento de documentos
+  T18.2:
+    corto: Variante GraphSpec
+    alcance: >-
+      En <code>platform/engine/</code>, construir una variante del <code>GraphSpec</code> del proyecto
+      quitando nodos, y pasarla por <strong>el mismo validador</strong> que se usa al cargar el proyecto.
+      Una combinación inválida se rechaza antes de empezar.
+    archivos:
+    - backend/app/platform/engine/
+    - backend/app/platform/projects/
+    ojo_con: >-
+      No dupliques la validación: si hay dos validadores, divergen. El motor no menciona agentes concretos
+      y esto no debe cambiarlo (hay tests que lo vigilan). La forma del pipeline se define en <code>template.yaml</code>,
+      no en Python.
+    rama: feat/365-variante-graphspec
+    componentes:
+    - engine
+    - template
+    revision: Motor del pipeline
+  T18.3:
+    corto: Notas del enjambre
+    alcance: >-
+      Las notas adicionales tienen una longitud máxima declarada, entran en el prompt delimitadas como
+      dato (nunca como instrucción de sistema) y quedan en la traza del paso que las usó. Los parámetros
+      de la ejecución (referencia, agentes, notas, modo) también quedan en la traza.
+    archivos:
+    - backend/app/routers/agents.py
+    - backend/app/platform/explainability.py
+    - adapters de los agentes
+    ojo_con: >-
+      Es una superficie de inyección: pide revisión. Coordina con T17.2, porque lo que entra en la traza
+      entra en el hash canónico y cambiar su forma después obliga a versionar la serialización. Toca agentes:
+      corre el gate EDD.
+    rama: sec/366-notas-enjambre
+    componentes:
+    - api-agents
+    - trace
+    - engine
+    revision: Inyección en prompts
+  T18.4:
+    corto: Evento de progreso
+    alcance: >-
+      Un tipo nuevo de evento SSE de progreso que emite solo el agente que sabe cuántas unidades tiene
+      (el Redactor conoce sus secciones: «sección 2 de 5»). Los agentes que no lo saben no emiten nada.
+    archivos:
+    - emisor SSE del pipeline
+    - backend/app/modules/agents/adapters/redactor.py
+    ojo_con: >-
+      Un «40 %» calculado a ojo tiene la precisión de un dato y el valor de una suposición. Toca el mismo
+      emisor SSE que T17.5. Toca un agente: corre el gate EDD.
+    rama: feat/367-evento-progreso
+    componentes:
+    - bus
+    - engine
+    hecha_cuando_extra:
+    - Los clientes antiguos pueden ignorar el evento nuevo sin romperse.
+  T18.5:
+    corto: Pantalla de subida
+    alcance: >-
+      Pantalla de subida del archivo de referencia y configuración de la ejecución: tema, modo de aprendizaje
+      del formato (RAG disponible; fine-tune no disponible con el motivo visible), agentes participantes
+      y notas.
+    archivos:
+    - frontend/src/platform/
+    - frontend/src/projects/alejandria-magazine/
+    ojo_con: >-
+      Decide en la PR qué parte es del builder (<code>platform/</code>) y qué parte es de AlejandrIA (<code>projects/</code>):
+      la dependencia va en un solo sentido. Comprueba las dos builds. Los errores de validación de T18.2
+      deben verse aquí antes de lanzar.
+    rama: feat/368-pantalla-referencia
+    componentes:
+    - fe-platform
+    - fe-project
+  T18.6:
+    corto: Seguimiento honesto
+    alcance: >-
+      <code>ExecutionPage.jsx</code> refleja el pipeline real: la segunda pasada del Redactor por el bucle
+      de revisión se ve como tal, la pausa por decisión humana (<code>await_decision</code>) se ve como
+      pausa, y el progreso es fraccional solo con el evento de T18.4.
+    archivos:
+    - frontend/src/projects/alejandria-magazine/pages/ExecutionPage.jsx
+    ojo_con: >-
+      <code>ExecutionPage.jsx</code> ya consume el SSE (<code>agent_start</code>, <code>token</code>,
+      <code>await_decision</code>, <code>log</code>); léela entera antes de tocarla. El bucle Revisor→Redactor
+      tiene un máximo de 3 vueltas.
+    rama: feat/369-seguimiento
+    componentes:
+    - fe-project
