@@ -1200,12 +1200,12 @@ El backlog vive hoy en **dos tableros** de GitHub Projects, ambos con un campo `
 
 | Tablero | Épicas |
 |---|---|
-| [Hardening & Platform Backlog](https://github.com/users/luxinopanyvino/projects/7) | E1–E13: bootstrap y hardening |
-| [Roadmap: calidad, evaluación y vistas agénticas](https://github.com/users/luxinopanyvino/projects/8) | E14 en adelante: QA, evaluación, portada, trazabilidad, entrada de referencia |
+| [Hardening & Platform Backlog](https://github.com/users/luxinopanyvino/projects/7) | E1–E12: bootstrap y hardening |
+| [Roadmap: calidad, evaluación y vistas agénticas](https://github.com/users/luxinopanyvino/projects/8) | E13 y de E14 en adelante: selección de modelos, QA, evaluación con deepeval, portada, trazabilidad, entrada de referencia, fine-tune |
 
 > `/sdd-sync --apply` añade hoy los issues que crea al tablero «Hardening & Platform
-> Backlog». Si crea issues de una épica E14 o posterior, comprueba que acaben en el
-> Roadmap y muévelos si no.
+> Backlog». Si crea issues de E13 o de una épica E14 o posterior, comprueba que acaben
+> en el Roadmap y muévelos si no.
 
 En cada tablero: **View ▸ Group by ▸ Epic**, o una vista **Roadmap**. Para
 implementar una tarea: `/resolve-task <#>` o `bash scripts/run-task.sh <#issue>`.
