@@ -1,0 +1,1298 @@
+<title>AlejandrIA por dentro</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&family=Source+Sans+3:ital,wght@0,400;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+:root {
+  --canvas: #f4f6f9;
+  --surface: #ffffff;
+  --band: #f8f9fb;
+  --inset: #eef1f6;
+  --line: #e0e5ee;
+  --line-strong: #c9d2df;
+  --grid: #edf0f5;
+  --ink: #0b1b33;
+  --body: #2e3a4d;
+  --muted: #657286;
+  --brand: #0176d3;
+  --brand-hover: #005fb2;
+  --brand-tint: #eaf4ff;
+  --on-brand: #ffffff;
+  --high: #8e030f;
+  --high-bg: #feeeec;
+  --high-mark: #ba0517;
+  --med: #946004;
+  --med-bg: #fdf3e3;
+  --med-mark: #c47d04;
+  --low: #3f4b5e;
+  --low-bg: #eef1f6;
+  --low-mark: #8b96a8;
+  --ok: #1f6135;
+  --ok-bg: #ebf7ee;
+  --ok-line: #2e844a;
+  --edge: #8793a6;
+  --velo: rgba(11, 27, 51, 0.38);
+  --sombra: 0 12px 40px rgba(11, 27, 51, 0.16);
+  --code-bg: #0b1b33;
+  --code-ink: #e6ecf5;
+  --code-comment: #8ea0bb;
+  --serif: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --sans: "Source Sans 3", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "JetBrains Mono", "SF Mono", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --canvas: #0a1120;
+    --surface: #111c2f;
+    --band: #0e1729;
+    --inset: #1a2942;
+    --line: rgba(255, 255, 255, 0.10);
+    --line-strong: rgba(255, 255, 255, 0.22);
+    --grid: rgba(255, 255, 255, 0.05);
+    --ink: #f3f6fc;
+    --body: #d2dcea;
+    --muted: #8b99b0;
+    --brand: #54adff;
+    --brand-hover: #7cc1ff;
+    --brand-tint: rgba(47, 155, 255, 0.15);
+    --on-brand: #04111f;
+    --high: #ff9d9d;
+    --high-bg: rgba(255, 107, 107, 0.14);
+    --high-mark: #ff6b6b;
+    --med: #f3cd84;
+    --med-bg: rgba(232, 176, 75, 0.14);
+    --med-mark: #e8b04b;
+    --low: #c3cedd;
+    --low-bg: rgba(255, 255, 255, 0.07);
+    --low-mark: #75849d;
+    --ok: #6fe6ad;
+    --ok-bg: rgba(62, 207, 142, 0.13);
+    --ok-line: #3ecf8e;
+    --edge: #7f8ea6;
+    --velo: rgba(0, 0, 0, 0.55);
+    --sombra: 0 12px 40px rgba(0, 0, 0, 0.5);
+    --code-bg: #07101e;
+    --code-ink: #d2dcea;
+    --code-comment: #75849d;
+  }
+}
+:root[data-theme="dark"] {
+  --canvas: #0a1120;
+  --surface: #111c2f;
+  --band: #0e1729;
+  --inset: #1a2942;
+  --line: rgba(255, 255, 255, 0.10);
+  --line-strong: rgba(255, 255, 255, 0.22);
+  --grid: rgba(255, 255, 255, 0.05);
+  --ink: #f3f6fc;
+  --body: #d2dcea;
+  --muted: #8b99b0;
+  --brand: #54adff;
+  --brand-hover: #7cc1ff;
+  --brand-tint: rgba(47, 155, 255, 0.15);
+  --on-brand: #04111f;
+  --high: #ff9d9d;
+  --high-bg: rgba(255, 107, 107, 0.14);
+  --high-mark: #ff6b6b;
+  --med: #f3cd84;
+  --med-bg: rgba(232, 176, 75, 0.14);
+  --med-mark: #e8b04b;
+  --low: #c3cedd;
+  --low-bg: rgba(255, 255, 255, 0.07);
+  --low-mark: #75849d;
+  --ok: #6fe6ad;
+  --ok-bg: rgba(62, 207, 142, 0.13);
+  --ok-line: #3ecf8e;
+  --edge: #7f8ea6;
+  --velo: rgba(0, 0, 0, 0.55);
+  --sombra: 0 12px 40px rgba(0, 0, 0, 0.5);
+  --code-bg: #07101e;
+  --code-ink: #d2dcea;
+  --code-comment: #75849d;
+}
+
+html { scroll-behavior: smooth; scroll-padding-top: 72px; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+*, *::before, *::after { box-sizing: border-box; }
+body { background: var(--canvas); color: var(--body); font-family: var(--sans); font-size: 16px; line-height: 1.6; }
+a { color: var(--brand); text-underline-offset: 2px; text-decoration-thickness: 1px; }
+a:hover { color: var(--brand-hover); }
+:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; border-radius: 4px; }
+code, .mono { font-family: var(--mono); font-size: 0.86em; }
+code { overflow-wrap: anywhere; }
+h1, h2, h3, h4 { color: var(--ink); margin: 0; text-wrap: balance; }
+p { margin: 0; }
+button { font: inherit; color: inherit; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+.btn {
+  display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 7px; cursor: pointer;
+  border: 1px solid var(--line-strong); background: var(--surface); color: var(--ink); font-weight: 600; font-size: 0.92rem;
+}
+.btn:hover { border-color: var(--brand); color: var(--brand); }
+.btn:disabled { opacity: 0.45; cursor: default; border-color: var(--line-strong); color: var(--ink); }
+.btn-primario { background: var(--brand); border-color: var(--brand); color: var(--on-brand); }
+.btn-primario:hover { background: var(--brand-hover); border-color: var(--brand-hover); color: var(--on-brand); }
+.btn-texto { border-color: transparent; background: transparent; color: var(--brand); padding-inline: 6px; }
+.btn-texto:hover { border-color: transparent; text-decoration: underline; }
+
+/* ── Barra ────────────────────────────────────────────────── */
+.barra { position: sticky; top: 0; z-index: 30; background: var(--surface); border-bottom: 1px solid var(--line); }
+.barra-in { max-width: 1260px; margin: 0 auto; padding: 10px clamp(16px, 4vw, 40px); display: flex; align-items: center; justify-content: space-between; gap: 8px 24px; flex-wrap: wrap; }
+.marca { font-family: var(--sans); font-weight: 600; font-size: 1.2rem; color: var(--ink); text-decoration: none; letter-spacing: -0.01em; }
+.marca span { color: var(--brand); }
+.marca em { font-family: var(--serif); font-weight: 600; font-style: italic; color: var(--muted); font-size: 1rem; margin-left: 4px; }
+.barra nav { display: flex; gap: 4px 18px; flex-wrap: wrap; }
+.barra nav a { color: var(--body); text-decoration: none; font-weight: 600; font-size: 0.95rem; padding: 4px 0; }
+.barra nav a:hover { color: var(--brand); }
+
+.pagina { max-width: 1260px; margin: 0 auto; padding-inline: clamp(16px, 4vw, 40px); padding-block: 0 56px; }
+
+.eyebrow, .mini-tit, .panel-capa {
+  font-size: 0.74rem; letter-spacing: 0.07em; text-transform: uppercase; color: var(--muted); font-weight: 700;
+}
+
+/* ── Inicio ───────────────────────────────────────────────── */
+.inicio { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr); gap: 32px 56px; align-items: end; padding-block: 48px 44px; }
+@media (max-width: 860px) { .inicio { grid-template-columns: minmax(0, 1fr); } }
+.inicio-txt { display: grid; gap: 14px; }
+h1 { font-family: var(--serif); font-weight: 700; font-size: clamp(2rem, 4vw, 2.85rem); line-height: 1.1; letter-spacing: -0.012em; max-width: 22ch; }
+.entradilla { font-size: 1.12rem; max-width: 60ch; }
+.cifras { margin: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border-top: 1px solid var(--line); }
+.cifras div { padding: 14px 0 12px; border-bottom: 1px solid var(--line); }
+.cifras div:nth-child(odd) { padding-right: 16px; }
+.cifras div:nth-child(even) { padding-left: 16px; border-left: 1px solid var(--line); }
+.cifras dt { font-size: 0.8rem; color: var(--muted); }
+.cifras dd { margin: 0; font-family: var(--serif); font-weight: 700; font-size: 2.2rem; line-height: 1.1; color: var(--ink); font-variant-numeric: tabular-nums; }
+
+/* ── Secciones ────────────────────────────────────────────── */
+.seccion { padding-block: 52px; border-top: 1px solid var(--line); display: grid; gap: 24px; }
+.seccion-cab { display: grid; gap: 8px; }
+h2 { font-family: var(--serif); font-weight: 700; font-size: clamp(1.6rem, 3vw, 2.05rem); line-height: 1.15; }
+.lead { max-width: 74ch; }
+.nota { font-size: 0.9rem; color: var(--muted); }
+.nada { color: var(--muted); font-size: 0.92rem; }
+
+/* ── Proyecto ─────────────────────────────────────────────── */
+.proyecto-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr); gap: 28px 48px; align-items: start; }
+@media (max-width: 960px) { .proyecto-grid { grid-template-columns: minmax(0, 1fr); } }
+.prosa { display: grid; gap: 14px; max-width: 64ch; }
+.aviso-doble { border-left: 3px solid var(--brand); padding: 4px 0 4px 16px; display: grid; gap: 4px; }
+.aviso-tit { font-weight: 700; color: var(--ink); }
+.pipeline { display: grid; gap: 10px; }
+.pipeline-svg { overflow-x: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 8px; }
+.pipeline-svg svg { display: block; width: 100%; min-width: 620px; height: auto; }
+.p-caja { fill: var(--surface); stroke: var(--line-strong); stroke-width: 1.2; }
+.p-agente { cursor: pointer; outline: none; }
+.p-agente:hover .p-caja { stroke: var(--brand); }
+.p-agente:focus-visible .p-caja { stroke: var(--brand); stroke-width: 2.5; }
+.p-agente.sel .p-caja { fill: var(--brand-tint); stroke: var(--brand); stroke-width: 2; }
+.p-num { font-family: var(--mono); font-size: 11px; fill: var(--muted); }
+.p-nombre { font-family: var(--sans); font-size: 16px; font-weight: 700; fill: var(--ink); }
+.p-linea { fill: none; stroke: var(--edge); stroke-width: 1.5; }
+.p-bucle { fill: none; stroke: var(--brand); stroke-width: 1.6; stroke-dasharray: 5 4; }
+.p-flecha { fill: var(--edge); }
+.p-etq { font-family: var(--sans); font-size: 12.5px; font-weight: 600; fill: var(--brand); }
+.p-sub { font-family: var(--sans); font-size: 12px; fill: var(--muted); }
+.agente-info { background: var(--inset); border-radius: 10px; padding: 16px 20px; display: grid; gap: 8px; min-height: 9.5em; }
+.agente-info h3 { font-size: 1.08rem; }
+.mini-dl { margin: 0; display: grid; gap: 4px; font-size: 0.92rem; }
+.mini-dl div { display: grid; grid-template-columns: 7.5em minmax(0, 1fr); gap: 10px; }
+.mini-dl dt { color: var(--muted); }
+.mini-dl dd { margin: 0; }
+@media (max-width: 480px) { .mini-dl div { grid-template-columns: minmax(0, 1fr); gap: 0; } }
+
+.flujo-trabajo { display: grid; gap: 10px; }
+.cadena { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; }
+@media (max-width: 900px) { .cadena { grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); } }
+.cadena li { position: relative; display: grid; gap: 2px; padding: 12px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; }
+.cad-n { font-family: var(--mono); font-weight: 600; font-size: 0.88rem; color: var(--brand); }
+.cad-t { font-size: 0.9rem; }
+@media (min-width: 901px) {
+  .cadena li:not(:last-child)::after {
+    content: ""; position: absolute; right: -8px; top: 50%; width: 6px; height: 6px;
+    border-top: 1.5px solid var(--edge); border-right: 1.5px solid var(--edge); transform: translateY(-50%) rotate(45deg);
+  }
+}
+
+/* ── Arquitectura ─────────────────────────────────────────── */
+.recorrido { display: grid; gap: 10px; justify-items: start; }
+.rec-ctl { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; }
+.rec-ctl[hidden], .rec-txt[hidden], .btn[hidden] { display: none; }
+.rec-cont { font-family: var(--mono); font-size: 0.9rem; color: var(--muted); min-width: 4.5em; text-align: center; font-variant-numeric: tabular-nums; }
+.rec-txt { max-width: 78ch; background: var(--brand-tint); color: var(--ink); border-radius: 8px; padding: 12px 16px; }
+
+.arq { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 24px; align-items: start; }
+@media (max-width: 1080px) { .arq { grid-template-columns: minmax(0, 1fr); } }
+.arq-diagrama { display: grid; grid-template-columns: minmax(0, 1fr) 210px; gap: 14px; }
+@media (max-width: 760px) { .arq-diagrama { grid-template-columns: minmax(0, 1fr); } }
+.arq-capas { display: grid; gap: 10px; }
+.capa { display: grid; grid-template-columns: 104px minmax(0, 1fr); gap: 10px; background: var(--band); border: 1px solid var(--line); border-radius: 10px; padding: 10px; }
+@media (max-width: 560px) { .capa { grid-template-columns: minmax(0, 1fr); } }
+.capa-nombre { font-size: 0.72rem; letter-spacing: 0.07em; text-transform: uppercase; color: var(--muted); font-weight: 700; padding: 8px 4px; }
+.capa-comps { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+.capa-2 .capa-comps { grid-template-columns: repeat(auto-fill, minmax(165px, 1fr)); }
+.arq-lateral { background: var(--band); border: 1px solid var(--line); border-radius: 10px; padding: 10px; display: grid; gap: 4px; align-content: start; }
+.lateral-comps { display: grid; gap: 8px; }
+@media (max-width: 760px) { .lateral-comps { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); } }
+
+.comp {
+  position: relative; display: grid; gap: 2px; align-content: start; text-align: left; cursor: pointer;
+  background: var(--surface); border: 1px solid var(--line-strong); border-radius: 7px; padding: 9px 11px 10px;
+  transition: opacity 0.15s, border-color 0.15s, background-color 0.15s;
+}
+@media (prefers-reduced-motion: reduce) { .comp { transition: none; } }
+.comp:hover { border-color: var(--brand); }
+.comp.nuevo { border-style: dashed; }
+.comp.sel { border-color: var(--brand); background: var(--brand-tint); box-shadow: inset 0 0 0 1px var(--brand); }
+.comp.rel { border-color: var(--brand); border-style: dashed; }
+.comp-nombre { font-weight: 700; color: var(--ink); font-size: 0.96rem; line-height: 1.25; }
+.comp-ruta { font-family: var(--mono); font-size: 0.7rem; color: var(--muted); overflow-wrap: anywhere; line-height: 1.4; }
+.comp-tareas { font-size: 0.74rem; font-weight: 600; color: var(--med); }
+.comp-tareas:empty { display: none; }
+.en-recorrido .comp:not(.rec-on) { opacity: 0.35; }
+.rec-badge {
+  position: absolute; top: -9px; right: -7px; min-width: 22px; height: 22px; padding: 0 6px; border-radius: 999px;
+  background: var(--brand); color: var(--on-brand); font-family: var(--mono); font-size: 0.72rem; font-weight: 600;
+  display: grid; place-items: center;
+}
+
+.arq-panel {
+  position: sticky; top: 72px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px;
+  padding: 18px 20px 20px; display: grid; gap: 8px; max-height: calc(100vh - 92px); overflow: auto;
+}
+@media (max-width: 1080px) { .arq-panel { position: static; max-height: none; } }
+.arq-panel h3 { font-family: var(--serif); font-size: 1.4rem; }
+.arq-panel h4, .cajon h4 {
+  font-size: 0.72rem; letter-spacing: 0.07em; text-transform: uppercase; color: var(--muted); font-weight: 700; margin-top: 12px;
+}
+.panel-ruta { font-size: 0.95rem; }
+.reglas { margin: 0; padding-left: 1.1em; display: grid; gap: 6px; font-size: 0.95rem; }
+.reglas li::marker { color: var(--med-mark); }
+.rels { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; font-size: 0.92rem; }
+.rels li { display: flex; flex-wrap: wrap; gap: 2px 8px; align-items: baseline; }
+.rel-btn { border: 0; background: none; padding: 0; color: var(--brand); font-weight: 600; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+.rels span { color: var(--muted); }
+.refs { list-style: none; margin: 0 0 8px; padding: 0; display: grid; gap: 4px; }
+.refs li { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 8px; }
+.tref { border: 0; background: none; padding: 0; cursor: pointer; font-family: var(--mono); font-size: 0.86rem; font-weight: 600; color: var(--brand); text-decoration: underline; text-underline-offset: 2px; }
+.tref-t { font-size: 0.92rem; }
+.chip { display: inline-block; font-size: 0.78rem; font-weight: 600; padding: 2px 10px; border-radius: 999px; }
+.chip-nuevo { color: var(--med); background: var(--med-bg); text-transform: none; letter-spacing: 0; }
+
+/* ── Controles del Gantt ──────────────────────────────────── */
+.controles { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; }
+.seg { display: inline-flex; border: 1px solid var(--line-strong); border-radius: 8px; overflow: hidden; background: var(--surface); }
+.seg button { border: 0; background: transparent; padding: 6px 14px; cursor: pointer; font-weight: 600; font-size: 0.92rem; color: var(--body); }
+.seg button + button { border-left: 1px solid var(--line-strong); }
+.seg button[aria-checked="true"] { background: var(--ink); color: var(--surface); }
+.filtros { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip-f {
+  display: inline-flex; align-items: center; gap: 6px; cursor: pointer; font-size: 0.85rem; font-weight: 600;
+  border: 1px solid var(--line-strong); border-radius: 999px; padding: 3px 11px; background: var(--surface); color: var(--ink);
+}
+.chip-f[aria-pressed="false"] { background: transparent; color: var(--muted); border-style: dashed; }
+.chip-f[aria-pressed="true"] { border-color: var(--brand); background: var(--brand-tint); }
+.chip-f .mono { color: var(--brand); }
+.chip-f[aria-pressed="false"] .mono { color: var(--muted); }
+.chip-f .cuenta { font-family: var(--mono); font-size: 0.72rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.comps-t .chip-f { border-style: solid; }
+.interruptor { display: inline-flex; align-items: center; gap: 7px; font-size: 0.92rem; font-weight: 600; cursor: pointer; }
+.interruptor input { width: 16px; height: 16px; accent-color: var(--brand); }
+.buscar input {
+  font: inherit; font-size: 0.92rem; color: var(--ink); background: var(--surface); border: 1px solid var(--line-strong);
+  border-radius: 8px; padding: 6px 12px; width: min(260px, 100%);
+}
+.buscar input::placeholder { color: var(--muted); }
+.buscar { flex: 0 1 260px; }
+.filtro-activo { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 8px; background: var(--brand-tint); color: var(--ink); border-radius: 8px; padding: 6px 12px; font-size: 0.92rem; justify-self: start; }
+.filtro-activo[hidden] { display: none; }
+.leyenda { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 0.85rem; color: var(--muted); }
+.leyenda span { display: inline-flex; align-items: center; gap: 6px; }
+.lg { width: 22px; height: 12px; border-radius: 3px; display: inline-block; border: 1px solid; }
+.lg-lista { background: var(--brand-tint); border-color: var(--brand); }
+.lg-espera { background: var(--surface); border-color: var(--line-strong); }
+.lg-hecha { background: var(--ok-bg); border-color: var(--ok-line); }
+.lg-sev { width: 9px; height: 9px; border-radius: 2px; display: inline-block; }
+.lg-sev.sev-high, .g-sev.sev-high { background: var(--high-mark); }
+.lg-sev.sev-medium, .g-sev.sev-medium { background: var(--med-mark); }
+.lg-sev.sev-low, .g-sev.sev-low { background: var(--low-mark); }
+.lg-rev, .g-rev {
+  width: 15px; height: 15px; border-radius: 999px; background: var(--med-bg); color: var(--med);
+  font-style: normal; font-size: 9px; font-weight: 700; display: inline-grid; place-items: center; font-family: var(--sans);
+}
+
+/* ── Gantt ────────────────────────────────────────────────── */
+.gantt-marco { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+.gantt-scroll { overflow-x: auto; }
+.gantt { position: relative; width: max-content; min-width: 100%; --etq: 272px; }
+@media (max-width: 640px) { .gantt { --etq: 176px; } }
+.g-fila { display: flex; border-bottom: 1px solid var(--line); }
+.g-fila:last-of-type { border-bottom: 0; }
+.g-etq {
+  position: sticky; left: 0; z-index: 3; flex: none; width: var(--etq); background: var(--surface);
+  border-right: 1px solid var(--line); padding: 0 12px; display: flex; align-items: center; gap: 8px; min-height: 44px;
+}
+.g-pista {
+  position: relative; flex: none; width: calc(var(--ncols) * var(--col)); min-height: 44px;
+  background-image: repeating-linear-gradient(90deg, transparent 0 calc(var(--col) - 1px), var(--grid) calc(var(--col) - 1px) var(--col));
+}
+.g-cab .g-etq, .g-col {
+  font-size: 0.7rem; letter-spacing: 0.07em; text-transform: uppercase; color: var(--muted); font-weight: 700;
+}
+.g-cab .g-pista { display: flex; }
+.g-col { width: var(--col); padding: 12px 10px; flex: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.g-grupo .g-etq, .g-grupo .g-pista { background-color: var(--band); }
+.g-grupo .g-etq { font-weight: 700; color: var(--ink); min-height: 40px; flex-wrap: wrap; gap: 0 8px; padding-block: 8px; }
+.g-grupo .g-etq .mono { color: var(--brand); }
+.g-grupo .g-pista { min-height: 40px; }
+.g-enl { font-family: var(--mono); font-size: 0.78rem; font-weight: 400; }
+.g-sub { font-weight: 400; color: var(--muted); font-size: 0.88rem; }
+.g-etq-t { border: 0; border-right: 1px solid var(--line); cursor: pointer; text-align: left; }
+.g-etq-t:hover { background: var(--inset); }
+.g-tid { font-weight: 600; color: var(--brand); flex: none; }
+.g-ttl { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.92rem; color: var(--ink); }
+.g-iss { flex: none; color: var(--muted); font-size: 0.74rem; }
+@media (max-width: 640px) { .g-iss { display: none; } }
+
+.g-barra {
+  position: absolute; z-index: 2; top: 7px; bottom: 7px;
+  left: calc(var(--c) * var(--col) + 9px); width: calc(var(--col) - 18px);
+  display: flex; align-items: center; gap: 6px; padding: 0 8px; border-radius: 6px; border: 1px solid;
+  font-size: 0.8rem; text-align: left; cursor: pointer; white-space: nowrap; overflow: hidden;
+  transition: opacity 0.15s, box-shadow 0.15s;
+}
+@media (prefers-reduced-motion: reduce) { .g-barra, .g-fila { transition: none !important; } }
+.g-bid { font-weight: 600; flex: none; }
+.g-bt { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.g-marcas { margin-left: auto; display: inline-flex; align-items: center; gap: 4px; flex: none; }
+.g-sev { width: 8px; height: 8px; border-radius: 2px; display: inline-block; }
+.gantt[data-modo="persona"] .g-barra { padding-inline: 7px; }
+.st-lista { background: var(--brand-tint); border-color: var(--brand); color: var(--ink); }
+.st-espera { background: var(--surface); border-color: var(--line-strong); color: var(--body); }
+.st-hecha { background: var(--ok-bg); border-color: var(--ok-line); color: var(--ink); }
+.g-barra:hover { box-shadow: 0 0 0 1px var(--brand); }
+.g-fila { transition: opacity 0.15s; }
+.gantt.con-foco .g-tarea:not(.en-cadena) { opacity: 0.3; }
+.gantt .es-foco .g-barra, .gantt .es-sel .g-barra { box-shadow: 0 0 0 2px var(--brand); }
+.gantt .es-sel .g-etq-t { background: var(--brand-tint); }
+.g-flechas { position: absolute; top: 0; left: 0; z-index: 1; pointer-events: none; overflow: visible; }
+.g-flecha { fill: none; stroke: var(--edge); stroke-width: 1.3; opacity: 0.7; stroke-linejoin: round; }
+.g-flecha.on { stroke: var(--brand); stroke-width: 2.2; opacity: 1; }
+.gantt.con-foco .g-flecha:not(.on) { opacity: 0.1; }
+.gf { fill: var(--edge); }
+.gf-on { fill: var(--brand); }
+.g-vacio { padding: 24px 16px; color: var(--muted); position: sticky; left: 0; }
+.cuenta-vis { color: var(--ink); font-weight: 600; }
+
+.e19 { background: var(--inset); border-radius: 10px; padding: 16px 20px; display: grid; gap: 6px; max-width: 900px; }
+
+/* ── Cajón de tarea ───────────────────────────────────────── */
+.velo { position: fixed; inset: 0; background: var(--velo); z-index: 40; }
+.velo[hidden], .cajon[hidden] { display: none; }
+.cajon {
+  position: fixed; top: 0; right: 0; bottom: 0; width: min(470px, 100vw); z-index: 50;
+  background: var(--surface); border-left: 1px solid var(--line); box-shadow: var(--sombra);
+  display: flex; flex-direction: column; transform: translateX(100%); transition: transform 0.2s ease;
+}
+.cajon.abierto { transform: none; }
+@media (prefers-reduced-motion: reduce) { .cajon { transition: none; } }
+.cajon-cab { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 18px 12px 22px; border-bottom: 1px solid var(--line); }
+.cajon-id { display: flex; align-items: baseline; gap: 12px; }
+.cajon-id .mono { font-size: 1.15rem; font-weight: 600; color: var(--brand); }
+.cajon-id a { font-size: 0.9rem; }
+.cajon-cuerpo { overflow-y: auto; padding: 18px 22px 40px; display: grid; gap: 8px; align-content: start; }
+.cajon-cuerpo h3 { font-size: 1.25rem; line-height: 1.3; }
+.cajon-cuerpo .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip.st-lista { background: var(--brand-tint); color: var(--ink); border: 0; }
+.chip.st-espera { background: var(--inset); color: var(--body); border: 0; }
+.chip.st-hecha { background: var(--ok-bg); color: var(--ok); border: 0; }
+.chip.sevc-high { background: var(--high-bg); color: var(--high); }
+.chip.sevc-medium { background: var(--med-bg); color: var(--med); }
+.chip.sevc-low { background: var(--low-bg); color: var(--low); }
+.chip-rev { background: var(--med-bg); color: var(--med); }
+.st-mini { font-size: 0.74rem; color: var(--muted); }
+.st-mini.st-lista { color: var(--brand); }
+.st-mini.st-hecha { color: var(--ok); }
+.deps2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 0 20px; }
+.cuidado { background: var(--inset); border-radius: 8px; padding: 10px 14px; font-size: 0.95rem; }
+.archivos { list-style: none; margin: 0; padding: 0; display: grid; gap: 3px; font-size: 0.95rem; }
+.comps-t { display: flex; flex-wrap: wrap; gap: 6px; }
+.rama-caja { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.rama-caja code { background: var(--inset); padding: 4px 10px; border-radius: 6px; font-size: 0.85rem; color: var(--ink); }
+
+/* ── Contribuir ───────────────────────────────────────────── */
+.contrib { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 24px 48px; }
+.contrib h3 { font-size: 1.05rem; margin-bottom: 8px; }
+.pasos { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; }
+.pasos li::marker { font-family: var(--mono); color: var(--muted); font-size: 0.85em; }
+.dod { list-style: none; margin: 0; padding: 0; display: grid; gap: 7px; }
+.dod li { position: relative; padding-left: 25px; }
+.dod li::before {
+  content: ""; position: absolute; left: 1px; top: 0.35em; width: 12px; height: 12px;
+  border: 1.5px solid var(--line-strong); border-radius: 3px; background: var(--surface);
+}
+.ac {
+  display: inline-block; font-family: var(--mono); font-size: 0.68rem; font-weight: 600; color: var(--muted);
+  background: var(--inset); border: 1px solid var(--line); border-radius: 3px; padding: 0 5px; line-height: 1.55;
+  vertical-align: 1px; white-space: nowrap;
+}
+.codigo { background: var(--code-bg); border-radius: 10px; overflow-x: auto; }
+.codigo pre { margin: 0; padding: 18px 22px; color: var(--code-ink); font-family: var(--mono); font-size: 0.84rem; line-height: 1.7; }
+.codigo .c { color: var(--code-comment); }
+.avisos { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.avisos li { padding-left: 14px; border-left: 2px solid var(--med-mark); }
+.glosario { margin: 0; display: grid; gap: 10px; }
+.glosario div { display: grid; grid-template-columns: 5.5em minmax(0, 1fr); gap: 12px; }
+.glosario dt { font-weight: 700; color: var(--ink); }
+.glosario dd { margin: 0; }
+@media (max-width: 480px) { .glosario div { grid-template-columns: minmax(0, 1fr); gap: 0; } }
+
+.pie { font-size: 0.88rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 18px; }
+
+/* ── Estados adicionales ──────────────────────────────────── */
+.lg-sin { background: transparent; border-color: var(--muted); border-style: dashed; }
+.st-sin-issue { background: transparent; border-color: var(--muted); border-style: dashed; color: var(--muted); }
+.chip.st-sin-issue { background: var(--inset); color: var(--muted); border: 0; }
+.st-mini.st-cerrada { color: var(--ok); }
+.tref-cerrada { font-family: var(--mono); font-size: 0.86rem; font-weight: 600; color: var(--muted); text-decoration: line-through; }
+
+/* ── Borradores ───────────────────────────────────────────── */
+.borrador { background: var(--inset); border-radius: 10px; padding: 16px 20px; display: grid; gap: 6px; max-width: 940px; }
+.borrador h3 { font-size: 1.05rem; }
+
+/* ── Guías con pestañas ───────────────────────────────────── */
+.pestanas { display: flex; flex-wrap: wrap; gap: 4px; border-bottom: 1px solid var(--line-strong); }
+.pestanas [role="tab"] {
+  border: 0; background: transparent; padding: 10px 14px; cursor: pointer; font-weight: 600; color: var(--muted);
+  border-bottom: 3px solid transparent; margin-bottom: -1px;
+}
+.pestanas [role="tab"]:hover { color: var(--ink); }
+.pestanas [role="tab"][aria-selected="true"] { color: var(--ink); border-bottom-color: var(--brand); }
+.panel-guia { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 22px 24px; display: grid; gap: 18px; }
+.panel-guia[hidden] { display: none; }
+.guia-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 12px 44px; }
+@media (max-width: 420px) { .guia-grid { grid-template-columns: minmax(0, 1fr); } .panel-guia { padding: 16px; } }
+.guia-grid > div { display: grid; gap: 10px; align-content: start; }
+.panel-guia h3, .contrib h3 { font-size: 1.05rem; margin-top: 6px; }
+.panel-guia .pasos { gap: 12px; }
+.panel-guia .pasos li { padding-left: 2px; }
+.aviso { border-left: 3px solid var(--med-mark); background: var(--med-bg); color: var(--ink); padding: 10px 14px; border-radius: 0 8px 8px 0; font-size: 0.95rem; }
+
+.cmd {
+  display: flex; align-items: center; gap: 8px; margin-top: 6px; max-width: 100%;
+  background: var(--code-bg); border-radius: 8px; padding: 6px 6px 6px 12px;
+}
+.cmd code { color: var(--code-ink); font-size: 0.84rem; flex: 1 1 auto; min-width: 0; overflow-x: auto; white-space: pre; padding-block: 3px; }
+.cmd-lab { font-family: var(--mono); font-size: 0.7rem; color: var(--code-comment); flex: none; }
+.btn-mini { padding: 3px 10px; font-size: 0.78rem; flex: none; background: transparent; color: var(--code-ink); border-color: rgba(255,255,255,0.25); }
+.btn-mini:hover { color: var(--code-ink); border-color: var(--code-ink); }
+.bloque-code { margin: 8px 0 0; background: var(--code-bg); color: var(--code-ink); border-radius: 8px; padding: 12px 14px; font-family: var(--mono); font-size: 0.82rem; line-height: 1.6; overflow-x: auto; }
+
+.tabla-scroll { overflow-x: auto; }
+.origen { width: 100%; border-collapse: collapse; font-size: 0.93rem; }
+.origen th { text-align: left; font-size: 0.7rem; letter-spacing: 0.07em; text-transform: uppercase; color: var(--muted); font-weight: 700; padding: 0 14px 8px 0; border-bottom: 1px solid var(--line-strong); }
+.origen td { padding: 10px 14px 10px 0; border-bottom: 1px solid var(--line); vertical-align: top; }
+.referencia { min-width: 640px; }
+.referencia td:first-child { white-space: nowrap; }
+
+/* ── Bloque «Ejecutarla» en la ficha ──────────────────────── */
+.ejecutar { display: grid; gap: 6px; background: var(--inset); border-radius: 8px; padding: 12px 14px; }
+.ejecutar .cmd { margin-top: 0; }
+.ejecutar .aviso { margin-top: 4px; }
+
+</style>
+
+<header class="barra">
+  <div class="barra-in">
+    <a class="marca" href="#inicio">Alejandr<span>IA</span> <em>por dentro</em></a>
+    <nav aria-label="Secciones">
+      <a href="#proyecto">Proyecto</a><a href="#arquitectura">Arquitectura</a><a href="#tareas">Tareas</a><a href="#trabajar">Cómo trabajar</a>
+    </nav>
+  </div>
+</header>
+
+<div class="pagina">
+<section class="inicio" id="inicio">
+  <div class="inicio-txt">
+    <p class="eyebrow">Guía para quien empieza · generada el 15/09/2026</p>
+    <h1>Una plataforma para orquestar agentes, y la revista científica que la pone a prueba</h1>
+    <p class="entradilla">FastAPI, LangGraph y Qdrant por detrás; React por delante. Aquí tienes qué hace el proyecto, cómo está construido, qué trabajo queda abierto con sus dependencias y cómo ejecutarlo desde la terminal. Casi todo se puede pulsar.</p>
+  </div>
+  <dl class="cifras">
+    <div><dt>Agentes en el pipeline</dt><dd>5</dd></div>
+    <div><dt>Épicas abiertas</dt><dd>5</dd></div>
+    <div><dt>Tareas abiertas</dt><dd>30</dd></div>
+    <div><dt>Listas para empezar</dt><dd>10</dd></div>
+  </dl>
+</section>
+
+<section class="seccion" id="proyecto">
+  <div class="seccion-cab">
+    <p class="eyebrow">1 · El proyecto</p>
+    <h2>Qué es y qué produce</h2>
+  </div>
+  <div class="proyecto-grid">
+    <div class="prosa">
+      <p><strong>swarm-platform-builder</strong> es una plataforma para definir y ejecutar equipos de agentes de IA. Cada agente tiene un perfil, unas capacidades (buscar en documentos, llamar a un modelo, dar formato…) y un lugar en un grafo. El grafo no está escrito en Python: es un <strong>dato</strong>, un <code>template.yaml</code> por proyecto.</p>
+      <p>El proyecto de referencia es <strong>AlejandrIA Magazine</strong>: cinco agentes que investigan, redactan, revisan, formatean y publican artículos científicos. Es a la vez producto y banco de pruebas: lo que la plataforma promete (aislamiento entre proyectos, trazabilidad, evaluación) se demuestra sobre él.</p>
+      <div class="aviso-doble">
+        <p class="aviso-tit">Dos sentidos de «agente» conviven en el repo</p>
+        <p><strong>Agentes de producto</strong>: los del pipeline, perfiles en base de datos y en <code>*.agent.md</code>. Son la funcionalidad.<br><strong>Agentes de desarrollo</strong>: <code>.claude/agents/</code> (<code>task-runner</code>, <code>sdd-sync</code>), que implementan y sincronizan el backlog. Son herramientas del repo.</p>
+      </div>
+    </div>
+    <div class="pipeline">
+      <p class="mini-tit">El pipeline de AlejandrIA · pulsa un agente</p>
+      <div class="pipeline-svg"><svg viewBox="0 0 936 170" role="img" aria-label="Pipeline de AlejandrIA: Investigador, Redactor, Revisor, Formateador, Publicador en secuencia; el revisor devuelve el borrador al redactor si la nota es menor que 80, como mucho tres veces.">
+<defs><marker id="pflecha" viewBox="0 0 8 8" refX="7.5" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L8,4 L0,8 z" class="p-flecha"/></marker></defs>
+<path class="p-bucle" d="M468 62 C468 14, 280 14, 280 60" marker-end="url(#pflecha)"/>
+<text class="p-etq" x="374" y="22" text-anchor="middle">nota &lt; 80 → vuelve · máx. 3 vueltas</text>
+<path class="p-linea" d="M168 89 H204" marker-end="url(#pflecha)"/>
+<g class="p-agente" data-agente="investigador" tabindex="0" role="button" aria-label="Investigador: ver detalle"><rect class="p-caja" x="16" y="62" width="152" height="54" rx="6"/><text class="p-num" x="28" y="82">1</text><text class="p-nombre" x="28" y="102">Investigador</text></g>
+<text class="p-sub" x="92" y="142" text-anchor="middle">RAG · Qdrant</text>
+<path class="p-linea" d="M356 89 H392" marker-end="url(#pflecha)"/>
+<g class="p-agente" data-agente="redactor" tabindex="0" role="button" aria-label="Redactor: ver detalle"><rect class="p-caja" x="204" y="62" width="152" height="54" rx="6"/><text class="p-num" x="216" y="82">2</text><text class="p-nombre" x="216" y="102">Redactor</text></g>
+<text class="p-sub" x="280" y="142" text-anchor="middle">RAG · streaming SSE</text>
+<path class="p-linea" d="M544 89 H580" marker-end="url(#pflecha)"/>
+<g class="p-agente" data-agente="revisor" tabindex="0" role="button" aria-label="Revisor: ver detalle"><rect class="p-caja" x="392" y="62" width="152" height="54" rx="6"/><text class="p-num" x="404" y="82">3</text><text class="p-nombre" x="404" y="102">Revisor</text></g>
+<path class="p-linea" d="M732 89 H768" marker-end="url(#pflecha)"/>
+<g class="p-agente" data-agente="formateador" tabindex="0" role="button" aria-label="Formateador: ver detalle"><rect class="p-caja" x="580" y="62" width="152" height="54" rx="6"/><text class="p-num" x="592" y="82">4</text><text class="p-nombre" x="592" y="102">Formateador</text></g>
+<g class="p-agente" data-agente="publicador" tabindex="0" role="button" aria-label="Publicador: ver detalle"><rect class="p-caja" x="768" y="62" width="152" height="54" rx="6"/><text class="p-num" x="780" y="82">5</text><text class="p-nombre" x="780" y="102">Publicador</text></g>
+<text class="p-sub" x="844" y="142" text-anchor="middle">artículo + paper maquetado</text>
+</svg></div>
+      <div class="agente-info" id="agente-info" aria-live="polite"></div>
+    </div>
+  </div>
+  <div class="flujo-trabajo">
+    <p class="mini-tit">Cómo nace el trabajo que vas a hacer</p>
+    <ol class="cadena">
+      <li><span class="cad-n">Spec</span><span class="cad-t"><code>docs/specs/</code>: problema, criterios de aceptación y bloque de tareas</span></li>
+      <li><span class="cad-n">/sdd-sync</span><span class="cad-t">convierte las tareas de la spec en issues del tablero</span></li>
+      <li><span class="cad-n">/resolve-task</span><span class="cad-t">implementa un issue: rama, código, tests, bitácora y PR</span></li>
+      <li><span class="cad-n">Revisión</span><span class="cad-t">PR contra <code>develop</code> con CI en verde y aprobación</span></li>
+      <li><span class="cad-n">Merge</span><span class="cad-t"><code>Closes #N</code> cierra el issue y desbloquea lo que dependía de él</span></li>
+    </ol>
+  </div>
+</section>
+
+<section class="seccion" id="arquitectura">
+  <div class="seccion-cab">
+    <p class="eyebrow">2 · Arquitectura</p>
+    <h2>Cómo está construido</h2>
+    <p class="lead">Cuatro capas y tres piezas transversales. Pulsa un componente para ver qué hace, las reglas que no conviene romper y las tareas abiertas que lo tocan. Para verlo en movimiento, recorre una ejecución paso a paso.</p>
+  </div>
+  <div class="recorrido" id="recorrido">
+    <button type="button" class="btn btn-primario" id="rec-empezar">Recorrer una ejecución</button>
+    <div class="rec-ctl" hidden>
+      <button type="button" class="btn" id="rec-prev">Anterior</button>
+      <span class="rec-cont" id="rec-cont"></span>
+      <button type="button" class="btn btn-primario" id="rec-next">Siguiente</button>
+      <button type="button" class="btn btn-texto" id="rec-salir">Salir del recorrido</button>
+    </div>
+    <p class="rec-txt" id="rec-txt" aria-live="polite" hidden></p>
+  </div>
+  <div class="arq">
+    <div class="arq-diagrama">
+      <div class="arq-capas"><div class="capa capa-0"><div class="capa-nombre">Navegador</div><div class="capa-comps"><button type="button" class="comp" data-comp="fe-platform" id="comp-fe-platform" aria-pressed="false"><span class="comp-nombre">Builder</span><span class="comp-ruta">frontend/src/platform/</span><span class="comp-tareas"></span></button><button type="button" class="comp" data-comp="fe-project" id="comp-fe-project" aria-pressed="false"><span class="comp-nombre">AlejandrIA</span><span class="comp-ruta">frontend/src/projects/alejandria-magazine/</span><span class="comp-tareas"></span></button><button type="button" class="comp" data-comp="fe-public" id="comp-fe-public" aria-pressed="false"><span class="comp-nombre">Revista pública</span><span class="comp-ruta">vite.public.config.js · index.public.html</span><span class="comp-tareas"></span></button></div></div><div class="capa capa-1"><div class="capa-nombre">API · FastAPI</div><div class="capa-comps"><button type="button" class="comp" data-comp="api-core" id="comp-api-core" aria-pressed="false"><span class="comp-nombre">Auth y proyectos</span><span class="comp-ruta">routers/auth.py · projects.py</span><span class="comp-tareas"></span></button><button type="button" class="comp" data-comp="api-agents" id="comp-api-agents" aria-pressed="false"><span class="comp-nombre">Agentes y ejecución</span><span class="comp-ruta">routers/agents.py</span><span class="comp-tareas"></span></button><button type="button" class="comp" data-comp="api-articles" id="comp-api-articles" aria-pressed="false"><span class="comp-nombre">Artículos, flujos y revista</span><span class="comp-ruta">routers/articles.py · flows.py · magazine.py</span><span class="comp-tareas"></span></button><button type="button" class="comp nuevo" data-comp="api-dashboard" id="comp-api-dashboard" aria-pressed="false"><span class="comp-nombre">Portada</span><span class="comp-ruta">routers/dashboard.py</span><span class="comp-tareas"></span></button><button type="button" class="comp" data-comp="api-health" id="comp-api-health" aria-pressed="false"><span class="comp-nombre">Salud y métricas</span><span class="comp-ruta">routers/health.py</span><span class="comp-tareas"></span></button></div></div><div class="capa capa-2"><div class="capa-nombre">Plataforma</div><div class="capa-comps"><button type="button" class="comp" data-comp="ctx" id="comp-ctx" aria-pressed="false"><span class="comp-nombre">Aislamiento por proyecto</span><span class="comp-ruta">platform/project_context.py · project_access.py</span><span class="comp-tareas"></span></button><button type="button" class="comp" data-comp="engine" id="comp-engine" aria-pressed="false"><span class="comp-nombre">Motor del pipeline</span><span class="comp-ruta">platform/engine/ · modules/agents/application/use_cases.py</span><span class="comp-tareas"></span></button><button type="button" class="comp" data-comp="caps" id="comp-caps" aria-pressed="false"><span class="comp-nombre">Capacidades</span><span class="comp-ruta">platform/capabilities/registry.py · binding.py</span><span class="comp-tareas"></span></button><button type="button" class="comp" data-comp="trace" id="comp-trace" aria-pressed="false"><span class="comp-nombre">Traza de explicabilidad</span><span class="comp-ruta">platform/explainability.py</span><span class="comp-tareas"></span></button><button type="button" class="comp" data-comp="llm" id="comp-llm" aria-pressed="false"><span class="comp-nombre">Dispatcher LLM</span><span class="comp-ruta">platform/llm.py</span><span class="comp-tareas"></span></button><button type="button" class="comp" data-comp="rag" id="comp-rag" aria-pressed="false"><span class="comp-nombre">RAG</span><span class="comp-ruta">platform/capabilities/rag.py</span><span class="comp-tareas"></span></button><button type="button" class="comp" data-comp="egress" id="comp-egress" aria-pressed="false"><span class="comp-nombre">Egress</span><span class="comp-ruta">platform/egress.py</span><span class="comp-tareas"></span></button><button type="button" class="comp" data-comp="bus" id="comp-bus" aria-pressed="false"><span class="comp-nombre">Bus de eventos</span><span class="comp-ruta">platform/bus.py</span><span class="comp-tareas"></span></button></div></div><div class="capa capa-3"><div class="capa-nombre">Datos y servicios</div><div class="capa-comps"><button type="button" class="comp" data-comp="sql" id="comp-sql" aria-pressed="false"><span class="comp-nombre">Base de datos</span><span class="comp-ruta">SQLAlchemy async · Alembic</span><span class="comp-tareas"></span></button><button type="button" class="comp" data-comp="qdrant" id="comp-qdrant" aria-pressed="false"><span class="comp-nombre">Qdrant</span><span class="comp-ruta">colecciones p_&lt;proyecto&gt;__&lt;bucket&gt;</span><span class="comp-tareas"></span></button><button type="button" class="comp" data-comp="providers" id="comp-providers" aria-pressed="false"><span class="comp-nombre">Modelos</span><span class="comp-ruta">Anthropic · Ollama · OpenAI</span><span class="comp-tareas"></span></button><button type="button" class="comp" data-comp="redis" id="comp-redis" aria-pressed="false"><span class="comp-nombre">Redis</span><span class="comp-ruta">opcional · REDIS_ENABLED</span><span class="comp-tareas"></span></button><button type="button" class="comp" data-comp="internet" id="comp-internet" aria-pressed="false"><span class="comp-nombre">Internet</span><span class="comp-ruta">búsqueda académica · fetch_url</span><span class="comp-tareas"></span></button></div></div></div>
+      <div class="arq-lateral"><div class="capa-nombre">Transversal</div><div class="lateral-comps"><button type="button" class="comp" data-comp="template" id="comp-template" aria-pressed="false"><span class="comp-nombre">Proyecto como dato</span><span class="comp-ruta">backend/projects/&lt;slug&gt;/template.yaml</span><span class="comp-tareas"></span></button><button type="button" class="comp" data-comp="evals" id="comp-evals" aria-pressed="false"><span class="comp-nombre">Evaluación</span><span class="comp-ruta">backend/evals/</span><span class="comp-tareas"></span></button><button type="button" class="comp" data-comp="ci" id="comp-ci" aria-pressed="false"><span class="comp-nombre">CI y calidad</span><span class="comp-ruta">.github/workflows/ · backend/tests/</span><span class="comp-tareas"></span></button></div></div>
+    </div>
+    <aside class="arq-panel" id="arq-panel" aria-live="polite"></aside>
+  </div>
+</section>
+
+<section class="seccion" id="tareas">
+  <div class="seccion-cab">
+    <p class="eyebrow">3 · Trabajo abierto</p>
+    <h2>Tareas y dependencias</h2>
+    <p class="lead">Un Gantt sin fechas: la posición no es un día, es <strong>cuándo se puede empezar</strong>. <em>Por olas</em> coloca cada tarea en cuanto se desbloquea; <em>Por persona</em> muestra el reparto, en orden. Pasa por encima de una tarea para ver su cadena de dependencias; púlsala para abrir su ficha, con el comando para ejecutarla.</p>
+  </div>
+  <div class="controles" role="group" aria-label="Controles del diagrama">
+    <div class="seg" role="radiogroup" aria-label="Vista">
+      <button type="button" role="radio" aria-checked="true" data-modo="olas" id="modo-olas">Por olas</button>
+      <button type="button" role="radio" aria-checked="false" data-modo="persona" id="modo-persona">Por persona</button>
+    </div>
+    <div class="filtros" id="filtro-epicas" aria-label="Épicas"></div>
+    <div class="filtros" id="filtro-sev" aria-label="Severidad"></div>
+    <label class="interruptor" for="solo-listas"><input type="checkbox" id="solo-listas"> Solo listas para empezar</label>
+    <label class="buscar" for="buscar"><span class="sr">Buscar tarea</span><input type="search" id="buscar" placeholder="Buscar: T17, hash, #353…" autocomplete="off"></label>
+  </div>
+  <div class="filtro-activo" id="filtro-comp" hidden></div>
+  <div class="leyenda">
+    <span><i class="lg lg-lista"></i>Lista para empezar</span>
+    <span><i class="lg lg-espera"></i>Espera a otra tarea</span>
+    <span><i class="lg lg-hecha"></i>Hecha, falta cerrar el issue</span>
+    <span><i class="lg lg-sin"></i>Sin issue todavía</span>
+    <span><i class="lg-sev sev-high"></i>Alta <i class="lg-sev sev-medium"></i>Media <i class="lg-sev sev-low"></i>Baja</span>
+    <span><i class="lg-rev">R</i>Pide revisión de alguien con experiencia</span>
+  </div>
+  <div class="gantt-marco"><div class="gantt-scroll" tabindex="0" aria-label="Diagrama de tareas"><div class="gantt" id="gantt"></div></div></div>
+  <p class="nota" id="gantt-nota"></p>
+  <div class="borrador"><p class="mini-tit">Fuera del diagrama · E10 en borrador</p><h3>Memoria y contexto de agentes</h3><p>La spec (<a href="https://github.com/luxinopanyvino/swarm-platform-builder/blob/develop/docs/specs/SPEC-021-agent-memory-context-budget.md">SPEC-021</a>) está en <code>Draft</code> y no genera issues. </p><p class="nota">Tareas previstas: <span class=mono>T10.1</span> Presupuesto de contexto por paso (estimación central + recorte priorizado) → <span class=mono>T10.2</span> Compactación del historial del pipeline bajo presión de contexto → <span class=mono>T10.3</span> Memoria episódica por proyecto entre ejecuciones → <span class=mono>T10.4</span> Política de caché keep_alive configurable + uso de contexto observable</p></div><div class="borrador"><p class="mini-tit">Fuera del diagrama · E2 en borrador</p><h3>Seguridad: Aplicación (AppSec)</h3><p>La spec (<a href="https://github.com/luxinopanyvino/swarm-platform-builder/blob/develop/docs/specs/SPEC-024-egress-control-agent-tools.md">SPEC-024</a>) está en <code>Draft</code> y no genera issues. </p><p class="nota">Tareas previstas: <span class=mono>T2.5</span> Guarda central de egress para las herramientas de agente + restaurar verificación TLS</p></div><div class="borrador"><p class="mini-tit">Fuera del diagrama · E13 en borrador</p><h3>Benchmark y selección de modelos base para redacción científica</h3><p>La spec (<a href="https://github.com/luxinopanyvino/swarm-platform-builder/blob/develop/docs/specs/SPEC-025-model-benchmark-scientific-writing.md">SPEC-025</a>) está en <code>Draft</code> y no genera issues. </p><p class="nota">Tareas previstas: <span class=mono>T13.1</span> Dataset y harness de benchmark de modelos base (prompts fijos por rol + métricas de cómputo) → <span class=mono>T13.2</span> Ejecutar el benchmark sobre el set de modelos candidatos y producir el informe comparativo versionado → <span class=mono>T13.3</span> Selección de modelo(s) por agente documentada y aprobada por la comisión → <span class=mono>T13.4</span> Aplicar la selección a la configuración de agentes (agents_seed.py / .agent.md / config.yaml)</p></div><div class="borrador"><p class="mini-tit">Fuera del diagrama · E19 en borrador</p><h3>Aprendizaje de formato por fine-tune local</h3><p>La spec (<a href="https://github.com/luxinopanyvino/swarm-platform-builder/blob/develop/docs/specs/SPEC-031-format-learning-finetune.md">SPEC-031</a>) está en <code>Draft</code> y no genera issues. RAG se puede deshacer y un fine-tune no: el contenido queda en los pesos, y eso choca con la retención de datos y el aislamiento por proyecto. Antes de abrirla hay que responder las preguntas de la spec y escribir un ADR. Su criterio de éxito depende de las métricas de E15; en la pantalla de subida (T18.5) el modo aparece como no disponible.</p><p class="nota">Tareas previstas: <span class=mono>T19.1</span> Spike acotado: viabilidad en el hardware real (VRAM, tiempo, calidad) → <span class=mono>T19.2</span> ADR de fine-tune local: retención, aislamiento, alcance y reversibilidad</p></div>
+</section>
+
+<section class="seccion" id="trabajar">
+  <div class="seccion-cab">
+    <p class="eyebrow">4 · Cómo trabajar</p>
+    <h2>Del issue a la PR, y del plan a la página</h2>
+    <p class="lead">Tres cosas que vas a hacer a menudo. Todos los comandos se lanzan <strong>desde la raíz del repositorio</strong>; los que empiezan por <code>/</code> se escriben dentro de Claude Code.</p>
+  </div>
+
+  <div class="pestanas" role="tablist" aria-label="Guías">
+    <button type="button" role="tab" id="tab-ejecutar" aria-controls="panel-ejecutar" aria-selected="true">Ejecutar una tarea</button>
+    <button type="button" role="tab" id="tab-anadir" aria-controls="panel-anadir" aria-selected="false" tabindex="-1">Añadir tareas o épicas</button>
+    <button type="button" role="tab" id="tab-pagina" aria-controls="panel-pagina" aria-selected="false" tabindex="-1">Actualizar esta página</button>
+    <button type="button" role="tab" id="tab-referencia" aria-controls="panel-referencia" aria-selected="false" tabindex="-1">Skills y comandos</button>
+  </div>
+
+  <div class="panel-guia" role="tabpanel" id="panel-ejecutar" aria-labelledby="tab-ejecutar">
+    <div class="guia-grid">
+      <div>
+        <h3>Antes de la primera vez</h3>
+        <ol class="pasos">
+          <li>Instala <strong>Claude Code</strong> (la CLI <code>claude</code> o la extensión de VS Code) y <strong>GitHub CLI</strong>.</li>
+          <li>Autentica <code>gh</code> con permisos de proyecto. Si acabas de instalarlo, cierra y abre VS Code para que la terminal lo encuentre.
+            <div class="cmd"><code>gh auth login --scopes project</code><button type="button" class="btn btn-mini" data-copiar>Copiar</button></div></li>
+          <li>Comprueba que ves los issues: <div class="cmd"><code>gh issue view 337 -R luxinopanyvino/swarm-platform-builder</code><button type="button" class="btn btn-mini" data-copiar>Copiar</button></div></li>
+        </ol>
+        <h3>Ejecutarla con la skill <code>/resolve-task</code></h3>
+        <ol class="pasos">
+          <li>Elige una tarea <strong>lista para empezar</strong> en el diagrama y apunta su número de issue (la ficha lo trae).</li>
+          <li>Abre Claude Code en la raíz del repo:
+            <div class="cmd"><code>claude</code><button type="button" class="btn btn-mini" data-copiar>Copiar</button></div></li>
+          <li>Escribe la skill con el número. Puedes pasar varios, y se resuelven en orden:
+            <div class="cmd"><code>/resolve-task 337</code><button type="button" class="btn btn-mini" data-copiar>Copiar</button></div></li>
+          <li>O, sin abrir la sesión interactiva (en Git Bash):
+            <div class="cmd"><code>bash scripts/run-task.sh 337</code><button type="button" class="btn btn-mini" data-copiar>Copiar</button></div></li>
+        </ol>
+      </div>
+      <div>
+        <h3>Qué hace por dentro</h3>
+        <ol class="pasos">
+          <li>Lee el issue: criterios, dependencias («Bloqueada por: #N»), área y severidad.</li>
+          <li><strong>Comprueba que todas las dependencias estén cerradas.</strong> Si alguna sigue abierta, se detiene y lo avisa: no implementa tareas bloqueadas.</li>
+          <li>Crea una rama con prefijo desde <code>develop</code> y lee el código implicado.</li>
+          <li>Implementa y ejecuta los tests. Si fallan, no sigue.</li>
+          <li>Escribe la bitácora en <code>docs/bitacora/tarea-N.md</code>.</li>
+          <li>Sube la rama y abre la PR contra <code>develop</code> con <code>Closes #N</code>. <strong>No mergea</strong> ni cierra issues.</li>
+        </ol>
+        <h3>Y después, tú</h3>
+        <ul class="dod">
+          <li>Revisa el diff como si lo hubiera escrito otra persona: es tu PR.</li>
+          <li>Comprueba que la CI está en verde y que cada criterio de la ficha se cumple.</li>
+          <li>Pide revisión; si la ficha lleva <span class="lg-rev">R</span>, a alguien con experiencia.</li>
+          <li>Cuando se mergee, el issue se cierra solo y las tareas que dependían de él quedan listas. Regenera esta página.</li>
+        </ul>
+        <p class="aviso">Una tarea implementada pero con el issue abierto <strong>sigue bloqueando</strong> a las que dependen de ella: <code>/resolve-task</code> se detendrá. Ciérrala por el flujo (PR con su bitácora) antes de seguir.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel-guia" role="tabpanel" id="panel-anadir" aria-labelledby="tab-anadir" hidden>
+    <p class="aviso"><strong>Nunca crees issues a mano.</strong> El tablero se genera desde las specs: un issue sin su marcador oculto (<code>&lt;!-- sdd:task:T16.2 --&gt;</code>) queda «no gestionado», y uno duplicado bloquea la sincronización.</p>
+    <div class="guia-grid">
+      <div>
+        <h3>Una tarea nueva en una épica que ya existe</h3>
+        <ol class="pasos">
+          <li>Crea una rama <code>docs/</code> y abre la spec de la épica (la ficha de cualquier tarea de la épica enlaza su spec).</li>
+          <li>Si la tarea necesita un criterio que no existe, añádelo en la sección 3 como <code>- [ ] **AC8** — *Given* …, *When* …, *Then* …</code></li>
+          <li>Añádela al bloque <code>sdd-sync</code> de la sección 8:
+            <pre class="bloque-code">  - id: T16.7
+    title: "Qué hay que hacer, en una frase"
+    sev: medium            # high · medium · low
+    depends_on: [T16.5]    # ids de tareas; [] si ninguna
+    acceptance: [AC8]</pre></li>
+          <li>Valida las specs: <div class="cmd"><code>python scripts/validate_specs.py</code><button type="button" class="btn btn-mini" data-copiar>Copiar</button></div></li>
+          <li>PR contra <code>develop</code>. Cuando esté mergeada, en Claude Code, primero simula y luego aplica:
+            <div class="cmd"><code>/sdd-sync</code><button type="button" class="btn btn-mini" data-copiar>Copiar</button></div><div class="cmd"><code>/sdd-sync --apply</code><button type="button" class="btn btn-mini" data-copiar>Copiar</button></div></li>
+          <li>Opcional pero recomendable: su ficha en <code>docs/onboarding/tareas.yaml</code> (alcance, archivos, «ojo con», rama) y su sitio en el reparto. Regenera la página.</li>
+        </ol>
+      </div>
+      <div>
+        <h3>Una épica nueva</h3>
+        <ol class="pasos">
+          <li>Crea la spec con la skill de Spec Kit. Nace en <code>Draft</code> con su bloque <code>sdd-sync</code>:
+            <div class="cmd"><code>/speckit-specify &quot;Descripción de la necesidad&quot;</code><button type="button" class="btn btn-mini" data-copiar>Copiar</button></div></li>
+          <li>Madúrala: preguntas a lo que quedó ambiguo, checklist de calidad de requisitos y análisis de consistencia con su ADR y sus tareas:
+            <div class="cmd"><code>/speckit-clarify SPEC-032</code><button type="button" class="btn btn-mini" data-copiar>Copiar</button></div><div class="cmd"><code>/speckit-checklist SPEC-032 seguridad</code><button type="button" class="btn btn-mini" data-copiar>Copiar</button></div><div class="cmd"><code>/speckit-analyze SPEC-032</code><button type="button" class="btn btn-mini" data-copiar>Copiar</button></div></li>
+          <li>Cambia su <strong>Estado</strong> a <code>Ready</code>. Las specs en <code>Draft</code> no generan issues.</li>
+          <li>Valida, abre la PR <code>docs/</code> y, tras el merge, <code>/sdd-sync</code> y <code>/sdd-sync --apply</code>.</li>
+          <li>Cada épica va a su tablero: <strong>E14 en adelante</strong> al <a href="https://github.com/users/luxinopanyvino/projects/8">roadmap</a>; E1–E13, al backlog antiguo.</li>
+          <li>Añade su nombre corto en <code>epicas</code> de <code>tareas.yaml</code> y regenera la página.</li>
+        </ol>
+        <p class="nota">El número de spec y de épica es el siguiente libre. <code>/speckit-specify</code> lo propone, y la validación de specs falla si dos épicas se pisan.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel-guia" role="tabpanel" id="panel-pagina" aria-labelledby="tab-pagina" hidden>
+    <div class="guia-grid">
+      <div>
+        <h3>Regenerarla</h3>
+        <ol class="pasos">
+          <li>Desde la raíz del repo, con <code>gh</code> autenticado (lee el estado de cada issue):
+            <div class="cmd"><code>python scripts/build_onboarding.py</code><button type="button" class="btn btn-mini" data-copiar>Copiar</button></div></li>
+          <li>Sin red o sin <code>gh</code>, usa la última copia guardada del estado:
+            <div class="cmd"><code>python scripts/build_onboarding.py --sin-github</code><button type="button" class="btn btn-mini" data-copiar>Copiar</button></div></li>
+          <li>Ábrela en el navegador: <code>docs/public/onboarding/alejandria-por-dentro.html</code>. También la sirve la web de documentación:
+            <div class="cmd"><span class="cmd-lab">luego</span><code>cd docs &amp;&amp; npm run dev</code><button type="button" class="btn btn-mini" data-copiar>Copiar</button></div><span class="nota">y entra en <code>http://localhost:5174/onboarding/alejandria-por-dentro.html</code></span></li>
+          <li>Guarda el cambio en una rama <code>docs/</code> con su PR, como cualquier otro.</li>
+        </ol>
+        <h3>Cuándo regenerarla</h3>
+        <ul class="dod">
+          <li>Después de <code>/sdd-sync --apply</code> (tareas o épicas nuevas).</li>
+          <li>Después de mergear PRs que cierran tareas (cambian las listas para empezar).</li>
+          <li>Al cambiar el reparto, una ficha o la arquitectura.</li>
+        </ul>
+      </div>
+      <div>
+        <h3>De dónde sale cada cosa</h3>
+        <table class="origen">
+          <thead><tr><th scope="col">Lo que ves</th><th scope="col">Se edita en</th></tr></thead>
+          <tbody>
+            <tr><td>Épicas, tareas, severidad, dependencias, «Hecha cuando»</td><td><code>docs/specs/SPEC-*.md</code> (bloque <code>sdd-sync</code> y sección 3)</td></tr>
+            <tr><td>Número de issue, abierta o cerrada</td><td>GitHub; copia en <code>docs/onboarding/issues.json</code></td></tr>
+            <tr><td>Alcance, archivos, «Ojo con», rama, revisión, nombre corto, reparto</td><td><code>docs/onboarding/tareas.yaml</code></td></tr>
+            <tr><td>Arquitectura, recorrido de una ejecución, agentes</td><td><code>docs/onboarding/arquitectura.yaml</code></td></tr>
+            <tr><td>Aspecto y comportamiento de la página</td><td><code>docs/onboarding/plantilla/</code> (<code>estilos.css</code>, <code>app.js</code>)</td></tr>
+          </tbody>
+        </table>
+        <p class="nota">El generador avisa de lo que no cuadra: fichas de tareas que ya no existen, componentes desconocidos, criterios que faltan en la spec o tareas sin ficha. Con <code>--estricto</code>, esos avisos son error; así lo ejecuta el test <code>test_onboarding_page.py</code>.</p>
+        <h3>Si está publicada como artifact</h3>
+        <p>Pide a Claude Code que la republique en el mismo enlace, pasándole la URL: «republica el artifact &lt;URL&gt; con <code>docs/public/onboarding/alejandria-por-dentro.html</code>». Los que ya la tengan abierta verán la versión nueva.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel-guia" role="tabpanel" id="panel-referencia" aria-labelledby="tab-referencia" hidden>
+    <div class="tabla-scroll">
+    <table class="origen referencia">
+      <thead><tr><th scope="col">Skill o comando</th><th scope="col">Para qué</th><th scope="col">Cuándo</th></tr></thead>
+      <tbody>
+        <tr><td><code>/resolve-task N [N…]</code></td><td>Implementa issues de extremo a extremo con el agente <code>task-runner</code>: rama, código, tests, bitácora y PR.</td><td>Para ejecutar una tarea lista.</td></tr>
+        <tr><td><code>bash scripts/run-task.sh N</code></td><td>Lo mismo, sin sesión interactiva (<code>claude -p</code>).</td><td>Desde Git Bash o un script.</td></tr>
+        <tr><td><code>/sdd-sync</code></td><td>Simula la sincronización specs → issues: qué crearía, actualizaría o está desalineado. No cambia nada.</td><td>Antes de aplicar, y para revisar el estado.</td></tr>
+        <tr><td><code>/sdd-sync --apply</code></td><td>Crea y actualiza issues, dependencias, sub-issues y pertenencia al tablero. Nunca cierra ni borra.</td><td>Tras mergear cambios en specs.</td></tr>
+        <tr><td><code>/speckit-specify</code></td><td>Crea una spec nueva en <code>Draft</code> desde la plantilla, con bloque <code>sdd-sync</code>.</td><td>Para una épica nueva.</td></tr>
+        <tr><td><code>/speckit-clarify</code></td><td>Hasta 5 preguntas sobre lo ambiguo, y graba las respuestas en la spec.</td><td>Antes de pasarla a <code>Ready</code>.</td></tr>
+        <tr><td><code>/speckit-checklist</code></td><td>Checklist de calidad de los requisitos de una spec.</td><td>Antes de pasarla a <code>Ready</code>.</td></tr>
+        <tr><td><code>/speckit-analyze</code></td><td>Consistencia entre spec, ADR y tareas (solo lectura).</td><td>Antes de sincronizar.</td></tr>
+        <tr><td><code>python scripts/validate_specs.py</code></td><td>Valida formato y coherencia de todas las specs; es el gate de CI.</td><td>Antes de cada PR que toca specs.</td></tr>
+        <tr><td><code>python scripts/build_onboarding.py</code></td><td>Regenera esta página.</td><td>Tras sincronizar o cerrar tareas.</td></tr>
+        <tr><td><code>python -m evals.agent_behavior.gate</code></td><td>Gate de regresión de los agentes (desde <code>backend/</code>).</td><td>Si tocas agentes, prompts o el dispatcher.</td></tr>
+      </tbody>
+    </table>
+    </div>
+  </div>
+
+  <div class="contrib">
+    <div>
+      <h3>Definition of Done común</h3>
+      <ul class="dod">
+        <li>Cumple <strong>todos</strong> los criterios de aceptación de la tarea.</li>
+        <li>Tests automatizados que cubren el cambio, en verde en CI.</li>
+        <li>Sin secretos en el diff; dependencias nuevas escaneadas.</li>
+        <li>Documentación, spec o ADR actualizados si el cambio los afecta.</li>
+        <li>Si toca agentes, prompts o el dispatcher: el gate EDD pasa, o la regresión se explica en la misma PR.</li>
+        <li>Revisada y aprobada. Nadie mergea su propia PR ni cierra issues a mano.</li>
+      </ul>
+      <h3>Tu primera semana</h3>
+      <ol class="pasos">
+        <li>Lee <code>CLAUDE.md</code> y <code>docs/governance/GOVERNANCE.md</code>.</li>
+        <li>Levanta todo con <code>dev-local.cmd</code> (Qdrant, backend <code>:8000</code>, frontend <code>:5173</code>) y entra con <code>admin@admin</code>.</li>
+        <li>Pasa los tests del backend una vez, para saber qué es «verde».</li>
+        <li>Primera PR: la tarea marcada como <em>hecha, falta cerrar</em>, para aprender el flujo sin riesgo.</li>
+      </ol>
+    </div>
+    <div>
+      <h3>Lo que ya nos ha mordido</h3>
+      <ul class="avisos">
+        <li><strong>Tests y base de datos.</strong> Un orden concreto de tests llegó a vaciar la base de desarrollo. <code>tests/conftest.py</code> lo impide ahora: no debilites esa guarda.</li>
+        <li><strong>Modelos que razonan.</strong> <code>olmo-3:7b</code> razona aunque se le pida que no y puede devolver respuestas vacías. Usa <code>qwen3.5</code>.</li>
+        <li><strong>Esquema.</strong> Nunca con SQL a mano. Revisa lo que genera <code>--autogenerate</code>: hay un ciclo de claves foráneas que no sabe ordenar.</li>
+        <li><strong>Directo a develop.</strong> Un hook bloquea commits y push a <code>develop</code>. Si salta un mensaje de gobernanza, crea una rama.</li>
+      </ul>
+      <h3>Comandos de cada día</h3>
+      <div class="cmd"><span class="cmd-lab">backend/</span><code>DEBUG=true SECRET_KEY=ci-secret-not-for-prod python -m pytest -q</code><button type="button" class="btn btn-mini" data-copiar>Copiar</button></div>
+      <div class="cmd"><span class="cmd-lab">frontend/</span><code>npm run build &amp;&amp; npm run build:public</code><button type="button" class="btn btn-mini" data-copiar>Copiar</button></div>
+      <div class="cmd"><span class="cmd-lab">backend/</span><code>alembic revision --autogenerate -m &quot;...&quot;</code><button type="button" class="btn btn-mini" data-copiar>Copiar</button></div>
+    </div>
+  </div>
+</section>
+
+<footer class="pie">Generada el 15/09/2026 con <code>python scripts/build_onboarding.py</code> desde las specs de <code>develop</code> y el estado de GitHub (52 tareas ya cerradas no aparecen). El estado vivo está en el <a href="https://github.com/users/luxinopanyvino/projects/8">tablero del roadmap</a>.</footer>
+</div>
+
+<div class="velo" id="velo" hidden></div>
+<aside class="cajon" id="cajon" aria-label="Ficha de la tarea" hidden>
+  <div class="cajon-cab">
+    <span class="cajon-id" id="cajon-id"></span>
+    <button type="button" class="btn btn-texto" id="cajon-cerrar" aria-label="Cerrar ficha">Cerrar</button>
+  </div>
+  <div class="cajon-cuerpo" id="cajon-cuerpo"></div>
+</aside>
+
+<script>
+const DATA = {"repo": "https://github.com/luxinopanyvino/swarm-platform-builder", "tablero": "https://github.com/users/luxinopanyvino/projects/8", "tareas": [{"id": "T14.1", "n": 335, "sev": "low", "deps": [], "unlocks": ["T14.2"], "title": "Alta del área area/qa (validador, seed, gobernanza, backlog)", "short": "Alta area/qa (hecha)", "epic": "E14", "alcance": "Dar de alta la etiqueta <code>area/qa<\/code> en los cuatro sitios que la usan. <strong>Ya está hecho<\/strong> en el commit <code>c058fd4<\/code>: el validador la acepta, el seed la tiene, GOVERNANCE y el backlog la nombran y <code>test_qa_area_registration.py<\/code> pasa. Queda verificarlo y cerrar la tarea por el flujo normal.", "dod": ["<em>Given<\/em> el repositorio, <em>Then<\/em> existe <code>docs/governance/qa-strategy.md<\/code> que define <strong>qué es aquí<\/strong> una prueba unitaria, una de integración y una de estrés, dónde vive cada una, cuál bloquea una PR y <strong>qué se decide no probar y por qué<\/strong>; enlazado desde GOVERNANCE §6. <span class=\"ac\">AC1<\/span>", "<code>test_qa_area_registration.py<\/code> y <code>test_spec_plan_coherence.py<\/code> en verde.", "<code>scripts/validate_specs.py<\/code> acepta specs con <code>area/qa<\/code>.", "Bitácora <code>docs/bitacora/tarea-335.md<\/code> con la verificación, en una PR <code>Closes #335<\/code>."], "files": ["scripts/validate_specs.py", "scripts/seed_github_project.py", "docs/governance/GOVERNANCE.md"], "cuidado": "Buena primera tarea para aprender el flujo (rama, PR, bitácora) sin riesgo. No rehagas lo que ya funciona.", "rama": "docs/335-area-qa", "sensible": null, "comps": ["ci"], "estado": "hecha", "ola": 0}, {"id": "T14.2", "n": 336, "sev": "medium", "deps": ["T14.1"], "unlocks": ["T14.5", "T14.6"], "title": "Documento de estrategia de pruebas y su test de vigencia", "short": "Doc. estrategia QA", "epic": "E14", "alcance": "Escribir <code>docs/governance/qa-strategy.md<\/code>: qué es aquí una prueba unitaria, de integración y de estrés, dónde vive cada una, cuál bloquea una PR, <strong>qué se decide no probar y por qué<\/strong>, y la frontera con EDD (QA mide lo determinista; EDD, el comportamiento probabilístico). Enlazarlo desde GOVERNANCE §6 y añadir un test que cruce el documento con el repositorio.", "dod": ["<em>Given<\/em> el repositorio, <em>Then<\/em> existe <code>docs/governance/qa-strategy.md<\/code> que define <strong>qué es aquí<\/strong> una prueba unitaria, una de integración y una de estrés, dónde vive cada una, cuál bloquea una PR y <strong>qué se decide no probar y por qué<\/strong>; enlazado desde GOVERNANCE §6. <span class=\"ac\">AC1<\/span>", "<em>Given<\/em> el documento de estrategia, <em>Then<\/em> un test lo cruza con la realidad del repositorio —que los directorios y comandos que nombra existan, que los niveles que declara sean los que la CI ejecuta— de modo que no pueda quedarse describiendo un repositorio que ya no es este. <span class=\"ac\">AC7<\/span>"], "files": ["docs/governance/qa-strategy.md", "docs/governance/GOVERNANCE.md", "backend/tests/test_qa_strategy.py"], "cuidado": "Cuando escribas el documento, <code>backend/tests/integration/<\/code> y <code>qa/load/<\/code> aún no existen (los crean T14.5 y T14.6). Márcalos como planificados de forma que el test lo entienda, en vez de nombrar rutas que lo harían fallar. Inspírate en <code>test_sdd_governance.py<\/code>.", "rama": "docs/336-estrategia-qa", "sensible": null, "comps": ["ci"], "estado": "espera", "ola": 1}, {"id": "T14.3", "n": 337, "sev": "medium", "deps": [], "unlocks": ["T14.7"], "title": "Medir cobertura y fijar el suelo en CI", "short": "Suelo de cobertura", "epic": "E14", "alcance": "Añadir <code>pytest-cov<\/code>, medir la cobertura actual de <code>app<\/code> y fijar <code>--cov-fail-under<\/code> <strong>al número medido<\/strong> en el job de backend de <code>ci.yml<\/code>.", "dod": ["<em>Given<\/em> la CI, <em>When<\/em> corre el job de backend, <em>Then<\/em> mide cobertura y <strong>falla si baja del suelo declarado<\/strong>; el suelo se fija a la cobertura medida el día que se introduce (no a un número aspiracional) y bajarlo exige justificarlo en la misma PR. <span class=\"ac\">AC2<\/span>"], "files": ["backend/requirements-dev.in (nuevo)", ".github/workflows/ci.yml"], "cuidado": "No existe fichero de dependencias de desarrollo: la spec habla de <code>requirements-dev.in<\/code> y hay que crearlo con el mismo lock con hashes que <code>requirements.txt<\/code> (ver CLAUDE.md, «Dependencias»). Coordina con T15.1, que también añade una dependencia de desarrollo. El suelo es anti-regresión, no una meta.", "rama": "chore/337-cobertura", "sensible": null, "comps": ["ci"], "estado": "lista", "ola": 0}, {"id": "T14.4", "n": 338, "sev": "high", "deps": [], "unlocks": ["T14.7"], "title": "Runner de pruebas de frontend y primeras pruebas de platform/", "short": "Vitest en frontend", "epic": "E14", "alcance": "Vitest en <code>frontend/<\/code> (script <code>npm test<\/code>, <code>vitest.config.js<\/code>) y primeras pruebas donde hay lógica: el cliente HTTP (cabecera <code>X-Project-Id<\/code>, logout ante 401), los stores de sesión y proyectos, y los registros de <code>platform/<\/code> (<code>setAgentCatalog<\/code>, <code>setProjectNavItems<\/code>, <code>setRunTarget<\/code>, <code>setNotificationRoute<\/code>). Un job de CI que lo ejecute y bloquee.", "dod": ["<em>Given<\/em> <code>frontend/<\/code>, <em>When<\/em> se ejecuta <code>npm test<\/code>, <em>Then<\/em> corre un runner de pruebas con casos que cubren el cliente HTTP, los stores y los registros de <code>platform/<\/code>; la CI lo ejecuta y bloquea la PR si falla. <span class=\"ac\">AC3<\/span>"], "files": ["frontend/package.json", "frontend/vitest.config.js", "frontend/src/platform/**/*.test.js", ".github/workflows/ci.yml"], "cuidado": "Hay dos builds de Vite: <code>npm run build<\/code> y <code>npm run build:public<\/code> deben seguir pasando. Las pruebas de <code>platform/<\/code> no pueden importar de <code>projects/<\/code> (lo vigila <code>test_frontend_layers.py<\/code>). Ninguna prueba necesita el backend encendido.", "rama": "feat/338-vitest", "sensible": null, "comps": ["fe-platform", "ci"], "estado": "lista", "ola": 0}, {"id": "T14.5", "n": 339, "sev": "high", "deps": ["T14.2"], "unlocks": ["T14.7"], "title": "Suite de integración contra Qdrant y base de datos reales", "short": "Integración real", "epic": "E14", "alcance": "<code>docker-compose.test.yml<\/code> con Qdrant y Postgres, una marca <code>integration<\/code> que la suite rápida excluye por defecto, y en <code>backend/tests/integration/<\/code> los casos que <strong>solo<\/strong> se pueden probar con el servicio real. Job propio en CI.", "dod": ["<em>Given<\/em> un entorno con Qdrant y la base de datos <strong>reales<\/strong>, <em>When<\/em> se ejecuta la suite de integración, <em>Then<\/em> cubre al menos: indexar y recuperar un documento de punta a punta, el rechazo por dimensión incorrecta (409), el comportamiento con Qdrant caído, y las migraciones aplicadas sobre el motor de producción; corre en un job propio, <strong>no<\/strong> en el gate rápido. <span class=\"ac\">AC4<\/span>"], "files": ["docker-compose.test.yml (nuevo)", "backend/tests/integration/ (nuevo)", ".github/workflows/ci.yml"], "cuidado": "<code>backend/tests/conftest.py<\/code> <strong>aborta pytest<\/strong> si <code>DATABASE_URL<\/code> no es SQLite o apunta a <code>backend/data/<\/code>: es la guarda que evita que un test vacíe la base de desarrollo, y ya ocurrió. La suite de integración necesita un opt-in explícito para Postgres <em>sin debilitar esa guarda<\/em>. Pide revisión de ese cambio. Candidato claro a fallar distinto en Postgres: el ciclo de claves foráneas <code>users<\/code> ↔ <code>projects<\/code>.", "rama": "feat/339-integracion", "sensible": "Toca la guarda de la base de datos de tests", "comps": ["sql", "qdrant", "rag", "ci"], "estado": "espera", "ola": 2}, {"id": "T14.6", "n": 340, "sev": "medium", "deps": ["T14.2"], "unlocks": ["T14.7"], "title": "Pruebas de carga sobre SSE, indexación RAG y login, con presupuestos", "short": "Carga con k6", "epic": "E14", "alcance": "Scripts de <code>k6<\/code> en <code>qa/load/<\/code> para los tres caminos caros: ejecución del pipeline por SSE (conexiones abiertas simultáneas), indexación RAG (lotes al proveedor de embeddings) y login (rate limit y bloqueo). Presupuestos escritos en <code>qa/load/budgets.yaml<\/code>.", "dod": ["<em>Given<\/em> los tres caminos caros —la ejecución del pipeline por SSE, la indexación RAG y el login—, <em>When<\/em> se ejecuta la prueba de carga con el perfil declarado, <em>Then<\/em> se obtienen latencia (p50/p95), tasa de error y uso de memoria, y el resultado se compara con un <strong>presupuesto escrito<\/strong>; una regresión avisa. <span class=\"ac\">AC5<\/span>"], "files": ["qa/load/ (nuevo)", "qa/load/budgets.yaml (nuevo)"], "cuidado": "La carga es informativa: un runner compartido da cifras ruidosas, así que deja margen en los presupuestos y compara solo ejecuciones del mismo perfil. El login bloquea cuentas tras varios fallos a propósito: no lo confundas con un error. Acordad qué modelo usa el escenario de pipeline (la VRAM es el recurso escaso).", "rama": "feat/340-carga-k6", "sensible": null, "comps": ["bus", "api-core", "rag"], "estado": "espera", "ola": 2}, {"id": "T14.7", "n": 341, "sev": "medium", "deps": ["T14.3", "T14.4", "T14.5", "T14.6"], "unlocks": [], "title": "Separar los tres niveles en la CI y ajustar la protección de rama", "short": "Tres niveles en CI", "epic": "E14", "alcance": "Reorganizar <code>ci.yml<\/code> en tres niveles: unitarias (backend y frontend) bloqueantes y rápidas, integración bloqueante en job aparte, carga informativa y <strong>no obligatoria<\/strong>. Si integración pasa a check requerido, reimportar el ruleset de <code>branch-protection.md<\/code>.", "dod": ["<em>Given<\/em> una PR, <em>Then<\/em> la CI distingue los tres niveles: unitarias bloqueantes y rápidas, integración bloqueante en job aparte, carga <strong>informativa<\/strong> y no obligatoria (no puede ser un check requerido: tendría filtro de rutas o duración variable y bloquearía PRs para siempre, como ya documenta <code>branch-protection.md<\/code>). <span class=\"ac\">AC6<\/span>"], "files": [".github/workflows/ci.yml", ".github/rulesets/develop.json", "docs/governance/branch-protection.md"], "cuidado": "Un check requerido con filtro de rutas o duración variable bloquea PRs para siempre (lo documenta <code>branch-protection.md<\/code>). Nunca añadas el de carga a los obligatorios.", "rama": "chore/341-niveles-ci", "sensible": null, "comps": ["ci"], "estado": "espera", "ola": 3}, {"id": "T15.1", "n": 342, "sev": "medium", "deps": [], "unlocks": ["T15.2"], "title": "Adoptar deepeval como librería de métricas (dependencia, telemetría off)", "short": "Adoptar deepeval", "epic": "E15", "alcance": "Añadir deepeval como dependencia de <strong>desarrollo<\/strong> (nada de <code>backend/app/<\/code> la importa), desactivar su telemetría y documentarlo en <code>.env.example<\/code>, y registrar un primer módulo de métrica en <code>evals/agent_behavior/metrics/<\/code>.", "dod": ["<em>Given<\/em> deepeval instalado, <em>When<\/em> se ejecuta el runner, <em>Then<\/em> sus métricas se obtienen del <strong>mismo registro<\/strong> que las demás (<code>metrics/<\/code>), en escala <strong>0–100<\/strong>, con <code>applies_to<\/code> que las salta con motivo cuando el caso no las alimenta; <strong><code>runner.py<\/code> no cambia<\/strong> — verificable con un test que compare el fichero con su versión anterior o compruebe que no menciona deepeval. <span class=\"ac\">AC1<\/span>", "<em>Given<\/em> el entorno de evaluación, <em>Then<\/em> la telemetría de deepeval está desactivada y no se usa login ni subida de resultados a Confident AI; documentado en <code>.env.example<\/code> y verificable sin red. <span class=\"ac\">AC3<\/span>"], "files": ["backend/requirements-dev.in", "backend/evals/agent_behavior/metrics/", "backend/.env.example"], "cuidado": "Confirma en la documentación de deepeval el nombre exacto de la variable de opt-out de telemetría; no la supongas. Coordina el fichero de dependencias de desarrollo con T14.3. Añadir una métrica es añadir un módulo: el runner no se toca.", "rama": "feat/342-deepeval", "sensible": null, "comps": ["evals"], "estado": "lista", "ola": 0}, {"id": "T15.2", "n": 343, "sev": "high", "deps": ["T15.1"], "unlocks": ["T15.3"], "title": "Puente del juez: deepeval llama por el dispatcher de la plataforma", "short": "Puente del juez", "epic": "E15", "alcance": "Un <code>DeepEvalBaseLLM<\/code> propio que sirve los veredictos con el juez de la plataforma: <code>PlatformJudge<\/code> (que llama a <code>call_llm<\/code> con <code>temperature=0<\/code> y el modelo de la cascada) en <code>live<\/code>, y <code>RecordedJudge<\/code> en <code>replay<\/code>.", "dod": ["<em>Given<\/em> una métrica de deepeval que necesita juez, <em>When<\/em> se evalúa, <em>Then<\/em> la llamada sale por <code>platform/llm.py<\/code> con <code>temperature=0<\/code> y el modelo resuelto por la cascada de la plataforma; <strong>no<\/strong> se instancia ningún cliente de proveedor propio de deepeval — verificable con un test estructural que falle si aparece uno. <span class=\"ac\">AC2<\/span>"], "files": ["backend/evals/agent_behavior/judge.py"], "cuidado": "El test estructural debe mirar el <strong>AST<\/strong>, no buscar texto: la búsqueda de texto tropieza con los docstrings que explican el propio defecto (error ya cometido en #159, #264 y #265). Si deepeval abre su propio cliente, se salta la política de egress y la cascada de modelo.", "rama": "feat/343-puente-juez", "sensible": "Única puerta hacia los proveedores de LLM", "comps": ["evals", "llm"], "estado": "espera", "ola": 1}, {"id": "T15.3", "n": 344, "sev": "high", "deps": ["T15.2"], "unlocks": ["T15.4", "T15.5"], "title": "Métricas de recuperación alimentadas por la traza de explicabilidad", "short": "Métricas de RAG", "epic": "E15", "alcance": "Métricas de fidelidad al contexto y de relevancia de lo recuperado, alimentadas por las <code>rag_sources<\/code> que la traza de T9.1 ya guarda en <code>agent_run_steps<\/code>, sin que el agente tenga que colaborar.", "dod": ["<em>Given<\/em> un caso con corpus y fuentes recuperadas, <em>When<\/em> se evalúa, <em>Then<\/em> se computan al menos <strong>fidelidad al contexto<\/strong> y <strong>relevancia de lo recuperado<\/strong>, alimentadas por las fuentes que la traza de T9.1 ya registra (<code>agent_run_steps<\/code>), sin que el agente tenga que colaborar. <span class=\"ac\">AC4<\/span>"], "files": ["backend/evals/agent_behavior/metrics/"], "cuidado": "Si el caso no trae fuentes, la métrica se salta con motivo; no puntúa cero. En <code>replay<\/code> no se llama a ningún juez.", "rama": "feat/344-metricas-rag", "sensible": null, "comps": ["evals", "trace"], "estado": "espera", "ola": 2}, {"id": "T15.4", "n": 345, "sev": "medium", "deps": ["T15.3"], "unlocks": [], "title": "Dataset golden con procedencia recorded para el agente con RAG", "short": "Golden recorded", "epic": "E15", "alcance": "Grabar una ejecución real del agente que usa RAG y versionarla como <code>&lt;agente&gt;-golden<\/code> con <code>provenance: recorded<\/code>, más su pareja <code>&lt;agente&gt;-regressions<\/code>, que falla a propósito y documenta qué detecta.", "dod": ["<em>Given<\/em> el agente que usa RAG, <em>Then<\/em> existe un dataset <code>&lt;agente&gt;-golden<\/code> con <code>provenance: recorded<\/code> —salidas grabadas de una ejecución real, no escritas a mano— y su pareja <code>&lt;agente&gt;-regressions<\/code> que falla a propósito y documenta qué se detecta. <span class=\"ac\">AC5<\/span>"], "files": ["backend/evals/agent_behavior/datasets/"], "cuidado": "<strong>Es la única tarea que necesita un modelo de verdad<\/strong> (Ollama local o clave de API). En este equipo Ollama funciona con <code>qwen3.5:4b<\/code> o <code>9b<\/code>; evita <code>olmo-3:7b<\/code>, que razona aunque se le pida que no. Nunca presentes un <code>replay<\/code> como prueba de que el agente va bien.", "rama": "feat/345-golden-recorded", "sensible": null, "comps": ["evals", "providers"], "estado": "espera", "ola": 3}, {"id": "T15.5", "n": 346, "sev": "medium", "deps": ["T15.3"], "unlocks": [], "title": "Umbrales en modo aviso y disciplina escrita en edd-discipline.md", "short": "Umbrales en aviso", "epic": "E15", "alcance": "Umbrales de las métricas nuevas en <code>thresholds.yaml<\/code> en <strong>modo aviso<\/strong>, y la disciplina escrita en <code>docs/governance/edd-discipline.md<\/code>, incluida la frontera con <code>model_benchmark<\/code>.", "dod": ["<em>Given<\/em> <code>thresholds.yaml<\/code>, <em>Then<\/em> las métricas nuevas tienen umbral declarado <strong>en modo aviso<\/strong>, el gate distingue igual que hoy entre regresión (avisa) y medición rota (rompe siempre), y la disciplina queda escrita en <code>edd-discipline.md<\/code> junto con la frontera con <code>model_benchmark<\/code>. <span class=\"ac\">AC6<\/span>"], "files": ["backend/evals/agent_behavior/thresholds.yaml", "docs/governance/edd-discipline.md"], "cuidado": "El modo lo decide <code>thresholds.yaml<\/code>, no el workflow. No marques el check <code>edd-gate<\/code> como obligatorio: tiene filtro de rutas.", "rama": "feat/346-umbrales-aviso", "sensible": null, "comps": ["evals"], "estado": "espera", "ola": 3}, {"id": "T16.1", "n": 352, "sev": "medium", "deps": [], "unlocks": ["T16.2", "T16.3"], "title": "Definir las magnitudes de la portada (qué cuenta cada tarjeta y de dónde sale)", "short": "Definir magnitudes", "epic": "E16", "alcance": "Un documento con cada tarjeta de la portada: qué cuenta, sobre qué ventana temporal, de qué tabla y columna sale y con qué estadístico. Las tarjetas son: papers generados, agentes activos, latencia, anomalías, papers recientes y estado del enjambre.", "dod": ["<em>Given<\/em> cada tarjeta de la portada, <em>Then<\/em> su magnitud está <strong>definida y documentada<\/strong>: qué cuenta, sobre qué ventana temporal y de qué tabla sale; en particular la latencia dice <strong>de qué<\/strong> es (paso de agente, no petición HTTP) y con qué estadístico. <span class=\"ac\">AC2<\/span>"], "files": ["documento de magnitudes (ubicación a acordar en la PR)"], "cuidado": "Es la base de T16.2 y T16.3: si una magnitud queda ambigua aquí, llega ambigua al código. El test de gobernanza que cruza el documento con el código solo puede completarse cuando exista <code>platform/summary.py<\/code> (T16.2).", "rama": "docs/352-magnitudes-portada", "sensible": null, "comps": ["api-dashboard", "trace"], "estado": "lista", "ola": 0}, {"id": "T16.2", "n": 353, "sev": "high", "deps": ["T16.1"], "unlocks": ["T16.4", "T16.5"], "title": "Endpoint GET /dashboard/summary por proyecto, con aislamiento probado", "short": "GET /dashboard/summary", "epic": "E16", "alcance": "<code>backend/app/routers/dashboard.py<\/code> y <code>platform/summary.py<\/code>: <code>GET /dashboard/summary<\/code> compone una consulta por magnitud y responde todo junto, autenticado y resuelto por <code>get_project_context<\/code>. Los papers recientes muestran el estado real del pipeline y los tokens desde <code>agent_runs<\/code>.", "dod": ["<em>Given<\/em> una sesión con proyecto activo, <em>When<\/em> se pide <code>GET /dashboard/summary<\/code> con <code>X-Project-Id<\/code>, <em>Then<\/em> devuelve las magnitudes de la portada <strong>solo de ese proyecto<\/strong>, autenticado y resuelto por <code>get_project_context<\/code>; no reutiliza <code>/metrics<\/code>, que es anónima y sin proyecto. <span class=\"ac\">AC1<\/span>", "<em>Given<\/em> la lista de papers recientes, <em>Then<\/em> cada uno muestra su estado real del pipeline y su coste en tokens tomados de <code>agent_runs<\/code>, no un estado de artículo que pueda haber quedado desfasado. <span class=\"ac\">AC5<\/span>", "<em>Given<\/em> dos proyectos con datos, <em>When<\/em> se pide la portada de uno, <em>Then<\/em> ninguna magnitud incluye datos del otro; verificable con un test que cree ejecuciones en ambos y compare. <span class=\"ac\">AC6<\/span>"], "files": ["backend/app/routers/dashboard.py (nuevo)", "backend/app/platform/summary.py (nuevo)"], "cuidado": "Es la tarea con más riesgo de fuga de E16: una portada «global» rompería el aislamiento entre proyectos por la puerta de atrás. <code>/metrics<\/code> es anónima y sin proyecto. Acota la ventana temporal por defecto y apóyate en los índices existentes. Pide revisión.", "rama": "feat/353-dashboard-summary", "sensible": "Aislamiento entre proyectos", "comps": ["api-dashboard", "ctx"], "estado": "espera", "ola": 1}, {"id": "T16.3", "n": 354, "sev": "high", "deps": ["T16.1"], "unlocks": ["T16.5"], "title": "Definir y calcular las anomalías sobre la traza de explicabilidad", "short": "Anomalías enumeradas", "epic": "E16", "alcance": "Un conjunto <strong>enumerado<\/strong> de condiciones sobre <code>agent_run_steps<\/code>, cada una con su cuenta: paso con estado de fallo, bucle de revisión agotado (<code>iteration<\/code> en el máximo), latencia por encima del presupuesto declarado y paso con RAG que no recuperó nada.", "dod": ["<em>Given<\/em> la traza de T9.1, <em>Then<\/em> «anomalía» está definida como un conjunto <strong>enumerado y verificable<\/strong> de condiciones sobre <code>agent_run_steps<\/code> —al menos: paso con <code>status<\/code> de fallo, bucle de revisión agotado (<code>iteration<\/code> en el máximo), latencia por encima del presupuesto declarado, y paso con RAG que no recuperó nada—, cada una con su cuenta propia; <em>When<\/em> no hay ninguna, <em>Then<\/em> el cero significa «se han comprobado estas condiciones», no «no se comprueba nada». <span class=\"ac\">AC3<\/span>"], "files": ["backend/app/platform/summary.py", "configuración del presupuesto de latencia"], "cuidado": "El presupuesto de latencia va en configuración, no dentro de la consulta (mismo patrón que <code>thresholds.yaml<\/code>). Escribe un test por condición, para que un fallo diga <em>cuál<\/em> dejó de detectarse.", "rama": "feat/354-anomalias", "sensible": null, "comps": ["api-dashboard", "trace"], "estado": "espera", "ola": 1}, {"id": "T16.4", "n": 355, "sev": "medium", "deps": ["T16.2"], "unlocks": ["T16.5"], "title": "Estado del enjambre derivado de los pasos abiertos, con umbral de incertidumbre", "short": "Estado del enjambre", "epic": "E16", "alcance": "Estado de cada agente del proyecto derivado de hechos: <em>ejecutando un paso ahora<\/em> (fila de <code>agent_run_steps<\/code> sin cerrar), <em>disponible<\/em> o <em>no configurado<\/em>, con el criterio escrito. Sin tabla de estado nueva.", "dod": ["<em>Given<\/em> ejecuciones en curso, <em>When<\/em> se consulta el estado del enjambre, <em>Then<\/em> cada agente del proyecto aparece con un estado derivado de hechos —ejecutando un paso ahora / disponible / no configurado— y el criterio de cada uno está escrito; un agente que lleva más de un umbral sin cerrar paso no se muestra como «ejecutando» indefinidamente. <span class=\"ac\">AC4<\/span>"], "files": ["backend/app/platform/summary.py"], "cuidado": "Un proceso que muere deja el paso abierto para siempre: sin el umbral, la portada mentiría justo cuando algo se ha roto. Pasado el umbral, se muestra como incierto. No guardes el estado en una tabla: sería una segunda verdad que se desincroniza.", "rama": "feat/355-estado-enjambre", "sensible": null, "comps": ["api-dashboard", "trace"], "estado": "espera", "ola": 2}, {"id": "T16.5", "n": 356, "sev": "medium", "deps": ["T16.2", "T16.3", "T16.4"], "unlocks": ["T16.6"], "title": "Portada en el frontend y fin de la redirección del index", "short": "Portada frontend", "epic": "E16", "alcance": "<code>OverviewPage.jsx<\/code> en <code>frontend/src/platform/pages/<\/code>, su cliente en <code>platform/api/<\/code>, y el <code>index<\/code> de <code>App.jsx<\/code> deja de redirigir a artículos. Una sola petición; las tarjetas enseñan qué miden y las anomalías se desglosan.", "dod": ["<em>Given<\/em> cada tarjeta de la portada, <em>Then<\/em> su magnitud está <strong>definida y documentada<\/strong>: qué cuenta, sobre qué ventana temporal y de qué tabla sale; en particular la latencia dice <strong>de qué<\/strong> es (paso de agente, no petición HTTP) y con qué estadístico. <span class=\"ac\">AC2<\/span>", "<em>Given<\/em> la lista de papers recientes, <em>Then<\/em> cada uno muestra su estado real del pipeline y su coste en tokens tomados de <code>agent_runs<\/code>, no un estado de artículo que pueda haber quedado desfasado. <span class=\"ac\">AC5<\/span>", "<code>/dashboard<\/code> abre la portada en vez de redirigir a artículos."], "files": ["frontend/src/platform/pages/OverviewPage.jsx (nuevo)", "frontend/src/App.jsx", "frontend/src/platform/api/"], "cuidado": "La portada vive en <code>platform/<\/code>, que no puede importar de <code>projects/<\/code>: «papers» es vocabulario de AlejandrIA, así que el texto sale de los registros (<code>runTargetLabel<\/code>), no escrito a mano. Comprueba las dos builds. Si T14.4 ya está, añade pruebas.", "rama": "feat/356-portada", "sensible": null, "comps": ["fe-platform"], "estado": "espera", "ola": 3}, {"id": "T16.6", "n": 357, "sev": "low", "deps": ["T16.5"], "unlocks": [], "title": "Degradación por tarjeta cuando una fuente de datos no responde", "short": "Degradación por tarjeta", "epic": "E16", "alcance": "Si la base o Qdrant no responden, las tarjetas que dependen de esa fuente se muestran indisponibles y el resto sigue funcionando. El backend informa del estado por magnitud en vez de fallar entero.", "dod": ["<em>Given<\/em> una fuente de datos caída (base, Qdrant), <em>When<\/em> se carga la portada, <em>Then<\/em> las tarjetas que dependen de ella se muestran como indisponibles y el resto funciona; la portada <strong>no<\/strong> se queda en blanco ni bloquea la navegación. <span class=\"ac\">AC7<\/span>"], "files": ["backend/app/platform/summary.py", "frontend/src/platform/pages/OverviewPage.jsx"], "cuidado": "El error por tarjeta tiene que decir qué falta y que el resto es fiable: una tarjeta vacía sin explicación parece un cero.", "rama": "feat/357-degradacion", "sensible": null, "comps": ["fe-platform", "api-dashboard"], "estado": "espera", "ola": 4}, {"id": "T17.1", "n": 358, "sev": "high", "deps": [], "unlocks": ["T17.4", "T17.5"], "title": "Vista de trazabilidad del proyecto sobre agent_run_steps", "short": "Vista de trazas", "epic": "E17", "alcance": "Endpoint y página en <code>frontend/src/platform/<\/code> que listan las ejecuciones del proyecto con sus pasos, estado y coste, leyendo <code>agent_run_steps<\/code>. Las ejecuciones se separan con <code>group_executions<\/code> (<code>platform/explainability.py<\/code>), el mismo criterio que <code>/explain<\/code>.", "dod": ["<em>Given<\/em> un proyecto activo, <em>When<\/em> se abre la vista de trazabilidad, <em>Then<\/em> lista las ejecuciones del <strong>proyecto<\/strong> con sus pasos, estado y coste, leyendo <code>agent_run_steps<\/code> (no OpenTelemetry, que está apagado por defecto); un usuario no ve ejecuciones de un proyecto que no le corresponde. <span class=\"ac\">AC1<\/span>"], "files": ["backend/app/routers/agents.py", "frontend/src/platform/pages/"], "cuidado": "No construyas nada sobre los spans de OpenTelemetry: están apagados por defecto y la vista quedaría vacía en todos los despliegues. Un artículo reejecutado tiene varias ejecuciones en la misma tabla: <code>step_index<\/code> vuelve a 0 al empezar una nueva, y una reanudación no reinicia.", "rama": "feat/358-vista-trazas", "sensible": "Aislamiento entre proyectos", "comps": ["api-agents", "trace", "fe-platform", "ctx"], "estado": "lista", "ola": 0}, {"id": "T17.2", "n": 359, "sev": "high", "deps": [], "unlocks": ["T17.3", "T17.4"], "title": "Cadena de hashes SHA-256 por paso, con serialización canónica versionada", "short": "Cadena SHA-256", "epic": "E17", "alcance": "Migración que añade <code>content_hash<\/code>, <code>prev_hash<\/code> y la versión de serialización a <code>agent_run_steps<\/code>. Al cerrar cada paso, <code>platform/explainability.py<\/code> calcula <code>sha256(canónico(paso) || hash_anterior)<\/code>.", "dod": ["<em>Given<\/em> un paso que se escribe, <em>Then<\/em> se calcula su hash SHA-256 sobre una serialización <strong>canónica<\/strong> de su contenido, encadenado al hash del paso anterior de la misma ejecución; el primer paso ancla en un valor conocido. <span class=\"ac\">AC4<\/span>", "La versión de la serialización queda en la fila, para que las cadenas viejas se sigan verificando si cambia."], "files": ["backend/app/models/agent_run_step.py", "backend/alembic/versions/ (migración nueva)", "backend/app/platform/explainability.py", "docs/governance/data-retention.md"], "cuidado": "<strong>Nunca cambies el esquema con SQL a mano<\/strong>: migración con <code>alembic revision --autogenerate<\/code> y revisa lo que genera (hay un ciclo de claves foráneas que no sabe ordenar); <code>test_migrations.py<\/code> compara. «Canónico» significa orden de claves y formato de números fijos. Hay que mencionar las columnas nuevas en <code>data-retention.md<\/code> (un test lo exige). Las trazas anteriores no tienen cadena.", "rama": "feat/359-cadena-hashes", "sensible": "Integridad y migración de esquema", "comps": ["trace", "sql"], "estado": "lista", "ola": 0}, {"id": "T17.3", "n": 360, "sev": "high", "deps": ["T17.2"], "unlocks": ["T17.6"], "title": "Verificación de integridad que localiza el paso alterado, borrado o insertado", "short": "Verificar integridad", "epic": "E17", "alcance": "Un verificador que recorre la cadena de una ejecución y un endpoint que lo expone. Informa de <em>qué<\/em> paso falla y en qué posición, y distingue «sin cadena» de «cadena rota».", "dod": ["<em>Given<\/em> una ejecución con su cadena, <em>When<\/em> se verifica, <em>Then<\/em> se detecta cualquier paso modificado, borrado o insertado, y el informe dice <strong>cuál<\/strong> y en qué posición; verificable con un test que altere una fila y otro que borre una del medio. <span class=\"ac\">AC5<\/span>", "<em>Given<\/em> una ejecución reanudada o un artículo reejecutado, <em>When<\/em> se verifica la integridad, <em>Then<\/em> la cadena no da falso positivo: la agrupación por ejecución sigue el mismo criterio que ya usa <code>/explain<\/code> —<code>step_index<\/code> que vuelve a 0 abre ejecución, una reanudación no—. <span class=\"ac\">AC7<\/span>"], "files": ["backend/app/platform/explainability.py", "backend/app/routers/agents.py"], "cuidado": "Las trazas anteriores a T17.2 no tienen cadena: si las marcas como rotas tienes un falso positivo garantizado. Reutiliza <code>group_executions<\/code>; otro criterio de agrupación haría que dos ejecuciones del mismo artículo parecieran una cadena rota.", "rama": "feat/360-verificar-integridad", "sensible": "Integridad", "comps": ["trace", "api-agents"], "estado": "espera", "ola": 1}, {"id": "T17.4", "n": 361, "sev": "medium", "deps": ["T17.1", "T17.2"], "unlocks": [], "title": "Exportación JSONL con esquema versionado y respeto a la retención", "short": "Export JSONL", "epic": "E17", "alcance": "Exportar una ejecución como JSONL, una línea por paso, a partir del mismo modelo de respuesta que <code>/explain<\/code>, con los hashes incluidos para que el export se pueda verificar fuera de la plataforma.", "dod": ["<em>Given<\/em> una ejecución, <em>When<\/em> se exporta, <em>Then<\/em> se obtiene JSONL con una línea por paso, esquema documentado y versionado, y <strong>sin volcar contenido que la política de retención no permita<\/strong> — el <code>input_digest<\/code> es un resumen a propósito y la exportación no lo convierte en un segundo almacén del artículo. <span class=\"ac\">AC3<\/span>"], "files": ["backend/app/routers/agents.py", "documentación del esquema JSONL"], "cuidado": "Compara el JSONL generado contra su esquema declarado en el test. Si dudas de si un campo se puede exportar, consulta <code>docs/governance/data-retention.md<\/code> antes de incluirlo.", "rama": "feat/361-export-jsonl", "sensible": null, "comps": ["api-agents", "trace"], "estado": "espera", "ola": 1}, {"id": "T17.5", "n": 362, "sev": "high", "deps": ["T17.1"], "unlocks": [], "title": "Log en vivo por proyecto, filtrado en servidor", "short": "Log en vivo", "epic": "E17", "alcance": "Una suscripción SSE por proyecto sobre los eventos que ya emite el pipeline, filtrada en <strong>servidor<\/strong> por el <code>project_id<\/code> resuelto, y en la vista un filtro por nivel (INFO, OK, WARN, ERROR).", "dod": ["<em>Given<\/em> ejecuciones en curso, <em>When<\/em> se mira el log en vivo, <em>Then<\/em> muestra los eventos del proyecto activo filtrables por nivel, y <strong>el flujo está acotado al proyecto<\/strong>: un evento de otro proyecto no llega al cliente ni siquiera para ser filtrado en el navegador. <span class=\"ac\">AC2<\/span>"], "files": ["emisor SSE del pipeline", "backend/app/core/stream_auth.py", "frontend/src/platform/"], "cuidado": "Es el punto con más riesgo de fuga de E17: filtrar en el navegador sería una fuga aunque no se vea. Mira cómo autentica hoy <code>/agents/{id}/stream<\/code> antes de diseñar el flujo por proyecto. Toca el mismo emisor SSE que T18.4.", "rama": "feat/362-log-en-vivo", "sensible": "Aislamiento entre proyectos", "comps": ["bus", "api-agents", "fe-platform", "ctx"], "estado": "espera", "ola": 1}, {"id": "T17.6", "n": 363, "sev": "medium", "deps": ["T17.3"], "unlocks": [], "title": "Pestaña de integridad que declara su alcance y sus límites", "short": "Pestaña integridad", "epic": "E17", "alcance": "Pestaña de integridad en la vista de trazabilidad: muestra el resultado de la verificación y dice <strong>en la propia interfaz<\/strong> qué garantiza la cadena y qué no.", "dod": ["<em>Given<\/em> la vista de integridad, <em>Then<\/em> dice explícitamente qué garantiza la cadena y <strong>qué no<\/strong> (que no protege frente a quien pueda reescribir la base entera), en la interfaz y no solo en la documentación. <span class=\"ac\">AC6<\/span>"], "files": ["frontend/src/platform/pages/"], "cuidado": "Un sello que promete más de lo que da es peor que no tenerlo. Evita textos como «38 hashes íntegros» sin contexto: di qué se comprobó y cuál es el límite.", "rama": "feat/363-pestana-integridad", "sensible": null, "comps": ["fe-platform"], "estado": "espera", "ola": 2}, {"id": "T18.1", "n": 364, "sev": "high", "deps": [], "unlocks": ["T18.5"], "title": "Alcance de documento por ejecución: la referencia no contamina la biblioteca", "short": "Referencia acotada", "epic": "E18", "alcance": "Al indexar la referencia de un paper, etiquetar sus fragmentos con ese artículo; la recuperación prefiere y filtra por ella cuando la ejecución declara una referencia, y la excluye de los demás papers. Es un filtro dentro del espacio del proyecto, no una colección nueva.", "dod": ["<em>Given<\/em> un archivo de referencia subido para un paper concreto, <em>When<\/em> se indexa, <em>Then<\/em> queda <strong>acotado a ese paper<\/strong>: los agentes lo recuperan al generarlo y <strong>no<\/strong> aparece en las recuperaciones de otros papers del proyecto; verificable con dos papers en el mismo proyecto. <span class=\"ac\">AC1<\/span>"], "files": ["backend/app/platform/capabilities/rag.py", "backend/app/routers/agents.py"], "cuidado": "El nombre de la colección se <strong>deriva<\/strong> en <code>platform/project_context.py<\/code> y nunca se compone a mano: no abras otra vía. Hoy toda subida va a <code>__library__<\/code>, que leen todos los agentes del proyecto; ese es justo el caso que el test debe hacer fallar antes del cambio. Pide revisión.", "rama": "feat/364-referencia-acotada", "sensible": "Aislamiento de documentos", "comps": ["rag", "qdrant", "ctx"], "estado": "lista", "ola": 0}, {"id": "T18.2", "n": 365, "sev": "high", "deps": [], "unlocks": ["T18.5"], "title": "Agentes participantes como variante validada del GraphSpec", "short": "Variante GraphSpec", "epic": "E18", "alcance": "En <code>platform/engine/<\/code>, construir una variante del <code>GraphSpec<\/code> del proyecto quitando nodos, y pasarla por <strong>el mismo validador<\/strong> que se usa al cargar el proyecto. Una combinación inválida se rechaza antes de empezar.", "dod": ["<em>Given<\/em> una selección de agentes participantes, <em>When<\/em> se lanza la ejecución, <em>Then<\/em> la selección se valida como variante del <code>GraphSpec<\/code> con las <strong>mismas<\/strong> comprobaciones que al cargar el proyecto, y una combinación inválida —por ejemplo un bucle de revisión cuyo nodo se ha quitado— se rechaza <strong>antes de empezar<\/strong>, con el motivo; nunca a mitad de la ejecución. <span class=\"ac\">AC2<\/span>"], "files": ["backend/app/platform/engine/", "backend/app/platform/projects/"], "cuidado": "No dupliques la validación: si hay dos validadores, divergen. El motor no menciona agentes concretos y esto no debe cambiarlo (hay tests que lo vigilan). La forma del pipeline se define en <code>template.yaml<\/code>, no en Python.", "rama": "feat/365-variante-graphspec", "sensible": "Motor del pipeline", "comps": ["engine", "template"], "estado": "lista", "ola": 0}, {"id": "T18.3", "n": 366, "sev": "medium", "deps": [], "unlocks": ["T18.5"], "title": "Notas del enjambre acotadas, tratadas como dato y registradas en la traza", "short": "Notas del enjambre", "epic": "E18", "alcance": "Las notas adicionales tienen una longitud máxima declarada, entran en el prompt delimitadas como dato (nunca como instrucción de sistema) y quedan en la traza del paso que las usó. Los parámetros de la ejecución (referencia, agentes, notas, modo) también quedan en la traza.", "dod": ["<em>Given<\/em> notas adicionales, <em>Then<\/em> tienen longitud máxima declarada, se tratan como dato (nunca como instrucción de sistema) y quedan registradas en la traza del paso que las usó, de modo que <code>/explain<\/code> pueda atribuirles un cambio de resultado. <span class=\"ac\">AC3<\/span>", "<em>Given<\/em> una ejecución lanzada desde esta pantalla, <em>Then<\/em> sus parámetros —referencia, agentes, notas, modo— quedan en la traza, de forma que dos ejecuciones del mismo paper con parámetros distintos sean distinguibles a posteriori. <span class=\"ac\">AC7<\/span>"], "files": ["backend/app/routers/agents.py", "backend/app/platform/explainability.py", "adapters de los agentes"], "cuidado": "Es una superficie de inyección: pide revisión. Coordina con T17.2, porque lo que entra en la traza entra en el hash canónico y cambiar su forma después obliga a versionar la serialización. Toca agentes: corre el gate EDD.", "rama": "sec/366-notas-enjambre", "sensible": "Inyección en prompts", "comps": ["api-agents", "trace", "engine"], "estado": "lista", "ola": 0}, {"id": "T18.4", "n": 367, "sev": "medium", "deps": [], "unlocks": ["T18.6"], "title": "Evento SSE de progreso para los agentes que conocen sus unidades de trabajo", "short": "Evento de progreso", "epic": "E18", "alcance": "Un tipo nuevo de evento SSE de progreso que emite solo el agente que sabe cuántas unidades tiene (el Redactor conoce sus secciones: «sección 2 de 5»). Los agentes que no lo saben no emiten nada.", "dod": ["<em>Given<\/em> un agente en ejecución, <em>Then<\/em> la interfaz muestra progreso <strong>fraccional solo si el agente emite unidades de trabajo reales<\/strong> (por ejemplo «sección 2 de 5»); si no las emite, muestra un estado indeterminado. <strong>Queda prohibido<\/strong> derivar un porcentaje de tokens emitidos o de tiempo transcurrido. <span class=\"ac\">AC5<\/span>", "Los clientes antiguos pueden ignorar el evento nuevo sin romperse."], "files": ["emisor SSE del pipeline", "backend/app/modules/agents/adapters/redactor.py"], "cuidado": "Un «40 %» calculado a ojo tiene la precisión de un dato y el valor de una suposición. Toca el mismo emisor SSE que T17.5. Toca un agente: corre el gate EDD.", "rama": "feat/367-evento-progreso", "sensible": null, "comps": ["bus", "engine"], "estado": "lista", "ola": 0}, {"id": "T18.5", "n": 368, "sev": "medium", "deps": ["T18.1", "T18.2", "T18.3"], "unlocks": [], "title": "Pantalla de subida de referencia y configuración de la ejecución", "short": "Pantalla de subida", "epic": "E18", "alcance": "Pantalla de subida del archivo de referencia y configuración de la ejecución: tema, modo de aprendizaje del formato (RAG disponible; fine-tune no disponible con el motivo visible), agentes participantes y notas.", "dod": ["<em>Given<\/em> el selector de modo de aprendizaje del formato, <em>Then<\/em> la opción RAG funciona y la de fine-tune aparece <strong>no disponible con el motivo visible<\/strong> mientras SPEC-031 no esté decidida; el modo elegido queda registrado en la ejecución. <span class=\"ac\">AC6<\/span>", "<em>Given<\/em> una ejecución lanzada desde esta pantalla, <em>Then<\/em> sus parámetros —referencia, agentes, notas, modo— quedan en la traza, de forma que dos ejecuciones del mismo paper con parámetros distintos sean distinguibles a posteriori. <span class=\"ac\">AC7<\/span>"], "files": ["frontend/src/platform/", "frontend/src/projects/alejandria-magazine/"], "cuidado": "Decide en la PR qué parte es del builder (<code>platform/<\/code>) y qué parte es de AlejandrIA (<code>projects/<\/code>): la dependencia va en un solo sentido. Comprueba las dos builds. Los errores de validación de T18.2 deben verse aquí antes de lanzar.", "rama": "feat/368-pantalla-referencia", "sensible": null, "comps": ["fe-platform", "fe-project"], "estado": "espera", "ola": 1}, {"id": "T18.6", "n": 369, "sev": "medium", "deps": ["T18.4"], "unlocks": [], "title": "Seguimiento de ejecución con bucle de revisión, pausa humana y progreso honesto", "short": "Seguimiento honesto", "epic": "E18", "alcance": "<code>ExecutionPage.jsx<\/code> refleja el pipeline real: la segunda pasada del Redactor por el bucle de revisión se ve como tal, la pausa por decisión humana (<code>await_decision<\/code>) se ve como pausa, y el progreso es fraccional solo con el evento de T18.4.", "dod": ["<em>Given<\/em> una ejecución en curso, <em>When<\/em> se mira el seguimiento, <em>Then<\/em> el estado de cada agente refleja el pipeline <strong>real<\/strong>, incluidos el bucle Revisor→Redactor —una segunda pasada del Redactor se ve como tal y no como retroceso inexplicado— y la pausa por decisión humana (<code>await_decision<\/code>). <span class=\"ac\">AC4<\/span>", "<em>Given<\/em> un agente en ejecución, <em>Then<\/em> la interfaz muestra progreso <strong>fraccional solo si el agente emite unidades de trabajo reales<\/strong> (por ejemplo «sección 2 de 5»); si no las emite, muestra un estado indeterminado. <strong>Queda prohibido<\/strong> derivar un porcentaje de tokens emitidos o de tiempo transcurrido. <span class=\"ac\">AC5<\/span>"], "files": ["frontend/src/projects/alejandria-magazine/pages/ExecutionPage.jsx"], "cuidado": "<code>ExecutionPage.jsx<\/code> ya consume el SSE (<code>agent_start<\/code>, <code>token<\/code>, <code>await_decision<\/code>, <code>log<\/code>); léela entera antes de tocarla. El bucle Revisor→Redactor tiene un máximo de 3 vueltas.", "rama": "feat/369-seguimiento", "sensible": null, "comps": ["fe-project"], "estado": "espera", "ola": 1}], "epicas": [{"id": "E14", "nombre": "Estrategia de pruebas (QA): unitarias, integración y estrés", "area": "area/qa", "spec": "https://github.com/luxinopanyvino/swarm-platform-builder/blob/develop/docs/specs/SPEC-026-qa-test-strategy.md", "specid": "SPEC-026", "n": 333, "corto": "QA"}, {"id": "E15", "nombre": "Evaluación de modelos y agentes con deepeval", "area": "area/evaluation", "spec": "https://github.com/luxinopanyvino/swarm-platform-builder/blob/develop/docs/specs/SPEC-027-model-evaluation-deepeval.md", "specid": "SPEC-027", "n": 334, "corto": "deepeval"}, {"id": "E16", "nombre": "Portada de plataforma: métricas del proyecto y estado del enjambre", "area": "area/observability", "spec": "https://github.com/luxinopanyvino/swarm-platform-builder/blob/develop/docs/specs/SPEC-028-dashboard-swarm-status.md", "specid": "SPEC-028", "n": 349, "corto": "Portada"}, {"id": "E17", "nombre": "Trazabilidad auditable: vista, exportación e integridad", "area": "area/observability", "spec": "https://github.com/luxinopanyvino/swarm-platform-builder/blob/develop/docs/specs/SPEC-029-traceability-view-and-integrity.md", "specid": "SPEC-029", "n": 350, "corto": "Trazabilidad"}, {"id": "E18", "nombre": "Entrada de referencia y control de la ejecución", "area": "area/ux", "spec": "https://github.com/luxinopanyvino/swarm-platform-builder/blob/develop/docs/specs/SPEC-030-reference-input-and-run-control.md", "specid": "SPEC-030", "n": 351, "corto": "Referencia"}], "reparto": [{"nombre": "Persona A", "foco": "backend y datos", "tareas": ["T14.1", "T14.3", "T14.2", "T16.1", "T16.3", "T16.2", "T16.4", "T17.2", "T17.3", "T17.4", "T15.1", "T15.2", "T15.3", "T15.5", "T15.4"]}, {"nombre": "Persona B", "foco": "interfaz, tiempo real y QA", "tareas": ["T14.4", "T17.1", "T17.5", "T18.4", "T18.6", "T18.1", "T18.2", "T16.5", "T16.6", "T17.6", "T18.3", "T18.5", "T14.5", "T14.6", "T14.7"]}], "cerradas": {}, "capas": ["Navegador", "API · FastAPI", "Plataforma", "Datos y servicios", "Transversal"], "comps": {"fe-platform": {"nombre": "Builder", "ruta": "frontend/src/platform/", "que": "La parte reutilizable del frontend: Flow Designer (React Flow), agentes, documentos, usuarios, configuración, cliente HTTP y stores de Zustand.", "reglas": ["<code>platform/<\/code> <strong>nunca<\/strong> importa de <code>projects/<\/code>; lo vigila <code>test_frontend_layers.py<\/code>.", "Lo que necesita saber del proyecto lo pregunta a registros (<code>setAgentCatalog<\/code>, <code>setRunTarget<\/code>…) que <code>main.jsx<\/code> rellena al arrancar."], "rel": [["api-agents", "lanza ejecuciones y escucha su SSE"], ["api-core", "sesión y proyecto activo en X-Project-Id"]], "nuevo": false, "capa": 0}, "fe-project": {"nombre": "AlejandrIA", "ruta": "frontend/src/projects/alejandria-magazine/", "que": "Las vistas de consumo de este proyecto: artículos, seguimiento de la ejecución (<code>ExecutionPage<\/code>), revista y maquetación del paper. <code>catalog.jsx<\/code> declara sus agentes y su navegación.", "reglas": ["Aquí vive el vocabulario del proyecto («artículo», «paper»); el builder no lo escribe a mano."], "rel": [["fe-platform", "se registra en el builder desde main.jsx"], ["api-articles", "lee y edita artículos"], ["api-agents", "sigue la ejecución por SSE"]], "nuevo": false, "capa": 0}, "fe-public": {"nombre": "Revista pública", "ruta": "vite.public.config.js · index.public.html", "que": "Un segundo build de Vite, independiente de la app, que sirve la revista a lectores sin sesión.", "reglas": ["Si tocas algo que comparte, comprueba <code>npm run build<\/code> <strong>y<\/strong> <code>npm run build:public<\/code>."], "rel": [["api-articles", "lee la revista publicada"]], "nuevo": false, "capa": 0}, "api-core": {"nombre": "Auth y proyectos", "ruta": "routers/auth.py · projects.py", "que": "Login con JWT, rate limit y bloqueo tras intentos fallidos, usuarios, proyectos y acceso por proyecto.", "reglas": ["El bloqueo del login es deliberado: en pruebas de carga no es un error."], "rel": [["ctx", "autoriza el acceso a cada proyecto"], ["sql", "usuarios y proyectos"]], "nuevo": false, "capa": 1}, "api-agents": {"nombre": "Agentes y ejecución", "ruta": "routers/agents.py", "que": "Lanza el pipeline y expone <code>/{id}/stream<\/code> (SSE, con stream-ticket), <code>/decision<\/code> (pausa humana), la cancelación, <code>/{id}/explain<\/code> y la subida de documentos al RAG.", "reglas": ["Toda ruta que lee o escribe datos del proyecto pide la dependencia <code>get_project_context<\/code> (hay un test que lo comprueba)."], "rel": [["ctx", "resuelve el proyecto de la petición"], ["engine", "lanza el grafo"], ["bus", "se suscribe a los eventos de la ejecución"], ["rag", "indexa documentos subidos"], ["trace", "sirve /explain"]], "nuevo": false, "capa": 1}, "api-articles": {"nombre": "Artículos, flujos y revista", "ruta": "routers/articles.py · flows.py · magazine.py", "que": "CRUD de artículos, flujos guardados del Flow Designer y la API de la revista pública.", "reglas": ["Los estados de artículo pueden quedarse desfasados respecto a la ejecución; el estado real está en <code>agent_runs<\/code>."], "rel": [["sql", "artículos y flujos"]], "nuevo": false, "capa": 1}, "api-dashboard": {"nombre": "Portada", "ruta": "routers/dashboard.py", "que": "<strong>Todavía no existe.<\/strong> Servirá <code>GET /dashboard/summary<\/code>: las magnitudes de la portada, solo del proyecto activo.", "reglas": ["No reutilizar <code>/metrics<\/code>, que es anónima y sin proyecto."], "rel": [["ctx", "filtra por proyecto"], ["trace", "agrega agent_run_steps"]], "nuevo": true, "capa": 1}, "api-health": {"nombre": "Salud y métricas", "ruta": "routers/health.py", "que": "<code>/health<\/code> y <code>/metrics<\/code> en formato Prometheus para el recolector de operación.", "reglas": ["Sin autenticación ni proyecto: no sirve para vistas de producto."], "rel": [], "nuevo": false, "capa": 1}, "ctx": {"nombre": "Aislamiento por proyecto", "ruta": "platform/project_context.py · project_access.py", "que": "Resuelve y autoriza el proyecto de cada petición (cabecera <code>X-Project-Id<\/code>) y deriva el nombre de la colección de Qdrant: <code>p_&lt;project_id&gt;__&lt;bucket&gt;<\/code>.", "reglas": ["El nombre de la colección se <strong>deriva<\/strong>, nunca se recibe ni se compone a mano.", "Una fuga entre proyectos no rompe nada visible: por eso cada tarea que agrega datos lleva un test con dos proyectos."], "rel": [["qdrant", "colección por proyecto"]], "nuevo": false, "capa": 2}, "engine": {"nombre": "Motor del pipeline", "ruta": "platform/engine/ · modules/agents/application/use_cases.py", "que": "Construye el <code>StateGraph<\/code> de LangGraph a partir de un <code>GraphSpec<\/code> (secuencia + bucles de revisión) y ejecuta los nodos pasándose un <code>AgentState<\/code>. Aquí viven el bucle revisor→redactor y la pausa humana.", "reglas": ["El motor <strong>no nombra<\/strong> a ningún agente concreto.", "Si añades un agente o cambias el bucle, se hace en <code>template.yaml<\/code>, no en Python."], "rel": [["template", "lee la secuencia y los bucles"], ["caps", "inyecta a cada agente sus capacidades"], ["trace", "cierra cada paso"], ["bus", "publica eventos de la ejecución"]], "nuevo": false, "capa": 2}, "caps": {"nombre": "Capacidades", "ruta": "platform/capabilities/registry.py · binding.py", "que": "Registro de lo que un agente puede usar: <code>rag<\/code>, <code>rag_results<\/code>, <code>llm<\/code>, <code>llm_stream<\/code>, <code>search<\/code>, <code>format<\/code>, <code>publish<\/code>. Con <code>AGENT_ENGINE=capabilities<\/code> se inyectan; con <code>adapters<\/code> cada agente usa su import.", "reglas": ["Los dos caminos deben dar el mismo resultado: hay un test de paridad."], "rel": [["llm", "llm · llm_stream"], ["rag", "rag · rag_results"], ["egress", "search"]], "nuevo": false, "capa": 2}, "trace": {"nombre": "Traza de explicabilidad", "ruta": "platform/explainability.py", "que": "Una fila en <code>agent_run_steps<\/code> por paso: modelo, parámetros, fuentes RAG con su score, tokens, latencia y decisión del revisor. <code>group_executions<\/code> separa las ejecuciones de un mismo artículo.", "reglas": ["Tokens y fuentes los anotan quienes los conocen (dispatcher y RAG) en variables de contexto: un agente nuevo queda trazado sin tocarlo.", "<code>step_index<\/code> vuelve a 0 al empezar una ejecución nueva; una reanudación no reinicia."], "rel": [["sql", "agent_runs · agent_run_steps"]], "nuevo": false, "capa": 2}, "llm": {"nombre": "Dispatcher LLM", "ruta": "platform/llm.py", "que": "La única puerta a los modelos: Anthropic, Ollama u OpenAI según <code>LLM_PROVIDER<\/code>. Resuelve modelo y temperatura por cascada (ejecución → <code>.agent.md<\/code> → proveedor), reintenta errores transitorios y admite <code>max_tokens<\/code>.", "reglas": ["Nada llama a un proveedor por su cuenta; tampoco las librerías de evaluación.", "Con Ollama pide <code>think: false<\/code>: los modelos que razonan gastaban el contexto pensando."], "rel": [["providers", "una llamada por paso, o en streaming"]], "nuevo": false, "capa": 2}, "rag": {"nombre": "RAG", "ruta": "platform/capabilities/rag.py", "que": "Extrae texto de PDF, trocea, vectoriza con <code>EMBED_PROVIDER<\/code> (independiente del de generación) y busca en el bucket del agente más la biblioteca <code>__library__<\/code> del proyecto.", "reglas": ["La dimensión del índice sale de <code>embed_vector_size()<\/code>; si no cuadra, la indexación se corta con 409."], "rel": [["qdrant", "vectores por colección"], ["providers", "embeddings"], ["ctx", "pide la colección derivada"]], "nuevo": false, "capa": 2}, "egress": {"nombre": "Egress", "ruta": "platform/egress.py", "que": "La única salida hacia destinos que elige la persona usuaria o el modelo (<code>fetch_url<\/code>, búsqueda académica). Bloquea por IP resuelta y revalida cada redirección.", "reglas": ["Todo fetch saliente influido por usuario o modelo sale por <code>safe_get<\/code>."], "rel": [["internet", "IP resuelta y validada"]], "nuevo": false, "capa": 2}, "bus": {"nombre": "Bus de eventos", "ruta": "platform/bus.py", "que": "Lleva los eventos de la ejecución (<code>agent_start<\/code>, <code>token<\/code>, <code>await_decision<\/code>, <code>done<\/code>…) al SSE y las señales de control entre workers. En memoria por defecto; Redis con <code>REDIS_ENABLED<\/code>.", "reglas": ["Con varios workers, el SSE y el pipeline pueden estar en procesos distintos: por eso existe."], "rel": [["redis", "pub/sub si hay varios workers"], ["api-agents", "entrega eventos al SSE"]], "nuevo": false, "capa": 2}, "sql": {"nombre": "Base de datos", "ruta": "SQLAlchemy async · Alembic", "que": "SQLite en local (<code>backend/data/dev.db<\/code>) y Postgres en Docker. El esquema se versiona con Alembic y el arranque aplica <code>upgrade head<\/code>.", "reglas": ["Nunca cambies el esquema con SQL a mano: siempre una migración revisada.", "<code>tests/conftest.py<\/code> aborta si los tests apuntan a la base de desarrollo."], "rel": [], "nuevo": false, "capa": 3}, "qdrant": {"nombre": "Qdrant", "ruta": "colecciones p_<proyecto>__<bucket>", "que": "Base vectorial de los documentos: una colección por proyecto y bucket.", "reglas": [], "rel": [], "nuevo": false, "capa": 3}, "providers": {"nombre": "Modelos", "ruta": "Anthropic · Ollama · OpenAI", "que": "Anthropic es el motor por defecto del repo; en local se usa Ollama (<code>dev-local.cmd<\/code> lo fija). OpenAI cubre servidores compatibles.", "reglas": ["Para trabajo con modelo real en local: <code>qwen3.5:4b<\/code> o <code>9b<\/code>."], "rel": [], "nuevo": false, "capa": 3}, "redis": {"nombre": "Redis", "ruta": "opcional · REDIS_ENABLED", "que": "Solo hace falta con varios workers del backend.", "reglas": [], "rel": [], "nuevo": false, "capa": 3}, "internet": {"nombre": "Internet", "ruta": "búsqueda académica · fetch_url", "que": "Destinos externos, siempre a través de Egress.", "reglas": [], "rel": [], "nuevo": false, "capa": 3}, "template": {"nombre": "Proyecto como dato", "ruta": "backend/projects/<slug>/template.yaml", "que": "Define un proyecto entero: agentes, capacidades de cada uno, secuencia y bucles de revisión. Los <code>agents/*.agent.md<\/code> son los perfiles que se clonan a la base.", "reglas": ["Se valida al cargar: una capacidad inexistente o un nodo no declarado fallan al arrancar, no a mitad de la ejecución."], "rel": [["engine", "lo lee el motor"]], "nuevo": false, "capa": 4}, "evals": {"nombre": "Evaluación", "ruta": "backend/evals/", "que": "<code>agent_behavior/<\/code> evalúa a los agentes de la plataforma sobre datasets versionados (gate EDD con <code>thresholds.yaml<\/code>). <code>model_benchmark/<\/code> compara modelos entre sí.", "reglas": ["<code>replay<\/code> reproduce salidas grabadas y <strong>no<\/strong> evalúa al modelo; solo <code>live<\/code> lo hace."], "rel": [["engine", "ejecuta el agente real"], ["trace", "lee tokens y fuentes"], ["llm", "el juez llama por el dispatcher"]], "nuevo": false, "capa": 4}, "ci": {"nombre": "CI y calidad", "ruta": ".github/workflows/ · backend/tests/", "que": "En cada PR a <code>develop<\/code>: pytest del backend, build del frontend, validación de specs, auditoría de dependencias y escaneo de secretos. El gate EDD corre en PRs que tocan agentes.", "reglas": ["Un check obligatorio con filtro de rutas bloquea PRs para siempre."], "rel": [], "nuevo": false, "capa": 4}}, "recorrido": [{"ids": ["fe-platform"], "txt": "Pulsas <strong>Ejecutar<\/strong> en el Flow Designer. El builder crea el artículo con el registro <code>runTarget<\/code> y navega a la ejecución con la secuencia de agentes del lienzo."}, {"ids": ["fe-project", "api-agents"], "txt": "<code>ExecutionPage<\/code> pide un stream-ticket, abre el SSE de <code>/agents/{id}/stream<\/code> y lanza el pipeline."}, {"ids": ["api-agents", "ctx"], "txt": "La API resuelve y autoriza el proyecto de la cabecera <code>X-Project-Id<\/code>. Desde aquí, el proyecto viaja en <code>AgentState.project_id<\/code>."}, {"ids": ["engine", "template"], "txt": "El motor construye el <code>StateGraph<\/code> desde el <code>GraphSpec<\/code> de <code>template.yaml<\/code> y empieza por el primer nodo."}, {"ids": ["engine", "caps"], "txt": "Cada agente recibe las capacidades que declara (el investigador, <code>rag_results<\/code> y <code>llm<\/code>)."}, {"ids": ["rag", "ctx", "qdrant"], "txt": "El investigador busca fragmentos en su bucket y en <code>__library__<\/code>, dentro de la colección derivada del proyecto."}, {"ids": ["llm", "providers"], "txt": "Sintetiza con el modelo resuelto por la cascada. El redactor hace lo mismo en streaming, token a token."}, {"ids": ["trace", "sql"], "txt": "Al cerrar cada paso se escribe una fila en <code>agent_run_steps<\/code>: modelo, fuentes, tokens, latencia."}, {"ids": ["bus", "api-agents", "fe-project"], "txt": "Los eventos (<code>agent_start<\/code>, <code>token<\/code>, <code>await_decision<\/code>…) viajan por el bus hasta el SSE y la pantalla los pinta."}, {"ids": ["engine"], "txt": "El revisor puntúa. Por debajo de 80 el grafo vuelve al redactor, como mucho 3 veces. La ejecución puede pausarse para una decisión humana."}, {"ids": ["engine", "sql", "fe-project"], "txt": "El formateador aplica el formato y el publicador persiste el artículo final. Llega <code>done<\/code>, y <code>/explain<\/code> puede reconstruir por qué salió ese resultado."}], "agentes": [{"id": "investigador", "nombre": "Investigador", "desc": "Busca fuentes en la base de conocimiento (su bucket y la biblioteca compartida del proyecto) y sintetiza el material con sus citas.", "requires": ["rag_results", "llm"], "entry": "modules/agents/adapters/investigador.py", "perfil": "projects/alejandria-magazine/agents/investigador.agent.md", "pie": "RAG · Qdrant"}, {"id": "redactor", "nombre": "Redactor", "desc": "Escribe el borrador a partir de la investigación y, en las vueltas siguientes, del feedback del revisor. Emite el texto token a token por SSE.", "requires": ["rag", "llm", "llm_stream"], "entry": "modules/agents/adapters/redactor.py", "perfil": "projects/alejandria-magazine/agents/redactor.agent.md", "pie": "RAG · streaming SSE"}, {"id": "revisor", "nombre": "Revisor", "desc": "Puntúa el borrador. Por debajo de 80 lo devuelve al redactor, como mucho 3 veces; si aprueba, sigue el flujo.", "requires": ["llm"], "entry": "modules/agents/adapters/revisor.py", "perfil": "projects/alejandria-magazine/agents/revisor.agent.md"}, {"id": "formateador", "nombre": "Formateador", "desc": "Aplica el formato científico elegido (APA, IEEE, Vancouver…) y construye las referencias.", "requires": ["llm"], "entry": "modules/agents/adapters/formateador.py", "perfil": "projects/alejandria-magazine/agents/formateador.agent.md"}, {"id": "publicador", "nombre": "Publicador", "desc": "Persiste el artículo final y genera la maquetación imprimible del paper.", "requires": ["format"], "entry": "modules/agents/adapters/publicador.py", "perfil": "projects/alejandria-magazine/agents/publicador.agent.md", "pie": "artículo + paper maquetado"}]};
+// Comportamiento de «AlejandrIA por dentro». Los datos llegan en DATA, que genera
+// scripts/build_onboarding.py a partir de las specs, GitHub y docs/onboarding/*.yaml.
+(() => {
+  const T = DATA.tareas;
+  const BY = Object.fromEntries(T.map(t => [t.id, t]));
+  const EPICS = DATA.epicas;
+  const SEVS = [["high", "Alta"], ["medium", "Media"], ["low", "Baja"]];
+  const SEV_TXT = { high: "Alta", medium: "Media", low: "Baja" };
+  const ESTADO_TXT = {
+    lista: "Lista para empezar", espera: "Espera a otra tarea",
+    hecha: "Hecha, falta cerrar el issue", "sin-issue": "Sin issue: falta /sdd-sync --apply",
+  };
+  const COLW = { olas: 176, persona: 100 };
+  const REDUCE = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  const S = {
+    modo: "olas", epicas: new Set(EPICS.map(e => e.id)), sevs: new Set(SEVS.map(s => s[0])),
+    solo: false, q: "", comp: null, hover: null, sel: null,
+  };
+
+  const $ = (s, el = document) => el.querySelector(s);
+  const $$ = (s, el = document) => Array.from(el.querySelectorAll(s));
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const irA = el => el && el.scrollIntoView({ behavior: REDUCE ? "auto" : "smooth", block: "start" });
+  const estrecho = () => window.matchMedia("(max-width: 900px)").matches;
+
+  // ── Grafo (solo tareas abiertas; las cerradas ya no bloquean) ──────────────
+  const anc = (id, acc = new Set()) => { for (const d of BY[id].deps) if (BY[d] && !acc.has(d)) { acc.add(d); anc(d, acc); } return acc; };
+  const desc = (id, acc = new Set()) => { for (const u of BY[id].unlocks) if (BY[u] && !acc.has(u)) { acc.add(u); desc(u, acc); } return acc; };
+  const num = id => (id.match(/\d+/g) || []).map(Number);
+  const cmpId = (a, b) => { const x = num(a.id), y = num(b.id); return (x[0] - y[0]) || (x[1] - y[1]); };
+  const grupoDe = id => {
+    for (let g = 0; g < DATA.reparto.length; g++) {
+      const i = DATA.reparto[g].tareas.indexOf(id);
+      if (i >= 0) return [g, i];
+    }
+    return [-1, 0];
+  };
+
+  // ── Controles ────────────────────────────────────────────────────────────
+  function pintarControles() {
+    $("#filtro-epicas").innerHTML = EPICS.map(e => {
+      const n = T.filter(t => t.epic === e.id).length;
+      return `<button type="button" class="chip-f" data-epica="${e.id}" aria-pressed="${S.epicas.has(e.id)}" title="${esc(e.nombre)}"><span class="mono">${e.id}</span> ${esc(e.corto)} <span class="cuenta">${n}</span></button>`;
+    }).join("");
+    $("#filtro-sev").innerHTML = SEVS.map(([k, lab]) =>
+      `<button type="button" class="chip-f" data-sev="${k}" aria-pressed="${S.sevs.has(k)}"><i class="lg-sev sev-${k}"></i>${lab}</button>`).join("");
+    $("#solo-listas").checked = S.solo;
+    $("#buscar").value = S.q;
+    $$(".seg [data-modo]").forEach(b => b.setAttribute("aria-checked", String(b.dataset.modo === S.modo)));
+    const fc = $("#filtro-comp");
+    fc.hidden = !S.comp;
+    fc.innerHTML = S.comp
+      ? `Solo tareas que tocan <strong>${esc(DATA.comps[S.comp].nombre)}</strong> <button type="button" class="btn btn-texto" data-quitar-comp>Quitar filtro</button>`
+      : "";
+  }
+
+  function visibles() {
+    const q = S.q.trim().toLowerCase();
+    return T.filter(t => S.epicas.has(t.epic) && S.sevs.has(t.sev)
+      && (!S.solo || t.estado === "lista")
+      && (!S.comp || t.comps.includes(S.comp))
+      && (!q || `${t.id} ${t.title} ${t.short} ${t.files.join(" ")} #${t.n || ""}`.toLowerCase().includes(q)));
+  }
+
+  function limpiarFiltros() {
+    S.epicas = new Set(EPICS.map(e => e.id)); S.sevs = new Set(SEVS.map(s => s[0]));
+    S.solo = false; S.q = ""; S.comp = null;
+  }
+
+  // ── Gantt ────────────────────────────────────────────────────────────────
+  function render() {
+    const vis = visibles();
+    const vset = new Set(vis.map(t => t.id));
+    const g = $("#gantt");
+    let grupos, colOf, etiquetas;
+    if (S.modo === "olas") {
+      const olas = Math.max(1, ...T.map(t => t.ola + 1));
+      etiquetas = Array.from({ length: olas }, (_, i) => i === 0 ? "Ola 1 · sin bloqueos" : `Ola ${i + 1}`);
+      colOf = t => t.ola;
+      grupos = EPICS.map(e => ({
+        titulo: `<span class="mono">${e.id}</span> ${esc(e.nombre)}`,
+        sub: e.n ? `<a class="g-enl" href="${DATA.repo}/issues/${e.n}" target="_blank" rel="noopener">#${e.n}</a>` : "",
+        tareas: vis.filter(t => t.epic === e.id).sort((a, b) => a.ola - b.ola || cmpId(a, b)),
+      }));
+    } else {
+      const largo = Math.max(1, ...DATA.reparto.map(r => r.tareas.length));
+      etiquetas = Array.from({ length: largo }, (_, i) => `Paso ${String(i + 1).padStart(2, "0")}`);
+      colOf = t => grupoDe(t.id)[1];
+      grupos = DATA.reparto.map(r => ({
+        titulo: esc(r.nombre), sub: `<span class="g-sub">${esc(r.foco)}</span>`,
+        tareas: r.tareas.filter(id => vset.has(id)).map(id => BY[id]),
+      }));
+    }
+    grupos = grupos.filter(x => x.tareas.length);
+    g.dataset.modo = S.modo;
+    g.style.setProperty("--col", COLW[S.modo] + "px");
+    g.style.setProperty("--ncols", etiquetas.length);
+
+    let h = `<div class="g-fila g-cab"><div class="g-etq">Tarea</div><div class="g-pista">${etiquetas.map(x => `<div class="g-col">${x}</div>`).join("")}</div></div>`;
+    for (const gr of grupos) {
+      h += `<div class="g-fila g-grupo"><div class="g-etq">${gr.titulo} ${gr.sub}</div><div class="g-pista"></div></div>`;
+      for (const t of gr.tareas) {
+        const cruce = S.modo === "persona" ? t.deps.filter(d => BY[d] && grupoDe(d)[0] !== grupoDe(t.id)[0]) : [];
+        const titulo = `${t.id} · ${t.title}. ${ESTADO_TXT[t.estado]}. Severidad ${SEV_TXT[t.sev].toLowerCase()}.${cruce.length ? " Espera a " + cruce.join(", ") + " de otra persona." : ""}`;
+        h += `<div class="g-fila g-tarea" data-id="${t.id}">
+          <button type="button" class="g-etq g-etq-t" data-id="${t.id}" aria-label="Abrir ficha de ${t.id}">
+            <span class="mono g-tid">${t.id}</span><span class="g-ttl">${esc(t.short)}</span><span class="g-iss mono">${t.n ? "#" + t.n : "sin issue"}</span>
+          </button>
+          <div class="g-pista">
+            <button type="button" class="g-barra st-${t.estado}" data-id="${t.id}" style="--c:${colOf(t)}" title="${esc(titulo)}" aria-label="${esc(titulo)}">
+              <span class="mono g-bid">${t.id}</span>${S.modo === "olas" ? `<span class="g-bt">${esc(t.short)}</span>` : ""}
+              <span class="g-marcas"><i class="g-sev sev-${t.sev}"></i>${t.sensible ? '<i class="g-rev">R</i>' : ""}</span>
+            </button>
+          </div>
+        </div>`;
+      }
+    }
+    if (!grupos.length) {
+      h += `<div class="g-vacio">Ninguna tarea cumple estos filtros. <button type="button" class="btn btn-texto" data-limpiar>Quitar filtros</button></div>`;
+    }
+    g.innerHTML = h + `<svg class="g-flechas" aria-hidden="true"></svg>`;
+    dibujar(vis);
+    resaltar();
+    $("#gantt-nota").innerHTML = (S.modo === "olas"
+      ? "Una tarea cae en la ola siguiente a la última de sus dependencias abiertas. La columna dice cuándo se puede empezar, no cuánto dura."
+      : "La columna es el orden del reparto, no la duración. Las flechas que cruzan de un grupo a otro son esperas: esa tarea depende del trabajo de otra persona. El reparto se edita en docs/onboarding/tareas.yaml.")
+      + ` <span class="cuenta-vis">Mostrando ${vis.length} de ${T.length} tareas.</span>`;
+  }
+
+  function dibujar(vis) {
+    const g = $("#gantt");
+    const svg = $(".g-flechas", g);
+    if (!svg) return;
+    const base = g.getBoundingClientRect();
+    const W = g.scrollWidth, H = g.scrollHeight;
+    svg.setAttribute("width", W); svg.setAttribute("height", H); svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+    const pos = {};
+    $$(".g-barra", g).forEach(b => {
+      const r = b.getBoundingClientRect();
+      pos[b.dataset.id] = { l: r.left - base.left, r: r.right - base.left, y: r.top - base.top + r.height / 2 };
+    });
+    let paths = "";
+    for (const t of vis) {
+      for (const d of t.deps) {
+        const a = pos[d], b = pos[t.id];
+        if (!a || !b) continue;
+        const xm = b.l - 9;
+        const dd = a.r + 4 <= xm ? `M${a.r} ${a.y} H${xm} V${b.y} H${b.l}` : `M${a.r} ${a.y} H${a.r + 6} V${b.y} H${b.l}`;
+        paths += `<path class="g-flecha" data-de="${d}" data-a="${t.id}" d="${dd}" marker-end="url(#gf)"/>`;
+      }
+    }
+    svg.innerHTML = `<defs>
+      <marker id="gf" viewBox="0 0 8 8" refX="7.5" refY="4" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L8,4 L0,8 z" class="gf"/></marker>
+      <marker id="gf-on" viewBox="0 0 8 8" refX="7.5" refY="4" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L8,4 L0,8 z" class="gf-on"/></marker>
+    </defs>${paths}`;
+  }
+
+  function resaltar() {
+    const foco = S.hover || S.sel;
+    const g = $("#gantt");
+    const valido = foco && BY[foco] && $(`.g-tarea[data-id="${foco}"]`, g);
+    g.classList.toggle("con-foco", !!valido);
+    let arriba = null, abajo = null;
+    if (valido) { arriba = anc(foco); arriba.add(foco); abajo = desc(foco); abajo.add(foco); }
+    $$(".g-tarea", g).forEach(f => {
+      const id = f.dataset.id;
+      f.classList.toggle("en-cadena", !!valido && (arriba.has(id) || abajo.has(id)));
+      f.classList.toggle("es-foco", id === foco);
+      f.classList.toggle("es-sel", id === S.sel);
+    });
+    $$(".g-flecha", g).forEach(p => {
+      const de = p.dataset.de, a = p.dataset.a;
+      const on = !!valido && ((arriba.has(de) && arriba.has(a)) || (abajo.has(de) && abajo.has(a)));
+      p.classList.toggle("on", on);
+      p.setAttribute("marker-end", on ? "url(#gf-on)" : "url(#gf)");
+    });
+  }
+
+  // ── Ficha de tarea ───────────────────────────────────────────────────────
+  let volverFoco = null;
+  const cmd = (texto, etiqueta = "") =>
+    `<div class="cmd">${etiqueta ? `<span class="cmd-lab">${etiqueta}</span>` : ""}<code>${esc(texto)}</code><button type="button" class="btn btn-mini" data-copiar>Copiar</button></div>`;
+
+  function refLista(ids) {
+    return `<ul class="refs">${ids.map(d => {
+      if (BY[d]) {
+        const e = BY[d].estado;
+        return `<li><button type="button" class="tref" data-ir="${d}">${d}</button><span class="tref-t">${esc(BY[d].short)}</span><span class="st-mini st-${e}">${ESTADO_TXT[e]}</span></li>`;
+      }
+      const c = DATA.cerradas[d];
+      return `<li><span class="tref-cerrada">${d}</span><span class="tref-t">${esc(c ? c.title : "")}</span><span class="st-mini st-cerrada">Cerrada${c && c.n ? " · #" + c.n : ""}</span></li>`;
+    }).join("")}</ul>`;
+  }
+
+  function bloqueEjecutar(t) {
+    if (!t.n) {
+      return `<div class="ejecutar"><p>Esta tarea está en su spec pero todavía no tiene issue. Sincroniza antes, en Claude Code:</p>${cmd("/sdd-sync")}${cmd("/sdd-sync --apply")}</div>`;
+    }
+    const abiertas = t.deps.filter(d => BY[d]);
+    let aviso = "";
+    if (t.estado === "hecha") {
+      aviso = `<p class="aviso">Ya está implementada: falta cerrarla por el flujo (PR con su bitácora y <code>Closes #${t.n}</code>). Mientras siga abierta, bloquea a ${t.unlocks.length ? t.unlocks.join(", ") : "sus dependientes"}.</p>`;
+    } else if (abiertas.length) {
+      aviso = `<p class="aviso"><strong>Todavía no se puede ejecutar.</strong> <code>/resolve-task</code> se detendrá hasta que se cierren: ${abiertas.map(d => `${d}${BY[d].n ? " (#" + BY[d].n + ")" : ""}`).join(", ")}.</p>`;
+    }
+    return `<div class="ejecutar">
+      <p>En Claude Code, desde la raíz del repo:</p>${cmd(`/resolve-task ${t.n}`)}
+      <p>O sin sesión interactiva, en Git Bash:</p>${cmd(`bash scripts/run-task.sh ${t.n}`)}
+      ${aviso}</div>`;
+  }
+
+  function abrir(id, desde) {
+    const t = BY[id];
+    if (!t) return;
+    if (desde) volverFoco = desde;
+    S.sel = id;
+    const [gi, pi] = grupoDe(id);
+    const reparto = gi >= 0 ? `Reparto: ${esc(DATA.reparto[gi].nombre)}, paso ${pi + 1} de ${DATA.reparto[gi].tareas.length}.` : "";
+    $("#cajon-id").innerHTML = `<span class="mono">${t.id}</span>${t.n ? `<a href="${DATA.repo}/issues/${t.n}" target="_blank" rel="noopener">Issue #${t.n}</a>` : '<span class="nota">sin issue</span>'}`;
+    $("#cajon-cuerpo").innerHTML = `
+      <h3>${esc(t.title)}</h3>
+      <div class="chips">
+        <span class="chip st-${t.estado}">${ESTADO_TXT[t.estado]}</span>
+        <span class="chip sevc-${t.sev}">Severidad ${SEV_TXT[t.sev].toLowerCase()}</span>
+        ${t.sensible ? `<span class="chip chip-rev">Revisión: ${esc(t.sensible)}</span>` : ""}
+      </div>
+      <h4>Ejecutarla</h4>${bloqueEjecutar(t)}
+      <h4>Alcance</h4><p>${t.alcance}</p>
+      <h4>Hecha cuando</h4><ul class="dod">${t.dod.map(x => `<li>${x}</li>`).join("")}</ul>
+      <div class="deps2">
+        <div><h4>Depende de</h4>${t.deps.length ? refLista(t.deps) : '<p class="nada">Nada: puede empezar ya.</p>'}</div>
+        <div><h4>Desbloquea</h4>${t.unlocks.length ? refLista(t.unlocks) : '<p class="nada">Nada: cierra su épica.</p>'}</div>
+      </div>
+      ${t.cuidado ? `<h4>Ojo con</h4><p class="cuidado">${t.cuidado}</p>` : ""}
+      ${t.files.length ? `<h4>Archivos</h4><ul class="archivos">${t.files.map(f => `<li><code>${esc(f)}</code></li>`).join("")}</ul>` : ""}
+      ${t.comps.length ? `<h4>Componentes que toca</h4><div class="comps-t">${t.comps.map(c => `<button type="button" class="chip-f" data-vercomp="${c}">${esc(DATA.comps[c].nombre)}</button>`).join("")}</div>` : ""}
+      ${t.rama ? `<h4>Rama sugerida</h4>${cmd(t.rama)}` : ""}
+      ${reparto ? `<p class="nota">${reparto}</p>` : ""}`;
+    const cajon = $("#cajon");
+    cajon.hidden = false;
+    $("#velo").hidden = !estrecho();
+    requestAnimationFrame(() => cajon.classList.add("abierto"));
+    $("#cajon-cuerpo").scrollTop = 0;
+    $("#cajon-cerrar").focus({ preventScroll: true });
+    resaltar();
+  }
+
+  function cerrar() {
+    const cajon = $("#cajon");
+    if (cajon.hidden) return;
+    cajon.classList.remove("abierto");
+    $("#velo").hidden = true;
+    if (REDUCE) cajon.hidden = true; else setTimeout(() => { cajon.hidden = true; }, 200);
+    S.sel = null;
+    resaltar();
+    if (volverFoco && document.contains(volverFoco)) volverFoco.focus({ preventScroll: true });
+  }
+
+  function irATarea(id) {
+    if (!visibles().some(t => t.id === id)) { limpiarFiltros(); pintarControles(); render(); }
+    const fila = $(`.g-tarea[data-id="${id}"]`);
+    if (fila) fila.scrollIntoView({ behavior: REDUCE ? "auto" : "smooth", block: "center" });
+    abrir(id, fila ? $(".g-barra", fila) : null);
+  }
+
+  // ── Arquitectura ─────────────────────────────────────────────────────────
+  const tareasDe = c => T.filter(t => t.comps.includes(c));
+
+  function pintarPanel(id) {
+    const c = DATA.comps[id];
+    const ts = tareasDe(id);
+    $("#arq-panel").innerHTML = `
+      <p class="panel-capa">${esc(DATA.capas[c.capa])}${c.nuevo ? ' <span class="chip chip-nuevo">por construir</span>' : ""}</p>
+      <h3>${esc(c.nombre)}</h3>
+      <p class="panel-ruta"><code>${esc(c.ruta)}</code></p>
+      <p>${c.que}</p>
+      ${c.reglas.length ? `<h4>Reglas que no conviene romper</h4><ul class="reglas">${c.reglas.map(r => `<li>${r}</li>`).join("")}</ul>` : ""}
+      ${c.rel.length ? `<h4>Se relaciona con</h4><ul class="rels">${c.rel.map(([to, lab]) => `<li><button type="button" class="rel-btn" data-comp-ir="${to}">${esc(DATA.comps[to].nombre)}</button><span>${esc(lab)}</span></li>`).join("")}</ul>` : ""}
+      <h4>Tareas abiertas que lo tocan</h4>
+      ${ts.length ? `<ul class="refs">${ts.map(t => `<li><button type="button" class="tref" data-tarea-ir="${t.id}">${t.id}</button><span class="tref-t">${esc(t.short)}</span></li>`).join("")}</ul>
+        <button type="button" class="btn" data-filtrar-comp="${id}">Ver solo estas en el diagrama</button>` : '<p class="nada">Ninguna por ahora.</p>'}`;
+  }
+
+  function seleccionarComp(id) {
+    if (!DATA.comps[id]) return;
+    const relacionados = new Set(DATA.comps[id].rel.map(r => r[0]));
+    Object.entries(DATA.comps).forEach(([k, v]) => { if (v.rel.some(r => r[0] === id)) relacionados.add(k); });
+    $$(".comp").forEach(b => {
+      const es = b.dataset.comp === id;
+      b.classList.toggle("sel", es);
+      b.setAttribute("aria-pressed", String(es));
+      b.classList.toggle("rel", !es && relacionados.has(b.dataset.comp));
+    });
+    pintarPanel(id);
+  }
+
+  let pasoActual = -1;
+  function pasoRecorrido(i) {
+    const R = DATA.recorrido;
+    const arq = $(".arq");
+    $$(".comp .rec-badge").forEach(x => x.remove());
+    if (i < 0 || i >= R.length) {
+      pasoActual = -1;
+      arq.classList.remove("en-recorrido");
+      $$(".comp").forEach(b => b.classList.remove("rec-on"));
+      $(".rec-ctl").hidden = true; $("#rec-txt").hidden = true; $("#rec-empezar").hidden = false;
+      return;
+    }
+    pasoActual = i;
+    arq.classList.add("en-recorrido");
+    $("#rec-empezar").hidden = true; $(".rec-ctl").hidden = false; $("#rec-txt").hidden = false;
+    const ids = new Set(R[i].ids);
+    $$(".comp").forEach(b => {
+      const on = ids.has(b.dataset.comp);
+      b.classList.toggle("rec-on", on);
+      if (on) { const s = document.createElement("span"); s.className = "rec-badge"; s.textContent = i + 1; b.appendChild(s); }
+    });
+    $("#rec-cont").textContent = `${i + 1} / ${R.length}`;
+    $("#rec-txt").innerHTML = R[i].txt;
+    $("#rec-prev").disabled = i === 0;
+    $("#rec-next").textContent = i === R.length - 1 ? "Terminar" : "Siguiente";
+    seleccionarComp(R[i].ids[0]);
+  }
+
+  // ── Pipeline ─────────────────────────────────────────────────────────────
+  function agente(id) {
+    const a = DATA.agentes.find(x => x.id === id);
+    if (!a) return;
+    $$(".p-agente").forEach(g => { const es = g.dataset.agente === id; g.classList.toggle("sel", es); g.setAttribute("aria-pressed", String(es)); });
+    $("#agente-info").innerHTML = `<h3>${esc(a.nombre)}</h3><p>${esc(a.desc)}</p>
+      <dl class="mini-dl">
+        <div><dt>Capacidades</dt><dd>${a.requires.map(r => `<code>${esc(r)}</code>`).join(" ")}</dd></div>
+        <div><dt>Código</dt><dd><code>backend/app/${esc(a.entry)}</code></dd></div>
+        <div><dt>Perfil</dt><dd><code>backend/${esc(a.perfil)}</code></dd></div>
+      </dl>`;
+  }
+
+  // ── Pestañas de «Cómo trabajar» ──────────────────────────────────────────
+  function activarPestana(tab, enfocar) {
+    const tabs = $$('.pestanas [role="tab"]');
+    tabs.forEach(t => {
+      const sel = t === tab;
+      t.setAttribute("aria-selected", String(sel));
+      t.tabIndex = sel ? 0 : -1;
+      $("#" + t.getAttribute("aria-controls")).hidden = !sel;
+    });
+    if (enfocar) tab.focus();
+  }
+
+  // ── Copiar ───────────────────────────────────────────────────────────────
+  function copiar(btn) {
+    const code = btn.parentElement.querySelector("code");
+    if (!code) return;
+    const ok = () => { btn.textContent = "Copiado"; setTimeout(() => { btn.textContent = "Copiar"; }, 1500); };
+    const manual = () => {
+      const r = document.createRange(); r.selectNodeContents(code);
+      const sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(r);
+      btn.textContent = "Ctrl+C";
+      setTimeout(() => { btn.textContent = "Copiar"; }, 2500);
+    };
+    try { navigator.clipboard.writeText(code.textContent).then(ok, manual); } catch (_) { manual(); }
+  }
+
+  // ── Eventos ──────────────────────────────────────────────────────────────
+  function enlazar() {
+    $$(".seg [data-modo]").forEach(b => b.addEventListener("click", () => { S.modo = b.dataset.modo; pintarControles(); render(); }));
+    $("#filtro-epicas").addEventListener("click", e => {
+      const b = e.target.closest("[data-epica]"); if (!b) return;
+      const k = b.dataset.epica; S.epicas.has(k) ? S.epicas.delete(k) : S.epicas.add(k);
+      pintarControles(); render();
+    });
+    $("#filtro-sev").addEventListener("click", e => {
+      const b = e.target.closest("[data-sev]"); if (!b) return;
+      const k = b.dataset.sev; S.sevs.has(k) ? S.sevs.delete(k) : S.sevs.add(k);
+      pintarControles(); render();
+    });
+    $("#solo-listas").addEventListener("change", e => { S.solo = e.target.checked; render(); });
+    $("#buscar").addEventListener("input", e => { S.q = e.target.value; render(); });
+    $("#filtro-comp").addEventListener("click", e => { if (e.target.closest("[data-quitar-comp]")) { S.comp = null; pintarControles(); render(); } });
+
+    const g = $("#gantt");
+    g.addEventListener("pointerover", e => {
+      const f = e.target.closest(".g-tarea"); const id = f ? f.dataset.id : null;
+      if (id !== S.hover) { S.hover = id; resaltar(); }
+    });
+    g.addEventListener("pointerleave", () => { S.hover = null; resaltar(); });
+    g.addEventListener("focusin", e => { const f = e.target.closest(".g-tarea"); S.hover = f ? f.dataset.id : null; resaltar(); });
+    g.addEventListener("focusout", () => { S.hover = null; resaltar(); });
+    g.addEventListener("click", e => {
+      if (e.target.closest("[data-limpiar]")) { limpiarFiltros(); pintarControles(); render(); return; }
+      const b = e.target.closest("button[data-id]"); if (b) abrir(b.dataset.id, b);
+    });
+
+    $("#cajon-cerrar").addEventListener("click", cerrar);
+    $("#velo").addEventListener("click", cerrar);
+    document.addEventListener("keydown", e => { if (e.key === "Escape") cerrar(); });
+    $("#cajon-cuerpo").addEventListener("click", e => {
+      const ir = e.target.closest("[data-ir]");
+      if (ir) { irATarea(ir.dataset.ir); return; }
+      const vc = e.target.closest("[data-vercomp]");
+      if (vc) { cerrar(); seleccionarComp(vc.dataset.vercomp); irA($("#arquitectura")); }
+    });
+    document.addEventListener("click", e => { const b = e.target.closest("[data-copiar]"); if (b) copiar(b); });
+
+    $$(".comp").forEach(b => b.addEventListener("click", () => {
+      if (pasoActual >= 0) pasoRecorrido(-1);
+      seleccionarComp(b.dataset.comp);
+      if (estrecho()) irA($("#arq-panel"));
+    }));
+    $("#arq-panel").addEventListener("click", e => {
+      const c = e.target.closest("[data-comp-ir]");
+      if (c) { seleccionarComp(c.dataset.compIr); const d = $(`#comp-${c.dataset.compIr}`); if (d) d.focus({ preventScroll: true }); return; }
+      const t = e.target.closest("[data-tarea-ir]");
+      if (t) { irA($("#tareas")); irATarea(t.dataset.tareaIr); return; }
+      const f = e.target.closest("[data-filtrar-comp]");
+      if (f) { limpiarFiltros(); S.comp = f.dataset.filtrarComp; pintarControles(); render(); irA($("#tareas")); }
+    });
+    $("#rec-empezar").addEventListener("click", () => { pasoRecorrido(0); $("#rec-next").focus({ preventScroll: true }); });
+    $("#rec-prev").addEventListener("click", () => pasoRecorrido(Math.max(0, pasoActual - 1)));
+    $("#rec-next").addEventListener("click", () => {
+      const i = pasoActual + 1;
+      if (i >= DATA.recorrido.length) { pasoRecorrido(-1); $("#rec-empezar").focus({ preventScroll: true }); } else pasoRecorrido(i);
+    });
+    $("#rec-salir").addEventListener("click", () => { pasoRecorrido(-1); $("#rec-empezar").focus({ preventScroll: true }); });
+
+    $$(".p-agente").forEach(el => {
+      el.addEventListener("click", () => agente(el.dataset.agente));
+      el.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); agente(el.dataset.agente); } });
+    });
+
+    const tabs = $$('.pestanas [role="tab"]');
+    tabs.forEach((t, i) => {
+      t.addEventListener("click", () => activarPestana(t, false));
+      t.addEventListener("keydown", e => {
+        const k = e.key;
+        if (k === "ArrowRight" || k === "ArrowLeft" || k === "Home" || k === "End") {
+          e.preventDefault();
+          const j = k === "Home" ? 0 : k === "End" ? tabs.length - 1 : (i + (k === "ArrowRight" ? 1 : -1) + tabs.length) % tabs.length;
+          activarPestana(tabs[j], true);
+        }
+      });
+    });
+
+    let raf = 0;
+    window.addEventListener("resize", () => { cancelAnimationFrame(raf); raf = requestAnimationFrame(() => { dibujar(visibles()); resaltar(); }); });
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { dibujar(visibles()); resaltar(); });
+  }
+
+  // ── Arranque ─────────────────────────────────────────────────────────────
+  $$(".comp").forEach(b => {
+    const n = tareasDe(b.dataset.comp).length;
+    const s = $(".comp-tareas", b);
+    if (n) s.textContent = n === 1 ? "1 tarea abierta" : `${n} tareas abiertas`;
+  });
+  pintarControles();
+  render();
+  if (DATA.agentes.length) agente(DATA.agentes[0].id);
+  seleccionarComp(DATA.comps.engine ? "engine" : Object.keys(DATA.comps)[0]);
+  enlazar();
+})();
+
+</script>
