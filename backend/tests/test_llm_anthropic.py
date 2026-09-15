@@ -152,8 +152,9 @@ async def test_call_llm_routes_to_anthropic_and_uses_default_model(monkeypatch):
 
     seen = {}
 
-    # `temperature` la añadió SPEC-014/T9.4: el doble refleja la firma real.
-    async def fake_call(prompt, model, timeout, system_prompt=None, temperature=None):
+    # `temperature` la añadió SPEC-014/T9.4 y `max_tokens` el tope de salida del
+    # dispatcher: el doble refleja la firma real.
+    async def fake_call(prompt, model, timeout, system_prompt=None, max_tokens=None, temperature=None):
         seen["model"] = model
         seen["prompt"] = prompt
         seen["temperature"] = temperature

@@ -340,6 +340,7 @@ async def call_llm(
     keep_alive: int = -1,
     num_ctx: Optional[int] = None,
     temperature: Optional[float] = None,
+    max_tokens: Optional[int] = None,
 ) -> str:
     """Call the configured LLM provider and return the generated text.
 
@@ -359,6 +360,12 @@ async def call_llm(
             between runs turns the T9.5 gate into a random red-light generator,
             because the metric stops measuring the agent and starts measuring
             the judge.
+        max_tokens: Tope de tokens de salida. ``None`` (default) no manda nada:
+            Anthropic sigue con ``ANTHROPIC_MAX_TOKENS`` y Ollama/OpenAI sin
+            tope, como antes. **En Ollama importa**: sin ``num_predict`` no hay
+            límite, y un modelo pequeño que entra en bucle genera hasta el
+            timeout —la síntesis del investigador se quedaba así 10 minutos por
+            intento, y el timeout se reintenta—.
 
     Returns:
         The generated text, stripped of leading/trailing whitespace.
@@ -399,6 +406,7 @@ async def call_llm(
                 model=resolved_model,
                 timeout=timeout,
                 system_prompt=system_prompt,
+                max_tokens=max_tokens,
                 temperature=temperature,
             ),
             what=f"Anthropic call ({resolved_model})",
@@ -412,6 +420,7 @@ async def call_llm(
                 timeout=timeout,
                 system_prompt=system_prompt,
                 temperature=temperature,
+                max_tokens=max_tokens,
             ),
             what=f"OpenAI call ({resolved_model})",
         ))
@@ -425,6 +434,7 @@ async def call_llm(
             keep_alive=keep_alive,
             num_ctx=num_ctx,
             temperature=temperature,
+            max_tokens=max_tokens,
         ),
         what=f"Ollama call ({resolved_model})",
     ))
@@ -497,6 +507,7 @@ async def _call_ollama(
     keep_alive: int = -1,
     num_ctx: Optional[int] = None,
     temperature: Optional[float] = None,
+    max_tokens: Optional[int] = None,
 ) -> str:
     """Send a generation request to the local Ollama /api/generate endpoint."""
     from app.core.config import settings
@@ -507,6 +518,8 @@ async def _call_ollama(
         options["num_ctx"] = num_ctx
     if temperature is not None:
         options["temperature"] = temperature
+    if max_tokens is not None:
+        options["num_predict"] = max_tokens
     if options:
         payload["options"] = options
     if keep_alive != -1:
@@ -544,6 +557,7 @@ async def _call_openai(
     timeout: float,
     system_prompt: Optional[str] = None,
     temperature: Optional[float] = None,
+    max_tokens: Optional[int] = None,
 ) -> str:
     """Send a chat completion request via the OpenAI Python SDK.
 
@@ -582,6 +596,8 @@ async def _call_openai(
             crear_kwargs: dict = {"model": model, "messages": messages}
             if temperature is not None:
                 crear_kwargs["temperature"] = temperature
+            if max_tokens is not None:
+                crear_kwargs["max_tokens"] = max_tokens
             response = await client.chat.completions.create(**crear_kwargs)
         finally:
             await client.close()
