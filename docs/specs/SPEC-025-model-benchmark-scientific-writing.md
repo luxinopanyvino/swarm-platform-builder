@@ -1,16 +1,24 @@
 # SPEC-025: Benchmark comparativo de modelos LLM open-source para redacción científica
 
-- **Estado:** Draft
+- **Estado:** In progress
 - **Autor:** Comisión de evaluación de modelos (plataforma AlejandrIA Magazine)
-- **Fecha:** 2026-08-09
+- **Fecha:** 2026-08-09 · pasa a `In progress` el 2026-09-15
 - **Épica:** E13 (Benchmark y selección de modelos base para redacción científica)
 - **ADR relacionado:** ADR-0006 (complementa; ver nota de alcance en §1); ver
   también nota sobre ADR-0009 más abajo.
 - **Severidad:** N/A — mejora de capacidad, no remediación de seguridad.
 
-> **Draft**: pendiente `/speckit-clarify` / `/speckit-checklist` antes de pasar a
-> `Ready`. Mientras esté en Draft, `/sdd-sync` no siembra su épica/tareas en el
-> GitHub Project (§ [docs/specs/README.md](README.md)).
+> **En curso (2026-09-15).** El trabajo se hizo en local antes de sincronizar la
+> spec (commit `d70c67f`), así que el backlog nunca lo recogió: la spec seguía en
+> `Draft` y `/sdd-sync` no siembra épicas en ese estado. Pasa a `In progress` para
+> que E13 tenga sus issues y se vea en el roadmap. Estado real de cada tarea:
+>
+> | Tarea | Estado | Evidencia |
+> |---|---|---|
+> | T13.1 Harness y dataset | Hecha | `backend/evals/model_benchmark/`, `tests/test_model_benchmark_smoke.py` |
+> | T13.2 Benchmark e informe | Hecha | [informe](../reports/model-benchmark-scientific-writing.md), 8 candidatos |
+> | T13.3 Selección aprobada | **Pendiente** | Selección en borrador; falta la ratificación de la comisión y, antes, repetir la prueba del revisor y revisar a mano salidas del formateador (pasos pendientes del informe) |
+> | T13.4 Aplicar la selección | Aplicada **provisionalmente** | `models.ollama` de investigador, revisor y formateador ya usan la selección; se cierra cuando T13.3 la ratifique, ajustándola si cambia |
 >
 > **Renumerada de SPEC-023 a SPEC-025 (2026-08-10):** esta spec se creó
 > originalmente como "SPEC-023" en una sesión de trabajo local, desconectada de
@@ -26,7 +34,7 @@ Los modelos usados por cada agente del pipeline editorial están fijados hoy sin
 comparación documentada: `mistral:7b`/`llama3.2:1b` (Investigador),
 `llama3.2:3b` (Redactor y Revisor), `llama3.2:1b` (Formateador) — ver
 [`backend/app/shared/agents_seed.py`](../../backend/app/shared/agents_seed.py)
-y los perfiles `backend/app/agents/*.agent.md`. No hay evidencia versionada de
+y los perfiles de entonces (hoy en `backend/projects/alejandria-magazine/agents/*.agent.md`). No hay evidencia versionada de
 por qué esos modelos y no otros equivalentes open-source, ni de su relación
 razonamiento/coste-de-cómputo para las tareas concretas del pipeline (síntesis
 de fuentes, redacción académica estructurada, revisión con score 0-100,
@@ -95,14 +103,15 @@ producción. No reabre ni contradice ADR-0006.
   explícita de la comisión** antes de considerarse definitivo.
 - [x] **AC3** — *Given* los modelos seleccionados (AC2), *When* se actualiza la
   configuración de agentes vía el frontmatter `models.ollama` de
-  `backend/app/agents/*.agent.md` (namespace on-prem — ver nota de alcance
+  `backend/projects/alejandria-magazine/agents/*.agent.md` (namespace on-prem — ver nota de alcance
   ADR-0009 arriba; `resolve_agent_model()` en
   [`platform/llm.py`](../../backend/app/platform/llm.py) prioriza
   `models[<proveedor activo>]` sobre el campo `model` legado), *Then* los
   agentes del pipeline usan efectivamente esos modelos cuando
   `LLM_PROVIDER=ollama`, verificable vía `GET /api/v1/agents/claude-defs?project_id=`
   y una ejecución completa del pipeline con ese proveedor activo. — Cumplido:
-  `backend/app/agents/{investigador,revisor,formateador}.agent.md` actualizados
+  `{investigador,revisor,formateador}.agent.md` actualizados (entonces en `backend/app/agents/`, hoy en
+  `backend/projects/alejandria-magazine/agents/`)
   en **ambos** campos (`model` legado y `models.ollama`, mantenidos en sync
   como hace el resto de agentes desde ADR-0009): investigador→`gemma2:2b`,
   revisor→`llama3.2:1b`, formateador→`llama3.2:3b` (redactor sin cambio);
@@ -129,7 +138,7 @@ una corrida real del pipeline.
     borrador con esquema dado, revisión de un borrador de referencia con score
     esperado aproximado, formateo de citas a un estilo dado).
   - `run_benchmark.py` — itera modelo × prompt vía el dispatcher
-    `backend/app/shared/llm.py` (reutiliza el cliente Ollama existente, no uno
+    `backend/app/platform/llm.py` (reutiliza el cliente Ollama existente, no uno
     nuevo), mide latencia y tokens/s, captura RAM/VRAM del proceso Ollama.
   - Rúbrica de calidad: métricas deterministas donde sea posible (longitud,
     presencia de secciones esperadas, formato de citas válido) + *LLM-as-judge*
