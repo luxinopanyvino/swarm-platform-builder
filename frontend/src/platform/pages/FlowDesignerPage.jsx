@@ -331,10 +331,13 @@ export default function FlowDesignerPage() {
         };
       }
 
+      // El estado de navegación pasa por `history.pushState`, que lo clona con
+      // structured clone: nada de funciones ni componentes. Los nodos llevan su
+      // icono (un componente de lucide) en `data.icon`, y mandarlos aquí lanzaba
+      // DataCloneError después de haber creado el artículo. La página de
+      // ejecución solo necesita la secuencia y los ajustes.
       navigate(`/execution/${articleId}`, {
         state: {
-          flowNodes: nodes,
-          flowEdges: edges,
           flowSequence,
           agentSettings,
           keywords: runKeywords,
@@ -342,7 +345,10 @@ export default function FlowDesignerPage() {
           articleOutline: runOutline,
         }
       });
-    } catch { toast.error('Error al iniciar pipeline'); }
+    } catch (err) {
+      console.error('Error al iniciar pipeline', err);
+      toast.error(err?.response?.data?.detail || 'Error al iniciar pipeline');
+    }
   };
 
   return (
