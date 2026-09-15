@@ -133,8 +133,13 @@ Una tarea/épica está *Ready* cuando:
 | **GitHub Project / Issues** | **Ejecución**: open/closed, progreso, asignados, prioridad | En GitHub, durante el trabajo diario |
 | `docs/backlog/*.md` | **Overview** humano de alto nivel | A mano, refleja el alcance vigente |
 
-- El backlog operativo vive en el **GitHub Project**; épicas y tareas etiquetadas
-  por `epic`/`task`, `area/*` y `sev/*`.
+- El backlog operativo vive en **dos GitHub Projects**, y la épica decide cuál:
+  **E1–E13** en `Hardening & Platform Backlog` (bootstrap y hardening) y **E14 en
+  adelante** en `Roadmap: calidad, evaluación y vistas agénticas`. Una tarea va
+  siempre al tablero de su épica. Épicas y tareas se etiquetan por `epic`/`task`,
+  `area/*` y `sev/*`, y cada tablero tiene un campo `Epic` que rellena `/sdd-sync`.
+  La tabla que asigna épicas a tableros vive en el agente
+  [`sdd-sync`](../../.claude/agents/sdd-sync.md) (Paso 4.3).
 - La **definición** de épicas/tareas se declara en el bloque estructurado
   `sdd-sync` de cada spec (sección 8 del [TEMPLATE](../specs/TEMPLATE.md)). El
   agente [`sdd-sync`](../../.claude/agents/sdd-sync.md) (comando `/sdd-sync`)
@@ -160,6 +165,9 @@ Una tarea/épica está *Ready* cuando:
   arreglo es `gh project item-add …` desde una máquina con `gh` autenticado.
   **Recomendado**: activar en el Project la workflow **«Auto-add to project»**
   (filtro `label:epic,task`) para que la pertenencia deje de depender del entorno.
+  **Con dos tableros, ese filtro no sirve tal cual**: metería todas las épicas en
+  los dos. Mientras no haya una etiqueta que distinga el tablero, la pertenencia la
+  pone `/sdd-sync` según su tabla de épicas.
 - Prioridad: primero 🔴, luego 🟠 de bajo esfuerzo, según
   [ADR-0003](../adr/0003-security-baseline-and-threat-model.md).
 - **Áreas registradas** (`area/*`): `security`, `infra`, `backend`,
