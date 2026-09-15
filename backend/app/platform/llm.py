@@ -500,6 +500,30 @@ async def call_llm_stream(
 # ---------------------------------------------------------------------------
 
 
+#: Razonamiento de los modelos que lo tienen (qwen3.5, olmo-3…). Desde Ollama
+#: 0.9 llega aparte, en `thinking`, y `response` sigue vacío mientras piensa. Con el
+#: `num_ctx` fijo del pipeline (4096 en el redactor), `qwen3.5:4b` gastaba el
+#: contexto razonando y terminaba por `length` sin escribir el borrador: «respuesta
+#: vacía». Los modelos sin razonamiento aceptan `think: false` sin error.
+OLLAMA_THINK = False
+
+
+def _solo_razonamiento(model: str, num_ctx: Optional[int], motivo_fin: Optional[str]) -> RuntimeError:
+    """El modelo razonó y no llegó a responder.
+
+    Permanente, no transitorio: con el mismo contexto volverá a pasar, y
+    reintentarlo solo multiplica la espera. Algunos modelos (olmo-3) razonan aunque
+    se les pida `think: false`.
+    """
+    contexto = f"num_ctx={num_ctx}" if num_ctx else "el contexto"
+    detalle = " (agotó la ventana)" if motivo_fin == "length" else ""
+    return RuntimeError(
+        f"El modelo '{model}' solo generó razonamiento y ninguna respuesta{detalle}: "
+        f"se le acabó {contexto} pensando. Usa un modelo sin razonamiento o uno que "
+        f"respete think=false (p. ej. qwen3.5)."
+    )
+
+
 async def _call_ollama(
     prompt: str,
     model: str,
@@ -512,7 +536,7 @@ async def _call_ollama(
     """Send a generation request to the local Ollama /api/generate endpoint."""
     from app.core.config import settings
 
-    payload: dict = {"model": model, "prompt": prompt, "stream": False}
+    payload: dict = {"model": model, "prompt": prompt, "stream": False, "think": OLLAMA_THINK}
     options: dict = {}
     if num_ctx is not None:
         options["num_ctx"] = num_ctx
@@ -538,6 +562,8 @@ async def _call_ollama(
             datos = response.json()
             text = datos.get("response", "").strip()
             if not text:
+                if (datos.get("thinking") or "").strip():
+                    raise _solo_razonamiento(model, num_ctx, datos.get("done_reason"))
                 # Often a model still warming up — worth another attempt.
                 raise TransientLLMError("Ollama returned an empty response")
             _record_usage("ollama", model, datos.get("prompt_eval_count"), datos.get("eval_count"))
@@ -640,7 +666,7 @@ async def _call_ollama_stream(
     from app.core.config import settings
     import json
 
-    payload: dict = {"model": model, "prompt": prompt, "stream": True}
+    payload: dict = {"model": model, "prompt": prompt, "stream": True, "think": OLLAMA_THINK}
     options: dict = {}
     if num_ctx is not None:
         options["num_ctx"] = num_ctx
@@ -651,6 +677,9 @@ async def _call_ollama_stream(
     if keep_alive != -1:
         payload["keep_alive"] = keep_alive
 
+    hubo_respuesta = False
+    hubo_razonamiento = False
+    motivo_fin = None
     try:
         limits = httpx.Timeout(timeout=timeout, connect=5.0)
         async with httpx.AsyncClient(base_url=settings.OLLAMA_BASE_URL, timeout=limits) as client:
@@ -670,15 +699,22 @@ async def _call_ollama_stream(
                             chunk = json.loads(line)
                             token = chunk.get("response", "")
                             if token:
+                                hubo_respuesta = True
                                 yield token
+                            if chunk.get("thinking"):
+                                hubo_razonamiento = True
                             # El chunk final (`done`) trae el recuento de tokens.
                             if chunk.get("done"):
+                                motivo_fin = chunk.get("done_reason")
                                 _record_usage(
                                     "ollama", model,
                                     chunk.get("prompt_eval_count"), chunk.get("eval_count"),
                                 )
                         except Exception:
                             pass
+        # Fuera del bucle: dentro, el `except Exception` se tragaría el error.
+        if not hubo_respuesta and hubo_razonamiento:
+            raise _solo_razonamiento(model, num_ctx, motivo_fin)
     except httpx.TimeoutException as exc:
         raise TransientLLMError(f"Ollama stream request timed out after {timeout:.0f}s") from exc
     except httpx.RequestError as exc:
@@ -1054,6 +1090,7 @@ async def _tool_loop_ollama(
                 "model": model,
                 "messages": messages,
                 "stream": False,
+                "think": OLLAMA_THINK,
             }
             if tool_schemas:
                 payload["tools"] = tool_schemas
