@@ -177,7 +177,7 @@ npm run dev
 
 ### Arranque unificado (Windows)
 
-Desde la raíz del proyecto, el script `dev-local.cmd` levanta Qdrant, el backend, el frontend y la web de documentación (VitePress) en ventanas separadas:
+Desde la raíz del proyecto, el script `dev-local.cmd` levanta Qdrant, el backend y el frontend en ventanas separadas (en Linux o macOS, `dev-local.sh`):
 
 ```bat
 dev-local.cmd
@@ -190,6 +190,17 @@ Además fija para el backend `DATABASE_URL` (SQLite en `backend/data/dev.db`),
 
 Con la siembra de desarrollo activa, entra con `admin@admin` / `admin123`.
 
+### Documentación (VitePress)
+
+La web de `docs/` **no** la levanta `dev-local`: necesita sus propias dependencias y
+se arranca a mano cuando hace falta.
+
+```bash
+cd docs
+npm install     # solo la primera vez
+npm run dev     # http://localhost:5174
+```
+
 ### Puertos por defecto
 
 | Servicio | URL |
@@ -197,7 +208,6 @@ Con la siembra de desarrollo activa, entra con `admin@admin` / `admin123`.
 | Frontend | http://localhost:5173 |
 | Backend API | http://localhost:8000 (en Docker Compose, http://localhost:8080) |
 | Swagger UI | http://localhost:8000/docs |
-| Documentación (VitePress) | http://localhost:5174 |
 | Qdrant Dashboard | http://localhost:6333/dashboard |
 | Ollama | http://localhost:11434 |
 

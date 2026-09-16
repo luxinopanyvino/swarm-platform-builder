@@ -123,19 +123,10 @@ start "Alex Backend" /D "%BACKEND_DIR%" "%UVICORN_EXE%" app.main:app --reload --
 echo Iniciando frontend en una nueva ventana...
 start "Alex Frontend" /D "%FRONTEND_DIR%" npm.cmd run dev
 
-set "DOCS_DIR=%ROOT_DIR%docs"
-if exist "%DOCS_DIR%\package.json" (
-  echo Iniciando docs ^(VitePress^) en una nueva ventana...
-  start "Alex Docs" /D "%DOCS_DIR%" cmd /k "node node_modules\vitepress\bin\vitepress.js dev"
-)
-
 echo.
 echo Qdrant:   http://localhost:6333
 echo Backend:  http://127.0.0.1:8000
 echo Frontend: http://localhost:5173
-if exist "%DOCS_DIR%\package.json" (
-  echo Docs:     http://localhost:5174
-)
 echo.
 echo Si ya habia procesos corriendo en esos puertos, cierra esas ventanas y vuelve a ejecutar este script.
 
