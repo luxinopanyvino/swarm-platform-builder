@@ -49,6 +49,19 @@ def test_el_lector_de_criterios_une_las_lineas_de_continuacion():
     assert mod.md_a_html(acs["AC1"]) == "<em>Given</em> algo, <em>When</em> pasa, <em>Then</em> <code>ocurre</code> otra cosa."
 
 
+def test_el_lector_de_criterios_no_confunde_la_seccion_3_0_con_la_3():
+    """SPEC-031 tiene «## 3.0 Preguntas abiertas» antes de «## 3. Criterios»."""
+    mod = _modulo()
+    texto = (
+        "## 3.0 Preguntas abiertas\n\n1. ¿Algo?\n\n"
+        "## 2. Objetivos\n\nNada.\n\n"
+        "## 3. Criterios de aceptación (Given/When/Then)\n\n"
+        "- [ ] **AC1** — Primero.\n"
+        "- [ ] **AC4** — Último, al final del fichero."
+    )
+    assert mod.criterios(texto) == {"AC1": "Primero.", "AC4": "Último, al final del fichero."}
+
+
 def test_una_tarea_de_una_spec_ready_aparece_aunque_no_tenga_issue_ni_ficha():
     mod = _modulo()
     specs = [dict(
