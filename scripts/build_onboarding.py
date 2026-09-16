@@ -542,7 +542,7 @@ def pagina(modelo, arq, hoy: str) -> str:
           <li>Sin red o sin <code>gh</code>, usa la última copia guardada del estado:
             {cmd("python scripts/build_onboarding.py --sin-github")}</li>
           <li>Ábrela en el navegador: <code>docs/public/onboarding/alejandria-por-dentro.html</code>. También la sirve la web de documentación:
-            {cmd("cd docs && npm run dev", "luego")}<span class="nota">y entra en <code>http://localhost:5174/onboarding/alejandria-por-dentro.html</code></span></li>
+            {cmd("cd docs && npm install && npm run dev", "luego")}<span class="nota">y entra en <code>http://localhost:5174/onboarding/alejandria-por-dentro.html</code></span></li>
           <li>Guarda el cambio en una rama <code>docs/</code> con su PR, como cualquier otro.</li>
         </ol>
         <h3>Cuándo regenerarla</h3>
