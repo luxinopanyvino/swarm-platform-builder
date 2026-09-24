@@ -96,18 +96,43 @@ def test_cada_criterio_de_aceptacion_lo_reclama_alguna_tarea(spec_name):
     assert declarados <= cubiertos, f"AC sin tarea: {sorted(declarados - cubiertos)}"
 
 
-def test_la_spec_de_finetune_sigue_en_draft():
-    """Su bloque declara tareas, y en `Draft` **no se siembran**.
+#: Las dos tareas de la fase de decisión de SPEC-031 (PR #380): el spike que mide
+#: la viabilidad (T19.1) y el ADR que fija el diseño (T19.2).
+TAREAS_FASE_DECISION_FINETUNE = {"T19.1", "T19.2"}
+
+
+def test_la_spec_de_finetune_no_siembra_implementacion_sin_adr():
+    """Sin ADR aceptado, SPEC-031 solo puede sembrar su fase de decisión.
 
     Es la salvaguarda de la decisión: RAG se deshace borrando un documento y un
     fine-tune no, así que la retención y el aislamiento por proyecto se deciden
-    antes de que existan issues que alguien pueda ponerse a resolver. Si esta spec
-    pasa a `Ready`, que sea con el ADR delante y borrando este test a conciencia.
+    antes de que existan issues de implementación que alguien pueda ponerse a
+    resolver.
+
+    Hasta el 2026-09-15 esto se comprobaba exigiendo que la spec siguiera en
+    `Draft`. La PR #380 la pasó a `Ready` **solo para su fase de decisión**, así
+    que la salvaguarda se reescribe sobre lo que de verdad protege: mientras el
+    ADR relacionado siga pendiente, el bloque `sdd-sync` no declara más tareas que
+    el spike y el ADR. Cuando el ADR se acepte (AC4), la spec lo enlaza y puede
+    añadir las tareas de implementación; si se rechaza, pasa a `Superseded`.
     """
-    texto = (SPECS_DIR / "SPEC-031-format-learning-finetune.md").read_text(encoding="utf-8")
+    spec_name = "SPEC-031-format-learning-finetune.md"
+    texto = (SPECS_DIR / spec_name).read_text(encoding="utf-8")
+
     estado = re.search(r"^\s*-\s*\*\*Estado:\*\*\s*(\S+)", texto, re.MULTILINE)
-    assert estado and estado.group(1) == "Draft", (
-        "SPEC-031 ha salido de Draft: ¿existe ya el ADR de fine-tune?"
+    assert estado and estado.group(1) in {"Draft", "Ready", "Superseded"}, (
+        f"Estado inesperado de SPEC-031: {estado and estado.group(1)}"
+    )
+
+    adr = re.search(r"^\s*-\s*\*\*ADR relacionado:\*\*\s*(.+)$", texto, re.MULTILINE)
+    assert adr, "SPEC-031 debe declarar su ADR relacionado (aunque esté pendiente)"
+    if "pendiente" not in adr.group(1).lower():
+        pytest.skip("El ADR de fine-tune ya está enlazado: la spec puede ampliar sus tareas")
+
+    tareas = {t["id"] for t in (dict(_bloques())[spec_name].get("tasks") or [])}
+    sobrantes = tareas - TAREAS_FASE_DECISION_FINETUNE
+    assert not sobrantes, (
+        f"SPEC-031 siembra tareas de implementación sin ADR aceptado: {sorted(sobrantes)}"
     )
 
 
