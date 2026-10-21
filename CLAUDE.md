@@ -184,7 +184,9 @@ de cambiar código lee [GOVERNANCE.md](docs/governance/GOVERNANCE.md). Lo esenci
   una con otra **sin tocar el estado** (dry-run por defecto; `--apply` para aplicar).
 - **Resolver una tarea**: `/resolve-task <#>` (o `bash scripts/run-task.sh <#>`)
   implementa una tarea de extremo a extremo y deja una **bitácora** datada en
-  `docs/bitacora/tarea-<N>.md` por ejecución exitosa.
+  `docs/bitacora/tarea-<N>.md` por ejecución exitosa. **Todo fix, implementación o
+  parche —hecho a mano también— lleva su bitácora en la misma PR**, con qué se hizo,
+  por qué, cuándo y dónde (GOVERNANCE §3.1.2); empujarla tras el merge la pierde.
 - **Definition of Done** (§6): criterios de aceptación cumplidos, tests que cubren
   el cambio en verde, docs/spec/ADR actualizados, sin secretos en el diff.
 - **Datos y retención**: [docs/governance/data-retention.md](docs/governance/data-retention.md)
