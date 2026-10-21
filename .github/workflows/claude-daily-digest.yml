@@ -21,7 +21,7 @@ permissions:
 
 # Destinatario de la mención (dispara el push de GitHub en el móvil).
 env:
-  DIGEST_RECIPIENT: luxinopanyvino
+  DIGEST_RECIPIENT: onpremialabs
   DIGEST_ISSUE_TITLE: "📬 Digest diario de PRs y tareas"
 
 jobs:

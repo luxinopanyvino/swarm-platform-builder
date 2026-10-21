@@ -1,7 +1,7 @@
 # Tarea 175 — T6.1 · CI en PRs: lint + pytest + build frontend
 
 - **Fecha:** 2026-09-08
-- **Issue:** [#175](https://github.com/luxinopanyvino/swarm-platform-builder/issues/175) · Épica E6 · [SPEC-020](../specs/SPEC-020-governance-supply-chain.md) / AC1
+- **Issue:** [#175](https://github.com/onpremialabs/swarm-platform-builder/issues/175) · Épica E6 · [SPEC-020](../specs/SPEC-020-governance-supply-chain.md) / AC1
 - **Rama:** `chore/175-branch-protection`
 
 ## Qué pedía la tarea y qué se encontró

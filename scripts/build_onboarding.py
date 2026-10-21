@@ -42,10 +42,10 @@ SPECS = ROOT / "docs" / "specs"
 ONB = ROOT / "docs" / "onboarding"
 CACHE = ONB / "issues.json"
 SALIDA = ROOT / "docs" / "public" / "onboarding" / "alejandria-por-dentro.html"
-REPO = "luxinopanyvino/swarm-platform-builder"
+REPO = "onpremialabs/swarm-platform-builder"
 REPO_URL = f"https://github.com/{REPO}"
 SPEC_URL = f"{REPO_URL}/blob/develop/docs/specs/"
-TABLERO_URL = "https://github.com/users/luxinopanyvino/projects/8"
+TABLERO_URL = "https://github.com/users/onpremialabs/projects/8"
 ACTIVAS = {"ready", "in progress", "done"}
 
 

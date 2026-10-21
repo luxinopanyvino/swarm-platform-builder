@@ -5,13 +5,13 @@
 # Ver docs/governance/GOVERNANCE.md.
 
 # Por defecto
-*                                   @luxinopanyvino
+*                                   @onpremialabs
 
 # Seguridad: auth, identidad y secretos (revisión de security owner)
-/backend/app/core/security.py       @luxinopanyvino
-/backend/app/routers/auth.py        @luxinopanyvino
-/backend/app/core/config.py         @luxinopanyvino
-/SECURITY.md                        @luxinopanyvino
+/backend/app/core/security.py       @onpremialabs
+/backend/app/routers/auth.py        @onpremialabs
+/backend/app/core/config.py         @onpremialabs
+/SECURITY.md                        @onpremialabs
 
 # Egress (riesgo SSRF): la única puerta de salida hacia destinos que eligen la
 # persona usuaria o el modelo (SPEC-024/T2.5). Aquí había una regla sobre el
@@ -19,22 +19,22 @@
 # apuntándolo, así que durante ese tiempo el riesgo de SSRF no tuvo revisor de área
 # mientras el código que lo lleva —el guardián y el catálogo de herramientas— sí
 # cambiaba.
-/backend/app/platform/egress.py                   @luxinopanyvino
-/backend/app/platform/capabilities/tools.py       @luxinopanyvino
+/backend/app/platform/egress.py                   @onpremialabs
+/backend/app/platform/capabilities/tools.py       @onpremialabs
 
 # Infraestructura y despliegue
-/docker-compose.yml                 @luxinopanyvino
-/backend/Dockerfile                 @luxinopanyvino
-/frontend/Dockerfile                @luxinopanyvino
-/.github/                           @luxinopanyvino
+/docker-compose.yml                 @onpremialabs
+/backend/Dockerfile                 @onpremialabs
+/frontend/Dockerfile                @onpremialabs
+/.github/                           @onpremialabs
 
 # Evaluación de agentes (EDD, SPEC-014). Relajar un umbral relaja la garantía de
 # comportamiento, y bajar uno «para que pase la PR» es indistinguible de arreglar
 # la regresión si nadie lo mira: se revisa como un cambio de seguridad.
-/backend/evals/                     @luxinopanyvino
-/.github/workflows/edd-gate.yml     @luxinopanyvino
+/backend/evals/                     @onpremialabs
+/.github/workflows/edd-gate.yml     @onpremialabs
 
 # Decisiones y gobernanza
-/docs/adr/                          @luxinopanyvino
-/docs/governance/                   @luxinopanyvino
-/docs/specs/                        @luxinopanyvino
+/docs/adr/                          @onpremialabs
+/docs/governance/                   @onpremialabs
+/docs/specs/                        @onpremialabs

@@ -1,7 +1,7 @@
 # Tarea 329 — `/api/v1/ai/ingest` indexaba con vectores de hash
 
 - **Fecha:** 2026-09-08
-- **Issue:** [#329](https://github.com/luxinopanyvino/swarm-platform-builder/issues/329) · seguimiento de [#322](https://github.com/luxinopanyvino/swarm-platform-builder/issues/322)
+- **Issue:** [#329](https://github.com/onpremialabs/swarm-platform-builder/issues/329) · seguimiento de [#322](https://github.com/onpremialabs/swarm-platform-builder/issues/322)
 - **Rama:** `fix/329-ai-router-real-embeddings`
 - **Naturaleza:** defecto. No gestionado por `sdd-sync`.
 

@@ -1210,8 +1210,8 @@ El backlog vive hoy en **dos tableros** de GitHub Projects, ambos con un campo `
 
 | Tablero | Épicas |
 |---|---|
-| [Hardening & Platform Backlog](https://github.com/users/luxinopanyvino/projects/7) | E1–E12: bootstrap y hardening |
-| [Roadmap: calidad, evaluación y vistas agénticas](https://github.com/users/luxinopanyvino/projects/8) | E13 y de E14 en adelante: selección de modelos, QA, evaluación con deepeval, portada, trazabilidad, entrada de referencia, fine-tune |
+| [Hardening & Platform Backlog](https://github.com/users/onpremialabs/projects/7) | E1–E12: bootstrap y hardening |
+| [Roadmap: calidad, evaluación y vistas agénticas](https://github.com/users/onpremialabs/projects/8) | E13 y de E14 en adelante: selección de modelos, QA, evaluación con deepeval, portada, trazabilidad, entrada de referencia, fine-tune |
 
 > `/sdd-sync --apply` decide el tablero por la épica del issue y rellena su campo
 > `Epic`. La tabla que asigna épicas a tableros vive en
