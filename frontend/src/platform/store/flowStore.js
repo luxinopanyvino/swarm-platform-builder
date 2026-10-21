@@ -4,6 +4,7 @@ import { flowsApi } from '../api/flows';
 import { mensajeDeCarga } from '../api/errors';
 import { useProjectStore } from './projectStore';
 import { useAuthStore } from './authStore';
+import { sanitizeEdges } from '../flowValidation';
 
 const getProjectId = () => {
   const role = useAuthStore.getState().user?.role;
@@ -46,7 +47,8 @@ export const useFlowStore = create(
         set({
           activeFlow: data,
           draftNodes: data.nodes || [],
-          draftEdges: data.edges || [],
+          // Flujos guardados antes de BUG-001 pueden traer autoconexiones.
+          draftEdges: sanitizeEdges(data.edges),
           draftName: data.name,
           draftChanged: false,
         });

@@ -13,6 +13,7 @@ import { nodeTypes } from '../components/flow/AgentNode';
 import { agentIds, agentMeta, hasOwnRag, listAgents, ragOwner } from '../agentCatalog';
 import { AgentCreateModal, AgentEditorModal } from '../components/agents/AgentEditorModal';
 import { useFlowStore } from '../store/flowStore';
+import { blocking, validateConnection, validateFlow } from '../flowValidation';
 import { useProjectStore } from '../store/projectStore';
 import { agentsApi } from '../api/agents';
 import toast from 'react-hot-toast';
@@ -186,7 +187,15 @@ export default function FlowDesignerPage() {
     }));
   }, [paletteAgents, setNodes]);
 
+  // Rechaza ya en el arrastre: el puerto no se ilumina como destino válido.
+  const isValidConnection = useCallback((connection) => !validateConnection(connection), []);
+
   const onConnect = useCallback((params) => {
+    const problem = validateConnection(params);
+    if (problem) {
+      toast.error(problem.message);
+      return;
+    }
     setEdges(eds => addEdge({ ...params, animated: true, style: { stroke: 'var(--brand-primary)' } }, eds));
   }, []);
 
@@ -234,6 +243,11 @@ export default function FlowDesignerPage() {
   }, [paletteAgents, rfInstance]);
 
   const handleSave = async () => {
+    const errors = blocking(validateFlow(nodes, edges));
+    if (errors.length > 0) {
+      toast.error(errors[0].message);
+      return;
+    }
     setSaving(true);
     setDraftNodes(nodes);
     setDraftEdges(edges);
@@ -242,8 +256,9 @@ export default function FlowDesignerPage() {
       await saveFlow();
       clearLocalDraft();
       toast.success('Flujo guardado');
-    } catch {
-      toast.error('Error al guardar');
+    } catch (err) {
+      const detail = err?.response?.data?.detail;
+      toast.error(detail?.issues?.[0]?.message || detail?.message || 'Error al guardar');
     } finally {
       setSaving(false);
     }
@@ -404,6 +419,7 @@ export default function FlowDesignerPage() {
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
           onConnect={onConnect}
+          isValidConnection={isValidConnection}
           onInit={setRfInstance}
           onDrop={onDrop}
           onDragOver={onDragOver}
