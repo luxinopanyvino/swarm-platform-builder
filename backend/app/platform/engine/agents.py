@@ -84,6 +84,24 @@ def bundle_for(name: str) -> Optional[CapabilityBundle]:
     return bind(spec.requires)
 
 
+#: Capacidades que significan «este agente llama al LLM».
+_CAPACIDADES_LLM = frozenset({"llm", "llm_stream"})
+
+
+def uses_llm(name: str) -> bool:
+    """¿Declara el agente alguna capacidad de LLM?
+
+    Es la declaración que usa la traza (SPEC-032/AC9): un agente que no pide
+    `llm`/`llm_stream` no tiene modelo que registrar. Un agente que el motor no
+    conoce (los dinámicos de `.agent.md`) se considera que sí lo usa: no se
+    afirma «sin LLM» de lo que no se ha declarado.
+    """
+    spec = get_agent(name)
+    if spec is None:
+        return True
+    return bool(_CAPACIDADES_LLM & set(spec.requires))
+
+
 def resolve_runner(
     name: str,
     fallback_loader: Callable[[str], Optional[Callable]] | None = None,
