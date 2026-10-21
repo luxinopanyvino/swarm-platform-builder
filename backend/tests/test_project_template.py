@@ -42,6 +42,9 @@ GRAFO_ESPERADO = GraphSpec(
     loops=(ReviewLoop(
         reviewer="revisor", on_reject="redactor", threshold=80.0, max_loops=3,
         retry_targets=("investigador", "redactor"),
+        # Único cambio deliberado respecto a la forma original: SPEC-032/AC7, agotadas
+        # las vueltas sin aprobar el flujo se detiene para revisión humana.
+        on_exhausted="stop",
     ),),
 )
 

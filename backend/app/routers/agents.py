@@ -27,7 +27,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import (
-    ArticleModel, AgentRunModel, AgentRunRequest,
+    ArticleModel, ArticleStatus, AgentRunModel, AgentRunRequest,
     AgentRunListResponse, AgentRunDetailResponse,
     AgentProfileModel, AgentProfileResponse,
     AgentRunStepModel, AgentRunStepResponse, ArticleExplainResponse,
@@ -743,6 +743,15 @@ async def run_agent_pipeline(
         )
     usuario = await usuario_actual(session, token_data)
     project = await load_project_context(session, usuario, article.project_id)
+
+    # Reejecutar saca el artículo de «requiere revisión humana» (SPEC-032/AC7): es la
+    # decisión de la persona. Los comentarios del revisor se conservan visibles y el
+    # contador de vueltas arranca de cero porque el estado inicial lo reinicia. Una
+    # reanudación (`resume`) continúa desde el checkpoint y **no** lo reinicia.
+    if not resume and article.status == ArticleStatus.REQUIRES_HUMAN_REVIEW:
+        article.status = ArticleStatus.DRAFT
+        session.add(article)
+        await session.commit()
 
     # Una reanudación continúa una ejecución que ya pasó la validación al empezar.
     if not resume:

@@ -36,6 +36,11 @@ class ReviewLoop:
         retry_targets: candidatos, en orden, a los que volver cuando la persona
             usuaria decide **añadir una fuente**. Se elige el primero que esté en
             el flujo; si no hay ninguno, se avanza.
+        on_exhausted: qué pasa al agotar las vueltas con la revisión sin aprobar.
+            `advance` (por defecto) sigue al nodo siguiente de todos modos;
+            `stop` termina la ejecución ahí y deja la decisión a una persona
+            (SPEC-032/AC7): publicar lo que el revisor no aprobó es justo lo que
+            esa regla evita.
     """
 
     reviewer: str
@@ -43,6 +48,7 @@ class ReviewLoop:
     threshold: float = 80.0
     max_loops: int = 3
     retry_targets: Tuple[str, ...] = field(default_factory=tuple)
+    on_exhausted: str = "advance"
 
 
 def next_after(flow: Sequence[str], node: str) -> str:
@@ -54,6 +60,21 @@ def next_after(flow: Sequence[str], node: str) -> str:
     if indice + 1 < len(flow):
         return flow[indice + 1]
     return FIN
+
+
+def needs_rework(loop: ReviewLoop, state: Dict[str, Any]) -> bool:
+    """¿La revisión no aprueba? Puntuación bajo el umbral o `coherent` falso."""
+    return state.get("approval_score", 100) < loop.threshold or state.get("coherent") is False
+
+
+def review_exhausted(loop: ReviewLoop, state: Dict[str, Any]) -> bool:
+    """Se agotaron las vueltas y la revisión sigue sin aprobar, y nadie decidió seguir.
+
+    Una decisión humana de continuar manda sobre la revisión automática.
+    """
+    if state.get("user_decision") == "continue":
+        return False
+    return needs_rework(loop, state) and state.get("loop_count", 0) >= loop.max_loops
 
 
 def make_review_router(loop: ReviewLoop) -> Callable[[Dict[str, Any]], str]:
@@ -89,12 +110,19 @@ def make_review_router(loop: ReviewLoop) -> Callable[[Dict[str, Any]], str]:
 
         score = state.get("approval_score", 100)
         vueltas = state.get("loop_count", 0)
-        if score < loop.threshold and vueltas < loop.max_loops:
+        if needs_rework(loop, state) and vueltas < loop.max_loops:
             logger.info(
                 "'%s' puntuó %s (vuelta %s/%s). Volviendo a '%s'.",
                 loop.reviewer, score, vueltas, loop.max_loops, loop.on_reject,
             )
             return loop.on_reject
+
+        if loop.on_exhausted == "stop" and review_exhausted(loop, state):
+            logger.info(
+                "'%s' agotó %s vueltas sin aprobar (puntuación %s). Se detiene para revisión humana.",
+                loop.reviewer, loop.max_loops, score,
+            )
+            return FIN
 
         siguiente = next_after(flow, loop.reviewer)
         logger.info("'%s' puntuó %s. Avanzando a '%s'.", loop.reviewer, score, siguiente)
