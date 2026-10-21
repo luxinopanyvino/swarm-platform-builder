@@ -35,6 +35,7 @@ from app.platform.engine.agents import AgentSpec, register_agent
 from app.platform.engine.graph import GraphSpec
 from app.platform.engine.routing import ReviewLoop
 from app.platform.flow_validation import ERROR, NO_RULES, WARNING, FlowRules, Requirement
+from app.platform.publication_gate.config import GateConfig, GateConfigError, parse_gate
 
 logger = logging.getLogger(__name__)
 
@@ -65,6 +66,8 @@ class ProjectPackage:
     profiles: Dict[str, Path]
     #: reglas de dependencia del Flow Designer (`graph.flow_rules`); sin ellas, solo las estructurales.
     flow_rules: FlowRules = NO_RULES
+    #: compuerta de publicación (`gate:`, SPEC-032); `None` si el proyecto no declara una.
+    gate: Optional[GateConfig] = None
 
     def profile_path(self, agent: str) -> Optional[Path]:
         return self.profiles.get(agent)
@@ -208,6 +211,15 @@ def _reglas_de_flujo(datos: Dict[str, Any], nombres: set[str]) -> FlowRules:
     return FlowRules(requires=tuple(requisitos), orphans=huerfanos)
 
 
+def _compuerta(datos: Dict[str, Any]) -> Optional[GateConfig]:
+    if "gate" not in datos:
+        return None
+    try:
+        return parse_gate(datos["gate"])
+    except GateConfigError as exc:
+        raise TemplateError(str(exc)) from exc
+
+
 def load_from(raiz: Path) -> ProjectPackage:
     """Lee y valida el proyecto que hay en `raiz`."""
     plantilla = raiz / PLANTILLA
@@ -234,6 +246,7 @@ def load_from(raiz: Path) -> ProjectPackage:
         graph=grafo,
         profiles=perfiles,
         flow_rules=_reglas_de_flujo(datos, {a.name for a in agentes}),
+        gate=_compuerta(datos),
     )
 
 

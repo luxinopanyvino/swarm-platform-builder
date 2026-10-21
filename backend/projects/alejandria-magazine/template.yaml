@@ -90,3 +90,54 @@ graph:
       - agent: publicador
         any_of: [formateador, revisor]
         severity: warning
+
+# ── Compuerta de publicación (SPEC-032, ADR-0011) ───────────────────────────
+# Comprobaciones deterministas, sin LLM, sobre el texto final tras el Formateador.
+# Falla cerrada: lo que no se puede comprobar (`not_verified`) bloquea. Los criterios
+# de `pending` aún no tienen dato: no bloquean y el informe los lista como pendientes.
+# Se valida al cargar la plantilla (platform/publication_gate/config.py).
+gate:
+  placeholders:
+    - "(Author, Year)"
+    - "(Autor, Año)"
+    - "(Author et al., Year)"
+    - "[?]"
+    - "[??]"
+    - "[citation needed]"
+    - "[cita necesaria]"
+    - "TODO"
+    - "TBD"
+    - "XXX"
+  references:
+    title_similarity: 0.90     # similitud mínima del título con el registro
+    other_authors_ratio: 0.5   # fracción de los demás autores que debe coincidir
+    timeout_s: 10              # por consulta a Crossref/OpenAlex
+    retries: 2                 # con espera exponencial
+    backoff_s: 1.0
+    max_total_s: 120           # por evaluación
+    cache_ttl_days: 30         # solo se cachean los positivos
+  structure:
+    sections: [introduction, methods, results, discussion, references]
+    titles:
+      es:
+        introduction: [Introducción]
+        methods: [Métodos, Metodología]
+        results: [Resultados]
+        discussion: [Discusión]
+        references: [Referencias, Bibliografía]
+      en:
+        introduction: [Introduction]
+        methods: [Methods, Methodology, Materials and Methods]
+        results: [Results]
+        discussion: [Discussion]
+        references: [References, Bibliography]
+  pending:
+    - {id: V01, phase: "Fase 4 (4.2)"}
+    - {id: V05, phase: "Fase 4 (4.3)"}
+    - {id: V06, phase: "Fase 4"}
+    - {id: V07, phase: "Fase 4 (4.1, 4.9)"}
+    - {id: V08, phase: "Fase 4"}
+    - {id: V12, phase: "Fase 5 (5.1)"}
+    - {id: V13, phase: "Fase 5 (5.2)"}
+    - {id: V14, phase: "Fase 5 (5.3)"}
+    - {id: V16, phase: "Fase 5 (5.4)"}
