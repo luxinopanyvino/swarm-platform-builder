@@ -216,5 +216,16 @@ def test_el_modo_aviso_y_el_correo_se_leen_de_la_configuracion_yaml():
     from app.core import config
 
     assert "PUBLICATION_GATE_ENFORCE" in config.Settings.model_fields
-    assert settings.PUBLICATION_GATE_ENFORCE is True  # por defecto, bloquea
+    # Sin configuración, bloquea (falla cerrada); el despliegue gradual (DEC-4) lo
+    # declara el yaml, que gana al valor por defecto del código.
+    assert config.Settings.model_fields["PUBLICATION_GATE_ENFORCE"].default is True
+    import yaml
+    from pathlib import Path
+
+    raiz = Path(__file__).resolve().parents[2]
+    valores = {yaml.safe_load((raiz / r).read_text(encoding="utf-8"))["publication"]["gate_enforce"]
+               for r in ("config.yaml", "backend/config.yaml")}
+    assert len(valores) == 1 and isinstance(valores.pop(), bool),         "config.yaml y backend/config.yaml deben coincidir y declarar un booleano"
+    # Los tests fijan la variable de entorno (conftest): el entorno gana al yaml.
+    assert settings.PUBLICATION_GATE_ENFORCE is True
     assert settings.PUBLICATION_GATE_CONTACT_EMAIL == "" or "@" in settings.PUBLICATION_GATE_CONTACT_EMAIL
