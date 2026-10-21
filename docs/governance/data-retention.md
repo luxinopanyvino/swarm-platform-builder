@@ -90,7 +90,7 @@ Decisiones ya tomadas en el código, no aspiraciones:
 - **El `audit_log` no tiene clave ajena a `users`**: guarda el UUID del actor, que
   identifica sin arrastrar datos personales.
 - **No se guarda nunca la contraseña intentada**, ni siquiera enmascarada.
-- **A Crossref y OpenAlex solo salen metadatos de referencias** (SPEC-032/AC16): DOI, o
+- **A Crossref, OpenAlex y DataCite solo salen metadatos de referencias** (SPEC-032/AC16): DOI, o
   título y autores de una referencia ya citada, por la puerta `platform/egress.py`. **Nunca
   el texto del manuscrito**, que puede ser inédito. Los dos hosts se añaden a
   `EGRESS_ALLOWED_DOMAINS` solo para la compuerta; la herramienta `fetch_url` del modelo

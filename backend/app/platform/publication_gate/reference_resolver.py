@@ -1,7 +1,8 @@
 """Existencia y coincidencia de las referencias (SPEC-032 AC3 y AC4, FW V09 nivel 2).
 
 Cada referencia se resuelve contra Crossref y, si no aparece, contra OpenAlex, por
-DOI o —sin él— por título y autores. Determinista y **sin LLM**: el framework
+DOI o —sin él— por título y autores. Los DOI de arXiv (`10.48550/…`) los registra
+DataCite, no Crossref, así que se consultan primero allí (ADR-0011, enmienda). Determinista y **sin LLM**: el framework
 documenta que un modelo que valida citas es justo el fallo que esto evita.
 
 Tres decisiones (ADR-0011):
@@ -36,6 +37,9 @@ CRITERION = "reference_existence"
 
 CROSSREF = "https://api.crossref.org/works"
 OPENALEX = "https://api.openalex.org/works"
+DATACITE = "https://api.datacite.org/dois"
+#: Prefijo de los DOI de arXiv: los registra DataCite y Crossref responde 404.
+DATACITE_PREFIXES = ("10.48550/",)
 
 
 @dataclass(frozen=True)
@@ -200,6 +204,23 @@ def _from_openalex(item: dict) -> Canonical:
     )
 
 
+def _from_datacite(item: dict) -> Canonical:
+    attrs = (item.get("data") or {}).get("attributes") or {}
+    types = attrs.get("types") or {}
+    return Canonical(
+        provider="datacite",
+        doi=normalize_doi(attrs.get("doi") or ""),
+        title=((attrs.get("titles") or [{}])[0] or {}).get("title", ""),
+        authors=[
+            c.get("familyName") or c.get("name", "") for c in attrs.get("creators") or []
+        ],
+        year=attrs.get("publicationYear"),
+        journal=((attrs.get("container") or {}).get("title")) or attrs.get("publisher") or "",
+        preprint=types.get("resourceTypeGeneral") == "Preprint"
+        or str(attrs.get("doi") or "").lower().startswith(DATACITE_PREFIXES),
+    )
+
+
 Fetch = Callable[..., Awaitable[Any]]
 
 
@@ -239,7 +260,9 @@ class PositiveCache:
 
 
 def _proveedor(url: str) -> str:
-    return "crossref" if url.startswith(CROSSREF) else "openalex"
+    if url.startswith(CROSSREF):
+        return "crossref"
+    return "datacite" if url.startswith(DATACITE) else "openalex"
 
 
 class _Session:
@@ -296,7 +319,21 @@ async def _lookup_doi(sess: _Session, doi: str) -> Optional[Canonical]:
         observe_gate_reference("cache_hit")
         return cached
     errors = []
-    for fetcher in (_crossref_doi, _openalex_doi):
+    fetchers = (_crossref_doi, _openalex_doi)
+    if doi.startswith(DATACITE_PREFIXES):
+        # El registrador de ese prefijo es la fuente de verdad: si responde, lo que
+        # diga (incluido «no existe») es concluyente y no se pregunta a quien solo lo
+        # indexa. Si no responde, se cae a los otros dos, que solo pueden aprobar si
+        # el registro coincide en todo.
+        try:
+            rec = await _datacite_doi(sess, doi)
+        except Unavailable as exc:
+            errors.append(str(exc))
+        else:
+            if rec:
+                sess.cache.put(doi, rec)
+            return rec
+    for fetcher in fetchers:
         try:
             rec = await fetcher(sess, doi)
         except Unavailable as exc:
@@ -315,6 +352,11 @@ async def _lookup_doi(sess: _Session, doi: str) -> Optional[Canonical]:
 async def _crossref_doi(sess: _Session, doi: str) -> Optional[Canonical]:
     data = await sess.get_json(f"{CROSSREF}/{quote(doi, safe='/')}")
     return _from_crossref(data["message"]) if data and "message" in data else None
+
+
+async def _datacite_doi(sess: _Session, doi: str) -> Optional[Canonical]:
+    data = await sess.get_json(f"{DATACITE}/{quote(doi, safe='/')}")
+    return _from_datacite(data) if data and "data" in data else None
 
 
 async def _openalex_doi(sess: _Session, doi: str) -> Optional[Canonical]:

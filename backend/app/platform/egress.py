@@ -114,7 +114,7 @@ def _resolver(host: str, port: int) -> List[str]:
 #: consulta (SPEC-032/AC16). Se añaden a la allowlist **solo para ella**: si
 #: `EGRESS_ALLOWED_DOMAINS` está definida, la herramienta `fetch_url` del modelo no
 #: gana acceso a estos hosts por el hecho de que la compuerta los necesite.
-HOSTS_COMPUERTA = ("api.crossref.org", "api.openalex.org")
+HOSTS_COMPUERTA = ("api.crossref.org", "api.openalex.org", "api.datacite.org")
 QUIEN_COMPUERTA = "publication_gate"
 
 

@@ -317,3 +317,63 @@ def test_la_salida_a_la_red_pasa_por_la_puerta_de_egress():
     fuente = inspect.getsource(m)
     assert "safe_get" in fuente
     assert "httpx" not in fuente and "verify=False" not in fuente
+
+
+# ── DataCite: DOI de arXiv (DEC-1) ──────────────────────────────────────────
+
+DATACITE = "https://api.datacite.org/dois"
+
+
+def dc(doi, title, creators, year, publisher="arXiv", type_="Preprint"):
+    return {"data": {"attributes": {
+        "doi": doi, "titles": [{"title": title}],
+        "creators": [{"familyName": c, "name": f"{c}, X."} for c in creators],
+        "publicationYear": year, "publisher": publisher,
+        "types": {"resourceTypeGeneral": type_},
+    }}}
+
+
+ARXIV = dc("10.48550/arxiv.1706.03762", "Attention is all you need",
+           ["Vaswani", "Shazeer", "Parmar"], 2017)
+FUENTE_ARXIV = {
+    "title": "Attention is all you need", "authors": "Vaswani, A., Shazeer, N., Parmar, N.",
+    "year": "2017", "journal": "arXiv", "doi": "10.48550/arXiv.1706.03762",
+}
+
+
+def test_un_doi_de_arxiv_se_resuelve_en_datacite_sin_preguntar_a_crossref():
+    fake = Fake([(DATACITE + "/", Resp(200, ARXIV))])
+    res, enriched = run([FUENTE_ARXIV], fake)
+    assert res.status is CriterionStatus.PASSED
+    assert [u for u, _ in fake.calls] == [f"{DATACITE}/10.48550/arxiv.1706.03762"]  # el DOI va normalizado
+    assert enriched[0]["doi"] == "10.48550/arxiv.1706.03762"
+
+
+def test_un_404_de_datacite_es_concluyente_y_no_se_pregunta_a_openalex():
+    fake = Fake([(DATACITE + "/", Resp(404))])
+    res, _ = run([FUENTE_ARXIV], fake)
+    assert res.status is CriterionStatus.FAILED
+    assert all(u.startswith(DATACITE) for u, _ in fake.calls)
+
+
+def test_si_datacite_no_responde_cae_a_crossref_y_openalex_y_nunca_aprueba_por_ausencia():
+    fake = Fake([
+        (DATACITE + "/", Resp(503)),
+        (CROSSREF + "/", Resp(404)),
+        (OPENALEX + "/", Resp(503)),
+    ])
+    res, _ = run([FUENTE_ARXIV], fake)
+    assert res.status is CriterionStatus.NOT_VERIFIED
+
+
+def test_los_demas_doi_no_tocan_datacite():
+    fake = Fake([(CROSSREF + "/", Resp(200, {"message": NATURE}))])
+    res, _ = run([FUENTE], fake)
+    assert res.status is CriterionStatus.PASSED
+    assert not any(u.startswith(DATACITE) for u, _ in fake.calls)
+
+
+def test_el_titulo_o_los_autores_distintos_en_datacite_siguen_fallando():
+    mal = dc("10.48550/arxiv.1706.03762", "Otro trabajo distinto", ["Nadie"], 2017)
+    res, _ = run([FUENTE_ARXIV], Fake([(DATACITE + "/", Resp(200, mal))]))
+    assert res.status is CriterionStatus.FAILED
