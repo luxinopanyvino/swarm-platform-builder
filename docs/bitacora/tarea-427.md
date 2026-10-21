@@ -134,4 +134,8 @@ las reglas de §3, §10 y §20.
 
 - Siguiente paso: `/sdd-sync` en dry-run y, con visto bueno, `--apply` para crear la épica E20 y
   T20.1–T20.15; después implementación por las tareas sin dependencias.
+- **Hecho el 2026-10-21:** `/sdd-sync --apply` (contra `onpremialabs/swarm-platform-builder`) creó la
+  épica E20 = #432 y T20.1–T20.15 = #433–#447, como sub-issues de #432 y dentro del Project 8, sin
+  ningún UPDATE (T8.3/#209 y T11.5/#251 difieren solo en tildes y no se tocaron). El campo `Epic`
+  del Project 8 no tiene la opción `E20`: queda vacío hasta que una persona la añada.
 - La implementación empezará con el gate EDD y la regresión explicada en la misma PR (T20.15).
