@@ -23,7 +23,9 @@ _DEFAULT_TEMPLATE_ES = (
     "{research_data}\n"
     "{feedback_section}\n"
     "Escribe un manuscrito científico estructurado que contenga:\n"
-    "- Resumen (Abstract)\n- Introducción\n- Metodología\n- Resultados y Discusión Preliminares\n\n"
+    "- Resumen (Abstract)\n- Introducción\n- Metodología\n- Resultados\n- Discusión\n\n"
+    "Resultados y Discusión son DOS secciones separadas, cada una con su propio encabezado: en "
+    "Resultados expón los hallazgos sin interpretarlos; la interpretación va en Discusión.\n\n"
     "Redacta el borrador en español, con lenguaje académico y profesional."
     "{word_count_footer}"
 )
@@ -38,7 +40,9 @@ _DEFAULT_TEMPLATE_EN = (
     "{research_data}\n"
     "{feedback_section}\n"
     "Write a structured scientific manuscript containing:\n"
-    "- Abstract\n- Introduction\n- Methodology\n- Preliminary Results and Discussion\n\n"
+    "- Abstract\n- Introduction\n- Methodology\n- Results\n- Discussion\n\n"
+    "Results and Discussion are TWO separate sections, each with its own heading: report "
+    "findings in Results without interpreting them; interpretation belongs in Discussion.\n\n"
     "Write the draft in English, in professional, academic language."
     "{word_count_footer}"
 )
@@ -194,7 +198,8 @@ async def run_redactor(state: Dict[str, Any]) -> Dict[str, Any]:
         abstract_w  = max(50,  int(target_word_count * 0.10))
         intro_w     = max(100, int(target_word_count * 0.25))
         method_w    = max(100, int(target_word_count * 0.25))
-        results_w   = max(100, int(target_word_count * 0.40))
+        results_w   = max(100, int(target_word_count * 0.25))
+        discussion_w = max(60, int(target_word_count * 0.15))
         if language == "es":
             word_count_header = (
                 f"\nREQUISITO DE LONGITUD: El borrador DEBE tener exactamente {target_word_count} palabras en total.\n"
@@ -202,7 +207,8 @@ async def run_redactor(state: Dict[str, Any]) -> Dict[str, Any]:
                 f"  - Resumen: ~{abstract_w} palabras\n"
                 f"  - Introducci\u00f3n: ~{intro_w} palabras\n"
                 f"  - Metodolog\u00eda: ~{method_w} palabras\n"
-                f"  - Resultados y Discusi\u00f3n: ~{results_w} palabras\n\n"
+                f"  - Resultados: ~{results_w} palabras\n"
+                f"  - Discusi\u00f3n: ~{discussion_w} palabras\n\n"
             )
             word_count_footer = (
                 f"\n\nRECORDATORIO FINAL: el manuscrito completo debe tener {target_word_count} palabras. "
@@ -215,7 +221,8 @@ async def run_redactor(state: Dict[str, Any]) -> Dict[str, Any]:
                 f"  - Abstract: ~{abstract_w} words\n"
                 f"  - Introduction: ~{intro_w} words\n"
                 f"  - Methodology: ~{method_w} words\n"
-                f"  - Results and Discussion: ~{results_w} words\n\n"
+                f"  - Results: ~{results_w} words\n"
+                f"  - Discussion: ~{discussion_w} words\n\n"
             )
             word_count_footer = (
                 f"\n\nFINAL REMINDER: the complete manuscript must be {target_word_count} words. "
@@ -295,7 +302,7 @@ async def run_redactor(state: Dict[str, Any]) -> Dict[str, Any]:
                     f"pero DEBE tener exactamente {target_word_count} palabras.\n\n"
                     f"INSTRUCCIÓN OBLIGATORIA: Reescribe y expande el borrador añadiendo "
                     f"al menos {shortfall} palabras más. Amplía TODAS las secciones "
-                    f"(Resumen, Introducción, Metodología, Resultados y Discusión). "
+                    f"(Resumen, Introducción, Metodología, Resultados, Discusión). "
                     f"Añade más detalles técnicos, ejemplos concretos, análisis y referencias. "
                     f"Mantén el formato Markdown y el estilo académico.\n\n"
                     f"BORRADOR ACTUAL:\n{draft_text}\n\n"
@@ -307,7 +314,7 @@ async def run_redactor(state: Dict[str, Any]) -> Dict[str, Any]:
                     f"but MUST have exactly {target_word_count} words.\n\n"
                     f"MANDATORY INSTRUCTION: Rewrite and expand the draft by adding at least "
                     f"{shortfall} more words. Expand ALL sections (Abstract, Introduction, "
-                    f"Methodology, Results and Discussion). Add more technical details, "
+                    f"Methodology, Results, Discussion). Add more technical details, "
                     f"concrete examples, analysis and references. "
                     f"Maintain Markdown format and academic style.\n\n"
                     f"CURRENT DRAFT:\n{draft_text}\n\n"
