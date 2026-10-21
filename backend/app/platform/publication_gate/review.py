@@ -9,6 +9,8 @@ from typing import Any, Mapping
 
 REVIEW_OK = "ok"
 REVIEW_NOT_VERIFIED = "not_verified"
+#: No hubo revisión (el flujo no incluía al Revisor): tampoco aprueba.
+REVIEW_NOT_RUN = "not_run"
 
 #: El mismo umbral que aplica el enrutador de revisión (`projects/*/template.yaml`).
 APPROVAL_THRESHOLD = 80
@@ -16,7 +18,10 @@ APPROVAL_THRESHOLD = 80
 
 def judgment_blockers(review: Mapping[str, Any]) -> list[str]:
     """Motivos por los que la revisión no aprueba; vacío si aprueba."""
-    if review.get("review_status", REVIEW_OK) != REVIEW_OK:
+    status = review.get("review_status", REVIEW_OK)
+    if status == REVIEW_NOT_RUN:
+        return ["review_missing"]
+    if status != REVIEW_OK:
         # Sin revisión interpretable no hay puntuación que mirar.
         return ["review_not_verified"]
     blockers = []

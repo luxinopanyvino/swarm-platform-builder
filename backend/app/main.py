@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import select
 
 from app.core.database import init_db
+from app.platform.publication_gate.decision import assign_published, dev_seed_decision
 # Import models to ensure they are registered on Base.metadata
 from app import models
 from app.core.config import settings
@@ -143,17 +144,20 @@ async def _seed_default_project_content(session, project_id, author_id):
         select(ArticleModel).where(ArticleModel.project_id == project_id).limit(1)
     )
     if not article_exists.scalars().first():
-        session.add_all([
-            ArticleModel(
-                title="Ejemplo de artículo publicado: AlejandrIA Magazine",
-                body=(
-                    "Este artículo de demostración muestra cómo la plataforma AlejandrIA Magazine "
-                    "puede administrar contenidos científicos, desde la investigación hasta la publicación."
-                ),
-                status=ArticleStatus.PUBLISHED,
-                author_id=author_id,
-                project_id=project_id,
+        ejemplo_publicado = ArticleModel(
+            title="Ejemplo de artículo publicado: AlejandrIA Magazine",
+            body=(
+                "Este artículo de demostración muestra cómo la plataforma AlejandrIA Magazine "
+                "puede administrar contenidos científicos, desde la investigación hasta la publicación."
             ),
+            status=ArticleStatus.DRAFT,
+            author_id=author_id,
+            project_id=project_id,
+        )
+        # La siembra de desarrollo también pasa por la única puerta a `published`.
+        assign_published(ejemplo_publicado, dev_seed_decision())
+        session.add_all([
+            ejemplo_publicado,
             ArticleModel(
                 title="Borrador de ejemplo: flujo editorial rápido",
                 body=(

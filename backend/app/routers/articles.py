@@ -223,6 +223,90 @@ async def submit_for_review(
     return ArticleResponse.model_validate(article)
 
 
+async def _publish_through_the_gate(
+    session: AsyncSession,
+    article: ArticleModel,
+    token_data: dict,
+    *,
+    reevaluate_if_stale: bool,
+    allowed_statuses: tuple,
+):
+    """Camino único de `approve` y `publish` hacia `published` (SPEC-032 AC8, AC10, AC13).
+
+    Los dos endpoints aplican **las mismas reglas** y las dos decisiones pasan por
+    `can_publish`; `assign_published` es el único sitio que asigna el estado.
+    Devuelve `(decisión, aviso)`; levanta `HTTPException` si no se puede publicar.
+    """
+    from app.core.config import settings
+    from app.modules.agents.domain import alejandria
+    from app.platform.publication_gate.approval import approval_denial
+    from app.platform.publication_gate.decision import (
+        Approval, GateState, assign_published, can_publish, legacy_decision,
+    )
+    from app.platform.publication_gate.service import (
+        evaluate_and_store, is_current, latest_report, text_sha256,
+    )
+
+    role = token_data.get("role", "redactor")
+    user_id = UUID(token_data["user_id"])
+    report = await latest_report(session, article.id)
+
+    denial, warning = approval_denial(
+        article=article, user_id=user_id, role=role, report=report,
+        enforce=settings.PUBLICATION_GATE_ENFORCE,
+        allow_self_approval=settings.PUBLICATION_ALLOW_SELF_APPROVAL,
+    )
+    # Quién puede va antes que en qué estado está: no se revela nada a quien no puede.
+    if denial is not None and denial.status == 403:
+        raise HTTPException(status_code=403, detail=denial.message)
+    if article.status not in allowed_statuses:
+        raise HTTPException(status_code=409, detail="El artículo no está en un estado que permita publicarlo")
+
+    config = alejandria.package().gate
+    if config is None:
+        decision = legacy_decision()
+    else:
+        # `publish` evalúa el texto actual si no hay informe vigente (AC13).
+        if reevaluate_if_stale and (report is None or not is_current(report, article)):
+            previo = report
+            report, _ = await evaluate_and_store(
+                session, article, config, list(previo.sources) if previo else None,
+                created_by=user_id,
+                review=(previo.criteria or {}).get("review") if previo else None,
+            )
+            # El informe se conserva aunque la publicación se rechace después: la
+            # evaluación ocurrió y es evidencia (AC6), no parte de una publicación.
+            await session.commit()
+            await session.refresh(article)
+            denial, warning = approval_denial(
+                article=article, user_id=user_id, role=role, report=report,
+                enforce=settings.PUBLICATION_GATE_ENFORCE,
+                allow_self_approval=settings.PUBLICATION_ALLOW_SELF_APPROVAL,
+            )
+        if denial is not None:
+            raise HTTPException(status_code=denial.status,
+                                detail={"code": denial.code, "message": denial.message})
+        decision = can_publish(
+            review=(report.criteria or {}).get("review") if report else None,
+            gate=GateState(passed=bool((report.criteria or {}).get("passed")),
+                           current=is_current(report, article)) if report else None,
+            approval=Approval(user_id=user_id, current=True),
+            enforce=settings.PUBLICATION_GATE_ENFORCE,
+        )
+        if not decision.allowed:
+            raise HTTPException(status_code=409, detail={
+                "code": decision.reasons[0], "reasons": list(decision.reasons),
+                "message": "No se cumplen las condiciones para publicar",
+            })
+
+    assign_published(article, decision)
+    article.reviewer_id = user_id
+    article.approved_by = user_id
+    article.approved_at = article.published_at
+    article.approved_text_sha256 = text_sha256(article.body)
+    return decision, warning
+
+
 @router.post("/{article_id}/approve", response_model=ArticleResponse)
 async def approve_article(
     article_id: UUID,
@@ -237,15 +321,6 @@ async def approve_article(
     y un informe de compuerta vigente y sin bloqueantes. Registra quién, cuándo y
     qué texto (huella) se aprobó.
     """
-    import datetime
-
-    from app.core.config import settings
-    from app.platform.publication_gate.approval import approval_denial
-    from app.platform.publication_gate.service import latest_report, text_sha256
-
-    role = token_data.get("role", "redactor")
-    current_user_id = UUID(token_data["user_id"])
-
     stmt = select(ArticleModel).where(ArticleModel.id == article_id)
     result = await session.execute(stmt)
     article = result.scalars().first()
@@ -253,28 +328,10 @@ async def approve_article(
     if not article:
         raise HTTPException(status_code=404, detail="Article not found")
 
-    report = await latest_report(session, article.id)
-    denial, warning = approval_denial(
-        article=article, user_id=current_user_id, role=role, report=report,
-        enforce=settings.PUBLICATION_GATE_ENFORCE,
-        allow_self_approval=settings.PUBLICATION_ALLOW_SELF_APPROVAL,
+    decision, warning = await _publish_through_the_gate(
+        session, article, token_data,
+        reevaluate_if_stale=False, allowed_statuses=(ArticleStatus.IN_REVIEW,),
     )
-    if denial is not None and denial.status == 403:
-        raise HTTPException(status_code=403, detail=denial.message)
-
-    if article.status != ArticleStatus.IN_REVIEW:
-        raise HTTPException(status_code=409, detail="Article not under review")
-
-    if denial is not None:
-        raise HTTPException(status_code=denial.status, detail={"code": denial.code, "message": denial.message})
-
-    article.status = ArticleStatus.PUBLISHED
-    article.reviewer_id = current_user_id
-    now = datetime.datetime.utcnow()
-    article.published_at = now
-    article.approved_by = current_user_id
-    article.approved_at = now
-    article.approved_text_sha256 = text_sha256(article.body)
 
     session.add(article)
     await record_audit(
@@ -289,6 +346,7 @@ async def approve_article(
             "text_sha256": article.approved_text_sha256,
             # Con la compuerta en modo aviso, queda constancia de qué no se cumplía.
             "gate_warning": warning.code if warning else None,
+            "gate_warnings": list(decision.warnings),
         },
     )
 
@@ -325,11 +383,12 @@ async def publish_article_direct(
     token_data=Depends(get_current_user),
     session: AsyncSession = Depends(get_session),
 ):
-    """Publish a draft article directly (draft → published). Admin or redactor only."""
-    role = token_data.get("role", "author")
-    if role not in (UserRole.ADMIN, UserRole.REDACTOR):
-        raise HTTPException(status_code=403, detail="Solo administradores y redactores pueden publicar directamente")
+    """Publica un artículo sin pasar por `in_review` (SPEC-032/AC13).
 
+    Aplica **las mismas reglas que `approve`** —revisor asignado o admin, nunca el
+    propietario, autor responsable, compuerta sobre el texto actual— y consulta
+    `can_publish`. Si no hay informe vigente, evalúa la compuerta primero.
+    """
     stmt = select(ArticleModel).where(ArticleModel.id == article_id)
     result = await session.execute(stmt)
     article = result.scalars().first()
@@ -340,8 +399,11 @@ async def publish_article_direct(
     if article.status == ArticleStatus.PUBLISHED:
         raise HTTPException(status_code=409, detail="El artículo ya está publicado")
 
-    article.status = ArticleStatus.PUBLISHED
-    article.published_at = __import__("datetime").datetime.utcnow()
+    decision, warning = await _publish_through_the_gate(
+        session, article, token_data,
+        reevaluate_if_stale=True,
+        allowed_statuses=(ArticleStatus.DRAFT, ArticleStatus.IN_REVIEW, ArticleStatus.APPROVED),
+    )
     session.add(article)
 
     # Notify the author if different from the publisher
@@ -363,7 +425,9 @@ async def publish_article_direct(
         target_type="article",
         target_id=article.id,
         request=request,
-        detail={"title": article.title, "author_id": str(article.author_id)},
+        detail={"title": article.title, "author_id": str(article.author_id),
+                "text_sha256": article.approved_text_sha256,
+                "gate_warnings": list(decision.warnings)},
     )
     await session.commit()
     await session.refresh(article)

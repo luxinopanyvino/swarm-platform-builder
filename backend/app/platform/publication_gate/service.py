@@ -47,6 +47,7 @@ async def evaluate_and_store(
     *,
     run_id: Optional[UUID] = None,
     created_by: Optional[UUID] = None,
+    review: Optional[dict] = None,
     **resolver_kwargs: Any,
 ) -> tuple[PublicationGateReportModel, GateReport]:
     """Evalúa el texto actual del artículo y guarda el informe (sin hacer commit)."""
@@ -59,11 +60,16 @@ async def evaluate_and_store(
             [{"index": 0, "title": "", "status": "not_verified",
               "reason": "no hay referencias estructuradas que comprobar"}],
         )
+    criteria = report.as_dict()
+    if review is not None:
+        # La revisión que acompañó a este texto: `can_publish` la lee de aquí, porque
+        # fuera del pipeline ya no queda rastro de ella (SPEC-032/AC10).
+        criteria["review"] = review
     row = PublicationGateReportModel(
         article_id=article.id,
         run_id=run_id,
         text_sha256=text_sha256(article.body),
-        criteria=report.as_dict(),
+        criteria=criteria,
         sources=report.sources,
         created_by=created_by,
     )

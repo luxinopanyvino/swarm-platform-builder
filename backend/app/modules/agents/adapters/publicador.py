@@ -8,6 +8,7 @@ from app.core.database import AsyncSessionLocal
 from app.models import ArticleModel, ArticleStatus
 from app.modules.agents.adapters.paper_layout import build_paper_html
 from app.platform.capabilities.binding import provider
+from app.platform.publication_gate.decision import assign_published, legacy_decision
 
 logger = logging.getLogger(__name__)
 
@@ -112,8 +113,7 @@ async def _apply_gate(session, article, state: Dict[str, Any], log) -> tuple:
 
     config = alejandria.package().gate
     if config is None:
-        article.status = ArticleStatus.PUBLISHED
-        article.published_at = datetime.datetime.utcnow()
+        assign_published(article, legacy_decision())
         log("✅ Artículo publicado (el proyecto no declara compuerta).")
         return False, []
 
@@ -125,8 +125,19 @@ async def _apply_gate(session, article, state: Dict[str, Any], log) -> tuple:
     article.published_at = None
 
     log("🛂 Evaluando la compuerta de publicación sobre el texto final...")
+    # La revisión de esta ejecución viaja con el informe; sin Revisor en el flujo no
+    # hubo revisión y `can_publish` no la da por buena.
+    if state.get("review_status") is None:
+        review = {"review_status": "not_run"}
+    else:
+        review = {
+            "review_status": state.get("review_status"),
+            "approval_score": state.get("approval_score"),
+            "coherent": state.get("coherent"),
+        }
     row, report = await evaluate_and_store(
-        session, article, config, state.get("sources") or [], run_id=state.get("_run_id"),
+        session, article, config, state.get("sources") or [],
+        run_id=state.get("_run_id"), review=review,
     )
     blockers = [
         {
