@@ -5,6 +5,11 @@ from typing import Dict, Any
 from app.core.config import settings
 from app.platform.capabilities.binding import provider
 from app.platform.llm import call_llm, resolve_agent_model, resolve_agent_temperature
+from app.platform.publication_gate.references import (
+    check_reference_structure,
+    is_citable,
+    missing_fields,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -262,10 +267,24 @@ async def run_formateador(state: Dict[str, Any]) -> Dict[str, Any]:
     # 3. Assemble references section deterministically using Python code.
     # Exclude non-citable placeholders: parametric LLM synthesis has no real
     # bibliographic value and would otherwise render as a bogus "N/A" reference.
-    sources = [
-        s for s in (state.get("sources") or [])
-        if not str(s.get("url", "")).startswith("synthesis://")
-    ]
+    sources = [s for s in (state.get("sources") or []) if is_citable(s)]
+
+    # SPEC-032/AC2: una fuente incompleta ya no se imprime con el campo omitido en
+    # silencio. Se deja fuera de la bibliografía y se informa de qué le falta; la
+    # compuerta la trata como bloqueante.
+    reference_issues = check_reference_structure(sources).evidence
+    incomplete = {
+        id(s) for s in sources if missing_fields(s)
+    }
+    if incomplete:
+        log(
+            f"⚠️ {len(incomplete)} fuente(s) incompleta(s) no se imprimen en la bibliografía: "
+            + "; ".join(
+                f"{e['title']} (falta: {', '.join(e['missing'])})" for e in reference_issues
+            ),
+            "warning",
+        )
+    sources = [s for s in sources if id(s) not in incomplete]
 
     formatted_refs = []
     seen_urls = set()
@@ -294,4 +313,8 @@ async def run_formateador(state: Dict[str, Any]) -> Dict[str, Any]:
         final_text = formatted_body
         log("ℹ️ No se encontraron fuentes en el estado del artículo para generar la bibliografía.")
 
-    return {"formatted_text": final_text, "scientific_format": scientific_format}
+    return {
+        "formatted_text": final_text,
+        "scientific_format": scientific_format,
+        "reference_issues": reference_issues,
+    }
