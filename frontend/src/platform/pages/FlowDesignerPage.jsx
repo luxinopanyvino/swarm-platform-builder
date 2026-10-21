@@ -451,7 +451,7 @@ export default function FlowDesignerPage() {
 
         {/* Empty state */}
         {nodes.length === 0 && (
-          <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 0 }}>
+          <div className="flow-empty">
             <EmptyState
               icon={<GitBranch size={28} />}
               title="Diseña tu pipeline"
