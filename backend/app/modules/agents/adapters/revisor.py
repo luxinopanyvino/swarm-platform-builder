@@ -6,6 +6,11 @@ from typing import Dict, Any
 from app.core.config import settings
 from app.platform.capabilities.binding import provider
 from app.platform.llm import call_llm, resolve_agent_model, resolve_agent_temperature
+from app.platform.publication_gate.review import (
+    APPROVAL_THRESHOLD,
+    REVIEW_NOT_VERIFIED,
+    REVIEW_OK,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -48,9 +53,14 @@ async def run_revisor(state: Dict[str, Any]) -> Dict[str, Any]:
         f"JSON output:"
     )
 
-    approval_score = 85
-    coherent = True
-    feedback = []
+    # SPEC-032/AC15: sin una revisión interpretable el estado es `not_verified`.
+    # Ni se aprueba por defecto (el 85 de antes) ni se inventa una revisión: lo que
+    # no se puede comprobar no se aprueba.
+    approval_score = 0
+    coherent = False
+    feedback: list = []
+    review_status = REVIEW_NOT_VERIFIED
+    motivo = ""
 
     try:
         evaluar = provider(state, "llm", call_llm)
@@ -58,38 +68,40 @@ async def run_revisor(state: Dict[str, Any]) -> Dict[str, Any]:
             prompt, model=model, timeout=45.0, num_ctx=4096, keep_alive=0,
             temperature=temperature,
         )
-        json_match = re.search(r"\{.*\}", raw_response, re.DOTALL)
-        if json_match:
+        json_match = re.search(r"\{.*\}", raw_response or "", re.DOTALL)
+        if not json_match:
+            motivo = "la respuesta no contiene un JSON"
+        else:
             try:
                 data = json.loads(json_match.group(0))
-                approval_score = int(data.get("approval_score", 85))
-                if "coherent" in data:
-                    coherent = bool(data.get("coherent"))
-                feedback = data.get("feedback", [])
-                if not isinstance(feedback, list):
-                    feedback = [str(feedback)]
+                score = data.get("approval_score")
+                if isinstance(score, bool) or not isinstance(score, (int, float)) or not 0 <= score <= 100:
+                    motivo = f"approval_score ausente o fuera de 0–100 ({score!r})"
+                else:
+                    approval_score = int(score)
+                    coherent = bool(data.get("coherent", True))
+                    feedback = data.get("feedback", [])
+                    if not isinstance(feedback, list):
+                        feedback = [str(feedback)]
+                    review_status = REVIEW_OK
             except Exception as parse_err:
-                logger.error(f"Failed to parse JSON from Revisor: {str(parse_err)}")
-                feedback = ["Review completed with parsing issue. Text looks acceptable."]
-        else:
-            logger.warning("Could not find JSON block in Revisor response.")
+                motivo = f"JSON no interpretable: {parse_err}"
     except Exception as e:
-        logger.error(f"Error calling LLM in Revisor: {str(e)}")
-        if loop_count == 0:
-            approval_score = 75
-            feedback = [
-                "The introduction is too short.",
-                "Please expand the methodology section with concrete details about Qdrant configuration.",
-            ]
-        else:
-            approval_score = 90
-            feedback = ["Draft significantly improved. The methodology is now clear."]
+        motivo = f"fallo del LLM: {e}"
+
+    if review_status != REVIEW_OK:
+        logger.error("Revisor: revisión no verificada — %s", motivo)
+        approval_score = 0
+        coherent = False
+        feedback = []
 
     # The draft "fails coherence" when the reviewer says so or the score is low.
-    coherent = coherent and approval_score >= 80
-    new_loop_count = loop_count + 1 if approval_score < 80 else loop_count
+    coherent = coherent and approval_score >= APPROVAL_THRESHOLD
+    new_loop_count = loop_count + 1 if approval_score < APPROVAL_THRESHOLD else loop_count
 
-    if coherent:
+    if review_status != REVIEW_OK:
+        log(f"⚠️ Revisión no verificada ({motivo}): no se aprueba ni se inventa una puntuación.", "warning")
+    elif coherent:
         log(f"✅ Borrador aprobado — puntuación: {approval_score}/100")
     else:
         log(f"❌ Coherencia insuficiente — puntuación: {approval_score}/100.", "warning")
@@ -101,6 +113,7 @@ async def run_revisor(state: Dict[str, Any]) -> Dict[str, Any]:
         "feedback": feedback,
         "loop_count": new_loop_count,
         "coherent": coherent,
+        "review_status": review_status,
         # Always reset the per-pass decision so a stale value can't re-trigger routing.
         "user_decision": None,
     }
@@ -111,7 +124,9 @@ async def run_revisor(state: Dict[str, Any]) -> Dict[str, Any]:
     source_retries = state.get("source_retries") or 0
     MAX_SOURCE_RETRIES = 3
 
-    if not coherent and request_decision is not None:
+    # Una revisión no verificada no es una opinión sobre la coherencia: no se le
+    # pregunta a la persona si añade una fuente por ella.
+    if not coherent and review_status == REVIEW_OK and request_decision is not None:
         if source_retries >= MAX_SOURCE_RETRIES:
             log("ℹ️ Límite de reintentos con nuevas fuentes alcanzado — continuando con el borrador actual.", "warning")
             result["user_decision"] = "continue"
