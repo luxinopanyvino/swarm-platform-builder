@@ -26,6 +26,9 @@ class AgentState(TypedDict):
     # Fuentes que el Formateador dejó fuera por incompletas, con los campos que faltan (SPEC-032/AC2)
     reference_issues: List[Dict[str, Any]]
     published_url: str
+    # La compuerta de publicación bloqueó el texto final y qué criterios (SPEC-032/AC14)
+    gate_failed: bool
+    gate_blockers: List[Dict[str, Any]]
     metadata: Dict[str, Any]
     flow_sequence: List[str]
     current_step_index: int

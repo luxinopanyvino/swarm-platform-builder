@@ -24,6 +24,8 @@ class GateReport:
     sources: list = field(default_factory=list)
     #: Criterios declarados sin dato todavía: `{"id", "phase"}`. No bloquean.
     pending: list = field(default_factory=list)
+    #: criterio → agente responsable (`gate.responsible`).
+    responsible: dict = field(default_factory=dict)
 
     @property
     def blockers(self) -> list:
@@ -37,7 +39,13 @@ class GateReport:
         return {
             "passed": self.passed,
             "criteria": [
-                {"criterion": c.criterion, "status": c.status.value, "evidence": c.evidence}
+                {
+                    "criterion": c.criterion,
+                    "status": c.status.value,
+                    "evidence": c.evidence,
+                    # A quién se devuelve si bloquea (AC14); la Fase 2 lo automatizará.
+                    "responsible_agent": self.responsible.get(c.criterion),
+                }
                 for c in self.criteria
             ],
             "pending": self.pending,
@@ -57,4 +65,6 @@ async def evaluate_gate(
         check_structure(text, config.sections, config.titles),
     ]
     pending = [{"id": p.id, "phase": p.phase} for p in config.pending]
-    return GateReport(criteria=criteria, sources=enriched, pending=pending)
+    return GateReport(
+        criteria=criteria, sources=enriched, pending=pending, responsible=dict(config.responsible)
+    )

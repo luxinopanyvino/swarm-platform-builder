@@ -211,13 +211,19 @@ def _reglas_de_flujo(datos: Dict[str, Any], nombres: set[str]) -> FlowRules:
     return FlowRules(requires=tuple(requisitos), orphans=huerfanos)
 
 
-def _compuerta(datos: Dict[str, Any]) -> Optional[GateConfig]:
+def _compuerta(datos: Dict[str, Any], nombres: set) -> Optional[GateConfig]:
     if "gate" not in datos:
         return None
     try:
-        return parse_gate(datos["gate"])
+        config = parse_gate(datos["gate"])
     except GateConfigError as exc:
         raise TemplateError(str(exc)) from exc
+    for criterio, agente in config.responsible.items():
+        _exigir(
+            agente in nombres,
+            f"'gate.responsible' manda '{criterio}' a '{agente}', que no está declarado",
+        )
+    return config
 
 
 def load_from(raiz: Path) -> ProjectPackage:
@@ -246,7 +252,7 @@ def load_from(raiz: Path) -> ProjectPackage:
         graph=grafo,
         profiles=perfiles,
         flow_rules=_reglas_de_flujo(datos, {a.name for a in agentes}),
-        gate=_compuerta(datos),
+        gate=_compuerta(datos, {a.name for a in agentes}),
     )
 
 

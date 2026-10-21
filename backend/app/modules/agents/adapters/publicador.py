@@ -16,8 +16,10 @@ logger = logging.getLogger(__name__)
 async def run_publicador(state: Dict[str, Any]) -> Dict[str, Any]:
     """
     Publicador Agent.
-    Persists the final formatted text to the database, marks the article as
-    PUBLISHED, and returns indexing metadata with the published URL.
+    Persists the final formatted text and the printable layout, then evaluates the
+    publication gate on that text (SPEC-032). It never leaves the article in
+    PUBLISHED: a clean gate sends it to `in_review` for explicit human approval and
+    a blocking one returns it to `draft` with the report. Makes no LLM call.
     """
     article_id = state.get("article_id")
     final_text = state.get("formatted_text") or state.get("draft_text") or ""
@@ -36,7 +38,9 @@ async def run_publicador(state: Dict[str, Any]) -> Dict[str, Any]:
         "indexing_timestamp": datetime.datetime.utcnow().isoformat(),
     }
 
-    published_url = f"http://localhost:8080/articles/{article_id}/view"
+    published_url = ""
+    gate_failed = False
+    gate_blockers: list = []
 
     try:
         async with AsyncSessionLocal() as session:
@@ -45,8 +49,6 @@ async def run_publicador(state: Dict[str, Any]) -> Dict[str, Any]:
             article = result.scalars().first()
             if article:
                 article.body = final_text
-                article.status = ArticleStatus.PUBLISHED
-                article.published_at = datetime.datetime.utcnow()
                 fmt = state.get("scientific_format")
                 if fmt and fmt != "none":
                     article.scientific_format = fmt
@@ -71,13 +73,83 @@ async def run_publicador(state: Dict[str, Any]) -> Dict[str, Any]:
                     logger.warning(f"Paper layout generation failed: {layout_exc}")
 
                 session.add(article)
+                gate_failed, gate_blockers = await _apply_gate(session, article, state, log)
                 await session.commit()
-                logger.info(f"Article {article_id} successfully marked as PUBLISHED in DB")
-                log(f"✅ Artículo publicado — {metadata['word_count']} palabras, {metadata['reading_time_minutes']} min de lectura.")
+                if not gate_failed and article.status == ArticleStatus.PUBLISHED:
+                    published_url = f"http://localhost:8080/articles/{article_id}/view"
+                logger.info(f"Article {article_id} left the Publicador as {article.status.value}")
             else:
                 logger.error(f"Article {article_id} not found in DB during publishing")
                 log("⚠️ Artículo no encontrado en la base de datos.", "error")
     except Exception as e:
         logger.error(f"Error updating article to PUBLISHED in DB: {str(e)}")
 
-    return {"published_url": published_url, "metadata": metadata}
+    return {
+        "published_url": published_url,
+        "metadata": metadata,
+        "gate_failed": gate_failed,
+        "gate_blockers": gate_blockers,
+    }
+
+
+async def _apply_gate(session, article, state: Dict[str, Any], log) -> tuple:
+    """Evalúa la compuerta sobre el texto final y fija el estado del artículo.
+
+    SPEC-032 AC5/AC8/AC14. El Publicador **nunca** deja un artículo en `published`:
+
+    * sin bloqueantes → `in_review`, a la espera de la aprobación humana (`approve`);
+    * con bloqueantes → `draft` y el informe dice qué criterio falló, con qué
+      evidencia y a qué agente le corresponde; la persona corrige y reejecuta o
+      reevalúa. Con `PUBLICATION_GATE_ENFORCE=false` los bloqueantes se registran y
+      se avisan pero el artículo llega igualmente a `in_review` (AC16).
+
+    Un proyecto que no declara `gate:` conserva el comportamiento anterior.
+    Devuelve `(gate_failed, bloqueantes)`.
+    """
+    from app.core.config import settings
+    from app.modules.agents.domain import alejandria
+    from app.platform.publication_gate.service import evaluate_and_store
+
+    config = alejandria.package().gate
+    if config is None:
+        article.status = ArticleStatus.PUBLISHED
+        article.published_at = datetime.datetime.utcnow()
+        log("✅ Artículo publicado (el proyecto no declara compuerta).")
+        return False, []
+
+    # El texto cambió: cualquier aprobación o publicación anterior ya no describe
+    # lo que hay ahora y hay que aprobarlo de nuevo.
+    article.approved_by = None
+    article.approved_at = None
+    article.approved_text_sha256 = None
+    article.published_at = None
+
+    log("🛂 Evaluando la compuerta de publicación sobre el texto final...")
+    row, report = await evaluate_and_store(
+        session, article, config, state.get("sources") or [], run_id=state.get("_run_id"),
+    )
+    blockers = [
+        {
+            "criterion": c.criterion,
+            "status": c.status.value,
+            "evidence": c.evidence,
+            "responsible_agent": config.responsible.get(c.criterion),
+        }
+        for c in report.blockers
+    ]
+    if not blockers:
+        article.status = ArticleStatus.IN_REVIEW
+        log(f"✅ Compuerta superada — {len(report.pending)} criterio(s) pendiente(s) de fases posteriores. "
+            "El artículo queda en revisión, a la espera de aprobación humana.")
+        return False, []
+
+    nombres = ", ".join(b["criterion"] for b in blockers)
+    if not settings.PUBLICATION_GATE_ENFORCE:
+        article.status = ArticleStatus.IN_REVIEW
+        log(f"⚠️ Compuerta con bloqueantes ({nombres}), pero PUBLICATION_GATE_ENFORCE=false: "
+            "pasa a revisión humana.", "warning")
+        return False, []
+
+    article.status = ArticleStatus.DRAFT
+    log(f"⛔ La compuerta bloquea la publicación ({nombres}). El artículo vuelve a borrador.", "warning")
+    return True, blockers

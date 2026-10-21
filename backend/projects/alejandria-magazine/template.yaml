@@ -141,3 +141,10 @@ gate:
     - {id: V13, phase: "Fase 5 (5.2)"}
     - {id: V14, phase: "Fase 5 (5.3)"}
     - {id: V16, phase: "Fase 5 (5.4)"}
+  # A qué agente se devuelve el manuscrito cuando un criterio bloquea (AC14). La
+  # devolución automática es de la Fase 2: hoy lo informa y una persona reejecuta.
+  responsible:
+    reference_existence: investigador
+    reference_structure: investigador
+    placeholders: redactor
+    imrad_structure: redactor
