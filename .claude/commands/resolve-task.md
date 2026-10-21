@@ -9,7 +9,7 @@ Resuelve la(s) tarea(s) del backlog cuyos números de issue son: **$ARGUMENTS**
 Para **cada** número de issue indicado, en orden:
 
 1. Lee la tarea para tener el contexto a la vista:
-   `gh issue view <N> --repo luxinopanyvino/swarm-platform-builder --json number,title,body,labels,state`
+   `gh issue view <N> --repo onpremialabs/swarm-platform-builder --json number,title,body,labels,state`
 2. Si el issue no es una tarea (`label: task`) o ya está cerrado, indícalo y pasa
    al siguiente.
 3. Lanza el subagente **task-runner** (vía la tool Task) para implementarla de

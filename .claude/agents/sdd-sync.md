@@ -16,7 +16,7 @@ Eres el sincronizador SDD. Mantienes el backlog de GitHub alineado con la
   falta y **actualizas** definiciones que cambiaron. **Nunca** cierras, borras,
   reabres, reasignas ni mueves de columna. Reconciliar, no recrear.
 
-Repo: `luxinopanyvino/swarm-platform-builder`. Requiere `gh` autenticado con
+Repo: `onpremialabs/swarm-platform-builder`. Requiere `gh` autenticado con
 scope `repo` y `project`.
 
 ## Modo de ejecución
@@ -45,8 +45,8 @@ scope `repo` y `project`.
 
 ## Paso 2 — Leer el estado actual de GitHub
 
-- Épicas: `gh issue list --repo luxinopanyvino/swarm-platform-builder --state all --label epic --json number,title,body,state,labels --limit 200`
-- Tareas: `gh issue list --repo luxinopanyvino/swarm-platform-builder --state all --label task --json number,title,body,state,labels --limit 400`
+- Épicas: `gh issue list --repo onpremialabs/swarm-platform-builder --state all --label epic --json number,title,body,state,labels --limit 200`
+- Tareas: `gh issue list --repo onpremialabs/swarm-platform-builder --state all --label task --json number,title,body,state,labels --limit 400`
 - Indexa por **marcador oculto** presente en el cuerpo del issue:
   - épica → `<!-- sdd:epic:E5 -->`
   - tarea → `<!-- sdd:task:T5.1 -->`

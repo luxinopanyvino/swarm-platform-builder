@@ -1,7 +1,7 @@
 # Tarea 180 — T6.6 · Adoptar SDD: specs, DoR/DoD, CODEOWNERS
 
 - **Fecha:** 2026-09-08
-- **Issue:** [#180](https://github.com/luxinopanyvino/swarm-platform-builder/issues/180) · Épica E6 · [SPEC-020](../specs/SPEC-020-governance-supply-chain.md) / AC6
+- **Issue:** [#180](https://github.com/onpremialabs/swarm-platform-builder/issues/180) · Épica E6 · [SPEC-020](../specs/SPEC-020-governance-supply-chain.md) / AC6
 - **Rama:** `docs/180-sdd-governance-live`
 
 ## Qué pedía la tarea

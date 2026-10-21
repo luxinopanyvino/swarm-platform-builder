@@ -10,7 +10,7 @@ este repositorio, de principio a fin, con calidad y trazabilidad.
 Recibirás un número de issue de GitHub. Procede así:
 
 1. **Lee la tarea**
-   - `gh issue view <N> --repo luxinopanyvino/swarm-platform-builder --json number,title,body,labels`
+   - `gh issue view <N> --repo onpremialabs/swarm-platform-builder --json number,title,body,labels`
    - Extrae: Problema, **Definition of Done** (checklist), **Dependencias**
      (líneas "Bloqueada por: #X"), y el área/severidad de los labels.
 

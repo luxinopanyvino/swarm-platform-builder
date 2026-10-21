@@ -27,8 +27,8 @@ import re
 import subprocess
 import sys
 
-OWNER = "luxinopanyvino"
-REPO = "luxinopanyvino/swarm-platform-builder"
+OWNER = "onpremialabs"
+REPO = "onpremialabs/swarm-platform-builder"
 PROJECT_TITLE = "Hardening & Platform Backlog"
 FIELD_NAME = "Epic"
 
