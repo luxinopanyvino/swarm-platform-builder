@@ -16,13 +16,13 @@ from app.core.logging_config import request_id_ctx
 from app.platform import explainability
 from app.platform.llm import TransientLLMError, resolve_agent_model
 from app.platform.project_context import ProjectContext
-from app.models import AgentRunModel, AgentRunStepModel
+from app.models import AgentRunModel, AgentRunStepModel, ArticleModel, ArticleStatus
 from app.modules.agents.domain.entities import AgentState
 from app.modules.agents.domain import alejandria
 from app.platform.engine.agents import MODO_CAPACIDADES, bundle_for, resolve_runner, uses_llm
 from app.platform.capabilities.binding import CLAVE_ESTADO as CLAVE_CAPACIDADES
 from app.platform.engine.graph import GraphSpec, build_graph
-from app.platform.engine.routing import make_review_router, next_after
+from app.platform.engine.routing import make_review_router, next_after, review_exhausted
 from app.modules.agents.adapters.generic import run_generic_agent, load_agent_profile
 from app.platform.bus import get_bus
 from app.platform.metrics import current_agent_ctx, observe_agent_run
@@ -394,6 +394,55 @@ def route_after_revisor(state: AgentState) -> str:
     return make_review_router(alejandria.review_loop())(state)
 
 
+async def _halt_for_human_review(article_id: uuid.UUID, final_state: Dict[str, Any], flow: List[str]) -> bool:
+    """Si la ejecución terminó por agotar las vueltas sin aprobar, deja el artículo
+    en `requires_human_review` (SPEC-032/AC7). Devuelve si lo hizo.
+
+    El enrutador ya cortó el flujo (`on_exhausted: stop`): ni el Formateador ni el
+    Publicador corrieron. Aquí solo se guarda lo que la persona necesita para
+    decidir —el último borrador y los comentarios del revisor— y se avisa por SSE.
+    Solo una persona sale de este estado: reejecutar (vuelve a `draft`) o rechazar.
+    """
+    try:
+        loop = alejandria.review_loop()
+    except LookupError:
+        return False
+    if loop.on_exhausted != "stop" or loop.reviewer not in flow:
+        return False
+    # Con `on_exhausted: stop` el enrutador corta el flujo justo al agotarse las
+    # vueltas, así que este predicado y el suyo coinciden por construcción.
+    if not review_exhausted(loop, final_state):
+        return False
+
+    feedback = final_state.get("feedback") or []
+    # El feedback se acumula entre vueltas (`operator.add`); un comentario que se
+    # repite en cada pasada se muestra una sola vez.
+    comentarios = list(dict.fromkeys(
+        str(f) for f in (feedback if isinstance(feedback, list) else [feedback])
+    ))
+    async with AsyncSessionLocal() as session:
+        article = (await session.execute(
+            select(ArticleModel).where(ArticleModel.id == article_id)
+        )).scalars().first()
+        if article is None:
+            return False
+        article.status = ArticleStatus.REQUIRES_HUMAN_REVIEW
+        if final_state.get("draft_text"):
+            article.body = final_state["draft_text"]
+        article.rejection_comment = "\n".join(comentarios) or None
+        session.add(article)
+        await session.commit()
+    publish_event(article_id, {
+        "type": "requires_human_review",
+        "score": final_state.get("approval_score"),
+        "review_status": final_state.get("review_status"),
+        "loops": final_state.get("loop_count"),
+        "feedback": comentarios,
+    })
+    logger.info("Article %s requires human review after %s loops", article_id, final_state.get("loop_count"))
+    return True
+
+
 class Orchestrator:
     """Dynamically compiles and executes a LangGraph flow for article generation."""
 
@@ -587,6 +636,7 @@ class Orchestrator:
             _log_buffers.setdefault(article_id, []).append(
                 f"\n{'='*60}\nFIN — {ts_end} — Pipeline completado con éxito\n{'='*60}"
             )
+            await _halt_for_human_review(article_id, final_state, flow_sequence)
             publish_event(article_id, {"type": "done"})
             logger.info(f"Completed LangGraph run for article {article_id}")
             _flush_log_file(article_id, title)

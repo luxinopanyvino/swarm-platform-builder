@@ -483,7 +483,7 @@ async def reject_article(
     token_data=Depends(get_current_user),
     session: AsyncSession = Depends(get_session)
 ):
-    """Reject article (in_review → draft). Admin, redactor, or the assigned reviewer."""
+    """Reject article (in_review | requires_human_review → rejected). Admin or the assigned reviewer."""
     role = token_data.get("role", "redactor")
     current_user_id = UUID(token_data["user_id"])
 
@@ -498,7 +498,7 @@ async def reject_article(
     if role != UserRole.ADMIN and not is_assigned_reviewer:
         raise HTTPException(status_code=403, detail="Solo el administrador o el revisor asignado puede rechazar artículos")
 
-    if article.status != ArticleStatus.IN_REVIEW:
+    if article.status not in (ArticleStatus.IN_REVIEW, ArticleStatus.REQUIRES_HUMAN_REVIEW):
         raise HTTPException(status_code=409, detail="Article not under review")
     
     article.status = ArticleStatus.REJECTED

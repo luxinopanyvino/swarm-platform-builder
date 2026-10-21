@@ -97,7 +97,9 @@ async def run_revisor(state: Dict[str, Any]) -> Dict[str, Any]:
 
     # The draft "fails coherence" when the reviewer says so or the score is low.
     coherent = coherent and approval_score >= APPROVAL_THRESHOLD
-    new_loop_count = loop_count + 1 if approval_score < APPROVAL_THRESHOLD else loop_count
+    # Cuenta la vuelta cuando la revisión no aprueba, por puntuación o por incoherencia:
+    # el enrutador también devuelve el borrador por `coherent` falso (SPEC-032/AC7).
+    new_loop_count = loop_count if coherent else loop_count + 1
 
     if review_status != REVIEW_OK:
         log(f"⚠️ Revisión no verificada ({motivo}): no se aprueba ni se inventa una puntuación.", "warning")

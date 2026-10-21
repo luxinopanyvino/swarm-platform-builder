@@ -170,12 +170,18 @@ def _grafo(datos: Dict[str, Any], nombres: set[str]) -> GraphSpec:
                 destino in nombres,
                 f"El bucle de '{revisor}' reintenta hacia '{destino}', que no existe",
             )
+        agotado = str(crudo.get("on_exhausted", "advance"))
+        _exigir(
+            agotado in ("advance", "stop"),
+            f"El bucle de '{revisor}': 'on_exhausted' debe ser 'advance' o 'stop', no {agotado!r}",
+        )
         bucles.append(ReviewLoop(
             reviewer=revisor,
             on_reject=rechazo,
             threshold=float(crudo.get("threshold", 80.0)),
             max_loops=int(crudo.get("max_loops", 3)),
             retry_targets=destinos,
+            on_exhausted=agotado,
         ))
 
     return GraphSpec(sequence=secuencia, loops=tuple(bucles))

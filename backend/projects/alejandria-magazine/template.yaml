@@ -67,6 +67,10 @@ graph:
       on_reject: redactor
       threshold: 80
       max_loops: 3
+      # Agotadas las vueltas sin aprobar, la ejecución se detiene y el artículo pasa a
+      # `requires_human_review` (SPEC-032/AC7): no se formatea ni se publica lo que el
+      # revisor no aprobó. Solo una persona sale de ahí (reejecutar o rechazar).
+      on_exhausted: stop
       # A dónde volver cuando alguien sube una fuente nueva. Al investigador si
       # está en el flujo, para que la fuente entre en la investigación y en las
       # citas; si no, al redactor, que al menos la usará como contexto.
