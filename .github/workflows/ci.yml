@@ -111,9 +111,18 @@ jobs:
         # con HS256 (`ALGORITHM` en app/core/config.py), que es HMAC y no toca
         # ECDSA por ningún lado. Si algún día se pasa a ES256, hay que quitar esta
         # excepción antes.
+        #
+        # PYSEC-2026-4298 (python-jose, hasta la 3.5.0 y sin versión con arreglo):
+        # una clave pública en DER, sin armadura PEM, pasa la guarda de confusión de
+        # algoritmos cuando `decode` no restringe `algorithms`. No es explotable aquí:
+        # `app/core/security.py` firma y verifica con HS256 y una clave **simétrica**
+        # (`SECRET_KEY`), y `jwt.decode` pasa siempre `algorithms=[settings.ALGORITHM]`.
+        # Un test (`test_jwt_algorithm_pinned.py`) falla si eso cambia. Si algún día se
+        # usan claves asimétricas, hay que quitar esta excepción antes.
         run: |
           pip-audit --require-hashes -r requirements.txt \
-            --ignore-vuln PYSEC-2026-1325
+            --ignore-vuln PYSEC-2026-1325 \
+            --ignore-vuln PYSEC-2026-4298
 
       - uses: actions/setup-node@v4
         with:
