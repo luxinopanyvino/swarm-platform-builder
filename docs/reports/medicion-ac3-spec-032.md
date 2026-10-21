@@ -9,7 +9,7 @@
 
 | Qué se mide | Resultado | Objetivo |
 |---|---|---|
-| Válidas **con DOI** | **18/20 (90 %)** | ≥ 90 % |
+| Válidas **con DOI** | **18/20 (90 %)** → **20/20 (100 %)** con DataCite (ver actualización al final) | ≥ 90 % |
 | Válidas **sin DOI** (título + autores) | 10/12 (83 %) | sin objetivo fijado |
 | Controles negativos bloqueados (inventadas o alteradas) | **6/6** | 100 % (ninguna falsa aceptación) |
 
@@ -86,3 +86,17 @@ DEBUG=true SECRET_KEY=local-medicion python ../scripts/measure_reference_resolut
 ```
 
 Sale con código 1 si no se llega al 90 % o si algún control negativo pasa. Conviene repetirla con un conjunto **revisado por la persona responsable de la revista** y con referencias de su campo real (preprints, español, informes técnicos) antes de dar AC3 por verificado.
+
+## Actualización 2026-10-22 — DataCite para los DOI de arXiv (DEC-1)
+
+Los dos fallos con DOI eran de arXiv (`vaswani-2017`, `devlin-2018`). Con `api.datacite.org` como proveedor del prefijo `10.48550/` (ADR-0011, enmienda) la misma
+medición da:
+
+| Métrica | Antes | Ahora | Objetivo |
+|---|---|---|---|
+| Válidas con DOI | 18/20 (90 %) | **20/20 (100 %)** | ≥ 90 % |
+| Válidas sin DOI | 10/12 (83 %) | 10/12 (83 %) | sin objetivo |
+| Controles negativos bloqueados | 6/6 | 6/6 | todos |
+
+Ahora hay margen sobre el objetivo en vez de cumplirlo justo. Las dos sin DOI que no pasan (`cortes-1995`, `vaswani-2017-sin-doi`) siguen igual y son decisiones de
+la regla de varios candidatos, no del proveedor. Sigue valiendo el límite de arriba: el conjunto lo escribió una persona de memoria.

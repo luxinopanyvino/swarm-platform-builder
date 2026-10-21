@@ -32,7 +32,7 @@ nuevo en el ciclo de vida del artículo y una única autoridad sobre «puede pub
    existe se declaran `not_implemented`: **no bloquean** y el informe los lista como pendientes
    con la fase que los construye. Es una concesión transitoria y visible, no una excepción
    silenciosa.
-3. **Referencias (V09) resueltas contra Crossref y OpenAlex** por DOI o, sin él, por título y
+3. **Referencias (V09) resueltas contra Crossref y OpenAlex** (y, para los DOI de arXiv `10.48550/…`, contra **DataCite**, su registrador: ver la *Enmienda* al final) por DOI o, sin él, por título y
    autores; sin excepción para «documento interno». El autor puede aportar el DOI a mano, que
    se verifica igual. Solo se envían **metadatos de referencias**, nunca el texto.
 4. **Una sola función de decisión** (`can_publish`) que todo camino a `PUBLISHED` consulta:
@@ -73,3 +73,16 @@ nuevo en el ciclo de vida del artículo y una única autoridad sobre «puede pub
   (Revisor por criterio: sustituye la definición provisional de «bloqueante de juicio»),
   Fase 4 (búsqueda externa y registro de búsqueda). Si el panel de validación cambia la
   decisión de V09, este ADR se reemplaza.
+
+## Enmienda 2026-10-22 — DataCite para los DOI de arXiv
+
+La primera medición real (docs/reports/medicion-ac3-spec-032.md) dio 18/20 con DOI y **los dos fallos eran de arXiv**: esos DOI los registra
+DataCite, Crossref responde 404 y todo recaía en OpenAlex, que dio un año distinto (2025 para un trabajo de 2017) y, en otro caso, **otra obra**.
+Se añade `api.datacite.org` como tercer proveedor, **solo para el prefijo `10.48550/`**:
+
+- DataCite se consulta **primero** para ese prefijo y es concluyente: si responde, lo que diga (incluido «no existe») es el veredicto, y no se pregunta a
+  quien solo lo indexa. Si no responde (red, 5xx, 429), se cae a Crossref y OpenAlex y, como siempre, lo que no se puede comprobar es `not_verified`.
+- **No se relaja ninguna regla de coincidencia** (título, autores, año): el dato mejora, el umbral no.
+- Es **un host más en el camino crítico de publicar**, con las mismas garantías que los otros dos: sale por `platform/egress.py` con `quien="publication_gate"`,
+  solo viajan metadatos de referencias y, con `EGRESS_ALLOWED_DOMAINS`, se añade solo para la compuerta.
+- Resultado medido: **20/20 con DOI (100 %)** y 6/6 negativos bloqueados (antes 18/20).

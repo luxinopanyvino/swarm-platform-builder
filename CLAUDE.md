@@ -161,7 +161,7 @@ Docker (`docker compose up --build`, backend en `:8080`).
   redirección**, porque `follow_redirects=True` obedece a `Location:` sin
   preguntar. Si añades fetch saliente influido por usuario o modelo, sale por
   `safe_get`; hay un test estructural que falla si aparece un `httpx.AsyncClient`
-  en `tools.py` o un `verify=False` en `backend/app/`. La compuerta de publicación (SPEC-032) consulta Crossref/OpenAlex por
+  en `tools.py` o un `verify=False` en `backend/app/`. La compuerta de publicación (SPEC-032) consulta Crossref/OpenAlex (y DataCite para los DOI de arXiv) por
   esta misma puerta (`quien="publication_gate"`); con `EGRESS_ALLOWED_DOMAINS` definida,
   esos dos hosts se añaden **solo para ella**, no para la herramienta del modelo.
   **Ollama, Qdrant y los

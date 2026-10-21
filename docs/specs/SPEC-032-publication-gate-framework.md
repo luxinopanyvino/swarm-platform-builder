@@ -182,8 +182,8 @@ final tras el Formateador**, (3) aprobación humana explícita (FW §3, regla de
   se avisan, pero no impiden que el flujo llegue a aprobación humana (que sigue siendo
   obligatoria); con `true` (valor por defecto) bloquean. En ambos modos, a Crossref/OpenAlex
   solo se envían **metadatos de referencias** (nunca el texto del manuscrito) y por la puerta
-  `platform/egress.py`; si `EGRESS_ALLOWED_DOMAINS` está definida, `api.crossref.org` y
-  `api.openalex.org` se añaden a ella.
+  `platform/egress.py`; si `EGRESS_ALLOWED_DOMAINS` está definida, `api.crossref.org`,
+  `api.openalex.org` y `api.datacite.org` (DOI de arXiv) se añaden a ella.
 
 ## 4. Diseño propuesto
 
