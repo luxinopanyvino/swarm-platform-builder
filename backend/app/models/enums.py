@@ -23,6 +23,8 @@ class ArticleStatus(str, Enum):
     APPROVED = "approved"
     PUBLISHED = "published"
     REJECTED = "rejected"
+    # Se agotaron las vueltas de revisión con bloqueantes; solo una persona sale (SPEC-032/AC7).
+    REQUIRES_HUMAN_REVIEW = "requires_human_review"
 
 
 class ProjectUseCaseType(str, Enum):

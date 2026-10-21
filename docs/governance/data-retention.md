@@ -22,7 +22,15 @@ Qué guarda la plataforma, cuánto tiempo y cómo se purga. Las ventanas viven e
 | `projects`, `agent_profiles`, `saved_flows` | configuración de la plataforma | No |
 | `articles` | título, cuerpo, resumen, autores, HTML maquetado | Nombres de autor |
 | `user_project_access` | qué usuario accede a qué proyecto | Referencia |
+| `publication_gate_reports` | informe de la compuerta de publicación: evidencia por criterio, huella del texto y fuentes resueltas (títulos y autores de las referencias) | Nombres de autor |
 | Figuras (`backend/app/.assets/`) | imágenes subidas a los artículos | Posible |
+
+**`publication_gate_reports` (SPEC-032, T20.6): hoy no caduca.** Es evidencia de por
+qué un texto se aprobó o se bloqueó, y se conserva con el artículo (se borra en
+cascada con él). La política objetivo —mientras exista un artículo `published`; para
+los demás, 90 días, alineada con `agent_runs`, ajuste `RETENTION_GATE_REPORTS_DAYS`—
+**aún no está implementada**: la trae T20.13 (#445). Hasta entonces este documento
+dice lo que el código hace, que es no purgar.
 
 **No se purgan por antigüedad, y es deliberado.** Son el producto, no su rastro:
 borrarlos por edad destruiría el trabajo de alguien. Se eliminan por decisión
