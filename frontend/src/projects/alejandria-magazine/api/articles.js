@@ -8,8 +8,16 @@ export const articlesApi = {
   delete: (id) => api.delete(`/api/v1/articles/${id}`).then(r => r.data),
   submit: (id) => api.post(`/api/v1/articles/${id}/submit`).then(r => r.data),
   approve: (id) => api.post(`/api/v1/articles/${id}/approve`).then(r => r.data),
-  reject: (id, comment) => api.post(`/api/v1/articles/${id}/reject`, { comment }).then(r => r.data),
+  // `comment` es un parámetro de consulta en el backend, no un cuerpo JSON.
+  reject: (id, comment) =>
+    api.post(`/api/v1/articles/${id}/reject`, null, { params: { comment } }).then(r => r.data),
   publish: (id) => api.post(`/api/v1/articles/${id}/publish`).then(r => r.data),
+  // Compuerta de publicación (SPEC-032): último informe y si describe el texto actual.
+  gateReport: (id) => api.get(`/api/v1/articles/${id}/gate-report`).then(r => r.data),
+  reevaluateGate: (id) => api.post(`/api/v1/articles/${id}/gate-report`).then(r => r.data),
+  // Autor humano responsable (FW V13): sin él no se puede aprobar.
+  setResponsibleAuthor: (id, userId) =>
+    api.put(`/api/v1/articles/${id}/responsible-author`, { user_id: userId }).then(r => r.data),
   // reviewer_identifier can be an email address or a full name
   assignReviewer: (id, reviewerIdentifier) =>
     api.post(`/api/v1/articles/${id}/assign-reviewer`, { reviewer_identifier: reviewerIdentifier }).then(r => r.data),
