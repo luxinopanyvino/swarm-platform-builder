@@ -125,3 +125,43 @@ export function nextStep(data) {
     action: first.actions?.[0] ? { ...first.actions[0], criterion: first.criterion } : null,
   };
 }
+
+/**
+ * Etapas del manuscrito hasta «Publicado» y en qué punto está cada una (FW §3).
+ * Los agentes salen de `agentIds` (el catálogo del proyecto); la compuerta, la
+ * aprobación y la publicación se derivan del artículo y del informe. Estados:
+ * `done`, `current`, `failed` o `pending`.
+ */
+export function stageStates({ article, runs, gateData, agentIds }) {
+  const latest = {};
+  for (const r of [...(runs || [])].sort((a, b) => String(a.started_at).localeCompare(String(b.started_at)))) {
+    latest[r.agent_name] = r;
+  }
+  const stages = agentIds.map((id) => {
+    const run = latest[id];
+    const state = !run ? 'pending'
+      : run.status === 'completed' ? 'done'
+      : run.status === 'failed' ? 'failed'
+      : 'current';
+    return { id, label: agentLabel(id), state };
+  });
+  const review = gateData?.report?.criteria?.review;
+  if (review && typeof review.approval_score === 'number') {
+    const rev = stages.find((s) => s.id === 'revisor');
+    if (rev) rev.detail = `${review.approval_score}/100`;
+  }
+
+  const report = gateData?.report;
+  const gateState = !report ? 'pending'
+    : !gateData.current ? 'current'
+    : report.criteria?.passed ? 'done' : 'failed';
+  const published = article?.status === 'published';
+  const approved = published || article?.status === 'approved';
+  stages.push({ id: 'gate', label: 'Compuerta', state: gateState });
+  stages.push({
+    id: 'approval', label: 'Aprobación humana',
+    state: approved ? 'done' : gateState === 'done' ? 'current' : 'pending',
+  });
+  stages.push({ id: 'published', label: 'Publicado', state: published ? 'done' : 'pending' });
+  return stages;
+}
