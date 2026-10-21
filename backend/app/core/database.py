@@ -93,6 +93,21 @@ def _alembic_config(connection) -> Config:
     return config
 
 
+def _missing_schema_objects(inspector) -> list[str]:
+    """Tablas y columnas de los modelos que no existen en la base real."""
+    tables = set(inspector.get_table_names())
+    missing: list[str] = []
+    for table_name, table in Base.metadata.tables.items():
+        if table_name not in tables:
+            missing.append(table_name)
+            continue
+        live_columns = {c["name"] for c in inspector.get_columns(table_name)}
+        for column in table.columns:
+            if column.name not in live_columns:
+                missing.append(f"{table_name}.{column.name}")
+    return sorted(missing)
+
+
 def _stamp_if_pre_alembic(connection) -> None:
     """Sella una base preexistente en la revisión base, en vez de reejecutarla.
 
@@ -113,23 +128,15 @@ def _stamp_if_pre_alembic(connection) -> None:
     if not tables:
         return  # base nueva: el upgrade la crea desde cero
 
-    missing: list[str] = []
-    for table_name, table in Base.metadata.tables.items():
-        if table_name not in tables:
-            missing.append(table_name)
-            continue
-        live_columns = {c["name"] for c in inspector.get_columns(table_name)}
-        for column in table.columns:
-            if column.name not in live_columns:
-                missing.append(f"{table_name}.{column.name}")
+    missing = _missing_schema_objects(inspector)
 
     if missing:
         logger.warning(
             "Base de datos preexistente con esquema incompleto; se sella en %s pero "
             "faltan objetos que los ALTER ad-hoc no aplicaron: %s",
             PRE_ALEMBIC_REVISION,
-            ", ".join(sorted(missing)),
-            extra={"event": "alembic_stamp_divergence", "missing": sorted(missing)},
+            ", ".join(missing),
+            extra={"event": "alembic_stamp_divergence", "missing": missing},
         )
     else:
         logger.info(
@@ -147,14 +154,30 @@ def _upgrade_to_head(connection) -> None:
     context = MigrationContext.configure(connection)
     current = context.get_current_revision()
     head = ScriptDirectory.from_config(_alembic_config(connection)).get_current_head()
-    if current == head:
-        return
+    if current != head:
+        logger.info(
+            "Aplicando migraciones: %s -> %s", current or "base", head,
+            extra={"event": "alembic_upgrade", "from_revision": current, "to_revision": head},
+        )
+        command.upgrade(_alembic_config(connection), "head")
 
-    logger.info(
-        "Aplicando migraciones: %s -> %s", current or "base", head,
-        extra={"event": "alembic_upgrade", "from_revision": current, "to_revision": head},
-    )
-    command.upgrade(_alembic_config(connection), "head")
+    _assert_schema_matches_models(connection, head)
+
+
+def _assert_schema_matches_models(connection, head: str) -> None:
+    """Abortar el arranque si, ya en `head`, faltan tablas o columnas de los modelos.
+
+    Una base sellada con huecos que ninguna migración repara llega a `head` igual de
+    coja, y el fallo aparece después como un `no such column` en la primera consulta
+    que toque el hueco, lejos de su causa. Mejor parar aquí y decir qué falta.
+    """
+    missing = _missing_schema_objects(inspect(connection))
+    if missing:
+        raise RuntimeError(
+            f"El esquema de la base de datos está en la revisión {head} pero no "
+            f"coincide con los modelos; faltan: {', '.join(missing)}. Añade una "
+            "migración que los cree o, en desarrollo, borra la base para recrearla."
+        )
 
 
 async def init_db() -> None:

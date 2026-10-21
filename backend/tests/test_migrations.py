@@ -295,13 +295,76 @@ async def test_stamp_warns_when_the_legacy_schema_is_incomplete(pre_alembic_db, 
     finally:
         engine.dispose()
 
-    await _run_init_db(monkeypatch, path)
+    with pytest.raises(RuntimeError, match="notifications"):
+        await _run_init_db(monkeypatch, path)
 
     warnings = [r for r in database_logs if r.levelno >= logging.WARNING]
     assert warnings, "se selló una base incompleta sin avisar"
     assert "notifications" in warnings[0].getMessage()
     assert "notifications" in warnings[0].missing
     assert warnings[0].event == "alembic_stamp_divergence"
+
+
+def _drop_theme_columns(path: Path) -> None:
+    """Deja la base como la que dejaba un ALTER ad-hoc de `theme` fallido."""
+    with sqlite3.connect(path) as conn:
+        for table in ("projects", "articles"):
+            conn.execute(f"alter table {table} drop column theme")
+
+
+@pytest.mark.asyncio
+async def test_pre_alembic_database_without_theme_is_repaired(pre_alembic_db, monkeypatch):
+    """El caso real: base sellada en la base sin `theme` → `no such column` al arrancar."""
+    path = pre_alembic_db
+    _drop_theme_columns(path)
+
+    await _run_init_db(monkeypatch, path)
+
+    assert _current_revision(path) == _head_revision()
+    with sqlite3.connect(path) as conn:
+        for table in ("projects", "articles"):
+            columns = {r[1] for r in conn.execute(f"pragma table_info({table})")}
+            assert "theme" in columns, f"{table}.theme sigue sin existir"
+
+
+@pytest.fixture
+def stamped_db_without_theme(tmp_path):
+    """Base que ya se selló sin `theme` y migró hasta 0004 antes de esta reparación.
+
+    Síncrona por el mismo motivo que `pre_alembic_db`: `command.upgrade` abre su
+    propio bucle de eventos.
+    """
+    path = tmp_path / "stamped.db"
+    command.upgrade(_config(_async_url(path)), "0004_agent_run_steps")
+    _drop_theme_columns(path)
+    return path
+
+
+@pytest.mark.asyncio
+async def test_already_stamped_database_without_theme_is_repaired(stamped_db_without_theme, monkeypatch):
+    """Las filas existentes reciben `{}`: heredar todo el tema, como el ORM."""
+    path = stamped_db_without_theme
+    with sqlite3.connect(path) as conn:
+        conn.execute(
+            "insert into projects (id, name, description, use_case_type, is_system,"
+            " created_at, updated_at)"
+            " values ('p1', 'P', '', 'CUSTOM', 1, '2026-01-01', '2026-01-01')"
+        )
+
+    await _run_init_db(monkeypatch, path)
+
+    with sqlite3.connect(path) as conn:
+        assert conn.execute("select theme from projects").fetchone()[0] == "{}"
+
+
+@pytest.mark.asyncio
+async def test_init_db_aborts_when_schema_still_diverges_at_head(migrated_db, monkeypatch):
+    """Sin migración que lo repare, mejor parar el arranque que fallar en una consulta."""
+    with sqlite3.connect(migrated_db) as conn:
+        conn.execute("drop table notifications")
+
+    with pytest.raises(RuntimeError, match="notifications"):
+        await _run_init_db(monkeypatch, migrated_db)
 
 
 # --------------------------------------------------------------------------- #
