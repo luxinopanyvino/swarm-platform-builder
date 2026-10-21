@@ -116,11 +116,12 @@ naturalezas distintas y permite declarar umbrales (T9.5) sin traducir unidades.
 |---|---|---|
 | `citation_fidelity` | Que cada `[Fuente: X]` exista en el corpus del caso. | El caso no trae corpus. |
 | `format_compliance` | Que aparezca el estilo de cita pedido y las secciones exigidas. | El caso no declara ninguno. |
+| `reference_completeness` | Que cada referencia impresa lleve año e identificador resoluble (SPEC-032/AC2). | El caso no declara `complete_references`. |
 | `budget` | Margen frente al presupuesto de tokens y latencia. | El caso no declara presupuesto. |
 | `reviewer_calibration` | Distancia del score del revisor a una referencia humana, **y si cae del mismo lado del umbral de 80**. | El caso no declara `reference_score`. |
 | `coherence` | Coherencia interna del texto, según un juez con rúbrica fija. | El caso no declara `min_coherence`, o no hay veredicto. |
 
-Las tres primeras son deterministas. Las dos últimas son las **asistidas** de
+Las primeras son deterministas. Las dos últimas son las **asistidas** de
 AC4, y son las que cazan lo que una expresión regular no ve: un revisor que
 puntúa 85 lo que merece 62 rompe el pipeline con un número perfectamente formado,
 y un texto puede citar bien, cumplir APA, caber en el presupuesto y contradecirse
