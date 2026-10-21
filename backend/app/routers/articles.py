@@ -10,7 +10,7 @@ from sqlalchemy.orm import joinedload
 from app.models import (
     ArticleModel, ArticleStatus, CreateArticleDTO, UpdateArticleDTO,
     ArticleResponse, ArticleListResponse, UserModel, NotificationModel, UserRole,
-    AuthorDTO, ThemeDTO, ScientificFormat
+    AuthorDTO, ThemeDTO, ScientificFormat, GateReportResponse
 )
 from app.core.database import get_session
 from app.platform.audit import AuditAction, record_audit
@@ -329,6 +329,77 @@ async def publish_article_direct(
     await session.commit()
     await session.refresh(article)
     return ArticleResponse.model_validate(article)
+
+
+async def _load_for_gate(session: AsyncSession, article_id: UUID, token_data: dict) -> ArticleModel:
+    """El artículo, si quien pregunta es su autor, el revisor asignado o un administrador."""
+    result = await session.execute(select(ArticleModel).where(ArticleModel.id == article_id))
+    article = result.scalars().first()
+    if not article:
+        raise HTTPException(status_code=404, detail="Article not found")
+    user_id = UUID(token_data["user_id"])
+    allowed = (
+        token_data.get("role") == UserRole.ADMIN
+        or article.author_id == user_id
+        or article.reviewer_id == user_id
+    )
+    if not allowed:
+        raise HTTPException(status_code=403, detail="Forbidden")
+    return article
+
+
+def _gate_payload(report, article: ArticleModel) -> dict:
+    from app.platform.publication_gate.service import is_current
+
+    if report is None:
+        # Los artículos anteriores a la compuerta no tienen informe (SPEC-032/AC6).
+        return {"report": None, "current": False}
+    return {
+        "report": GateReportResponse.model_validate(report).model_dump(mode="json"),
+        "current": is_current(report, article),
+    }
+
+
+@router.get("/{article_id}/gate-report")
+async def get_gate_report(
+    article_id: UUID,
+    token_data=Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+):
+    """Último informe de la compuerta y si describe el texto actual (autor, revisor asignado o admin)."""
+    from app.platform.publication_gate.service import latest_report
+
+    article = await _load_for_gate(session, article_id, token_data)
+    return _gate_payload(await latest_report(session, article.id), article)
+
+
+@router.post("/{article_id}/gate-report")
+async def reevaluate_gate_report(
+    article_id: UUID,
+    token_data=Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+):
+    """Reevalúa el texto actual y guarda un informe nuevo (no sobrescribe el anterior).
+
+    El informe lo escribe siempre el backend: este endpoint no recibe ninguno.
+    Las fuentes salen del último informe; sin informe previo no hay fuentes
+    estructuradas y el criterio de referencias queda `not_verified`.
+    """
+    from app.modules.agents.domain import alejandria
+    from app.platform.publication_gate.service import evaluate_and_store, latest_report
+
+    article = await _load_for_gate(session, article_id, token_data)
+    config = alejandria.package().gate
+    if config is None:
+        raise HTTPException(status_code=404, detail="El proyecto no declara una compuerta de publicación")
+    previo = await latest_report(session, article.id)
+    row, _ = await evaluate_and_store(
+        session, article, config, list(previo.sources) if previo else None,
+        created_by=UUID(token_data["user_id"]),
+    )
+    await session.commit()
+    await session.refresh(row)
+    return _gate_payload(row, article)
 
 
 @router.post("/{article_id}/reject", response_model=ArticleResponse)

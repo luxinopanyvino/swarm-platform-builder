@@ -37,6 +37,13 @@ class ArticleModel(Base):
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
     published_at = Column(DateTime)
+    # Autor humano responsable declarado (FW V13). Nulo hasta que se declara; sin
+    # él no se puede aprobar (SPEC-032/AC8).
+    responsible_author_id = Column(SA_UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"))
+    # Aprobación humana explícita: quién, cuándo y qué texto (huella SHA-256).
+    approved_by = Column(SA_UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"))
+    approved_at = Column(DateTime)
+    approved_text_sha256 = Column(String(64))
 
     author = relationship("UserModel", foreign_keys=[author_id], lazy="select")
 
@@ -95,6 +102,9 @@ class ArticleResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
     published_at: datetime | None
+    responsible_author_id: UUID | None = None
+    approved_by: UUID | None = None
+    approved_at: datetime | None = None
 
     @field_validator('authors', mode='before')
     @classmethod

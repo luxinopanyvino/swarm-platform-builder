@@ -60,6 +60,10 @@ from app.models.agent_run_step import (
     ExplainSource,
     ExplainTotals,
 )
+from app.models.publication_gate_report import (
+    GateReportResponse,
+    PublicationGateReportModel,
+)
 from app.models.saved_flow import (
     CreateSavedFlowDTO,
     SavedFlowModel,
@@ -118,6 +122,8 @@ __all__ = [
     "AgentProfileResponse",
     # Agent run
     "AgentRunModel",
+    "GateReportResponse",
+    "PublicationGateReportModel",
     "AgentRunStepModel",
     "AgentRunStepResponse",
     "ArticleExplainResponse",
