@@ -13,6 +13,7 @@ from typing import Any
 from app.platform.metrics import observe_gate_criterion
 
 from app.platform.publication_gate.config import GateConfig
+from app.platform.publication_gate.explain import explain
 from app.platform.publication_gate.placeholders import check_placeholders
 from app.platform.publication_gate.reference_resolver import check_reference_existence
 from app.platform.publication_gate.references import check_reference_structure
@@ -32,6 +33,8 @@ class GateReport:
     pending: list = field(default_factory=list)
     #: criterio → agente responsable (`gate.responsible`).
     responsible: dict = field(default_factory=dict)
+    #: criterio → `{"summary", "actions"}` (ver `explain.py`).
+    explanations: dict = field(default_factory=dict)
 
     @property
     def blockers(self) -> list:
@@ -51,6 +54,7 @@ class GateReport:
                     "evidence": c.evidence,
                     # A quién se devuelve si bloquea (AC14); la Fase 2 lo automatizará.
                     "responsible_agent": self.responsible.get(c.criterion),
+                    **self.explanations.get(c.criterion, {"summary": {"code": c.criterion}, "actions": []}),
                 }
                 for c in self.criteria
             ],
@@ -78,5 +82,6 @@ async def evaluate_gate(
             extra={"event": "gate_criterion", "criterion": c.criterion, "status": c.status.value},
         )
     return GateReport(
-        criteria=criteria, sources=enriched, pending=pending, responsible=dict(config.responsible)
+        criteria=criteria, sources=enriched, pending=pending, responsible=dict(config.responsible),
+        explanations=explain(criteria, enriched, config.sections, config.responsible),
     )
