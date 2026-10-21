@@ -4,7 +4,7 @@
 - **Autor:** Equipo de plataforma
 - **Fecha:** 2026-09-13 · decisiones de política y paso a `Ready` el 2026-09-15
 - **Épica:** E19 (GitHub Project)
-- **ADR relacionado:** ADR pendiente — lo produce T19.2 y es **prerrequisito** de cualquier implementación
+- **ADR relacionado:** [ADR-0012](../adr/0012-local-finetune-format-learning.md) (Propuesto; fija la política y deja abierto lo que mide el spike T19.1). Es **prerrequisito** de cualquier implementación
 - **Severidad:** 🟠
 
 > **`Ready` solo para la fase de decisión.** Esta spec nació en `Draft` a propósito:

@@ -96,21 +96,6 @@ def test_cada_criterio_de_aceptacion_lo_reclama_alguna_tarea(spec_name):
     assert declarados <= cubiertos, f"AC sin tarea: {sorted(declarados - cubiertos)}"
 
 
-def test_la_spec_de_finetune_sigue_en_draft():
-    """Su bloque declara tareas, y en `Draft` **no se siembran**.
-
-    Es la salvaguarda de la decisión: RAG se deshace borrando un documento y un
-    fine-tune no, así que la retención y el aislamiento por proyecto se deciden
-    antes de que existan issues que alguien pueda ponerse a resolver. Si esta spec
-    pasa a `Ready`, que sea con el ADR delante y borrando este test a conciencia.
-    """
-    texto = (SPECS_DIR / "SPEC-031-format-learning-finetune.md").read_text(encoding="utf-8")
-    estado = re.search(r"^\s*-\s*\*\*Estado:\*\*\s*(\S+)", texto, re.MULTILINE)
-    assert estado and estado.group(1) == "Draft", (
-        "SPEC-031 ha salido de Draft: ¿existe ya el ADR de fine-tune?"
-    )
-
-
 @pytest.mark.parametrize("spec_name", sorted(EPICAS_NUEVAS))
 def test_cada_spec_del_plan_esta_en_el_backlog(spec_name):
     """El backlog es donde se mira el orden; una épica que no está ahí no existe."""

@@ -15,7 +15,7 @@
 | **DEC-5** | **Código muerto `modules/articles`** (dominio hexagonal con su propio enum y un `publish()` sin compuerta). Hoy un test impide conectarlo. | ✅ **Resuelto en #478:** borrado. Un test impide que reaparezca. | hecho |
 | **DEC-6** | **El Publicador se traga los errores de base de datos** (`except Exception` + log). Si falla la evaluación de la compuerta o su escritura, el pipeline sigue y el artículo queda sin cambios, **sin avisar** a la persona. No publica de más (falla del lado seguro), pero oculta el fallo. | ✅ **Resuelto en #476:** el error sube y el paso queda `failed` (CHK031). | hecho |
 | **DEC-7** | **Carrera en la aprobación** (CHK030): dos aprobaciones simultáneas leen `in_review` a la vez. | ✅ **Resuelto en #476:** `approve` y `publish` bloquean la fila (`FOR UPDATE`) y, tras reevaluar, la vuelven a bloquear y recomprueban el estado (CHK030). | hecho |
-| **DEC-8** | `test_la_spec_de_finetune_sigue_en_draft` falla en `develop` desde antes de E20: SPEC-031 ya no está en `Draft`. | Revisar si SPEC-031 salió de Draft con su ADR (el test lo pide) y actualizar el test o la spec. No es de E20. | trabajo |
+| **DEC-8** | `test_la_spec_de_finetune_sigue_en_draft` falla en `develop` desde antes de E20: SPEC-031 ya no está en `Draft`. | Revisar si SPEC-031 salió de Draft con su ADR (el test lo pide) y actualizar el test o la spec. No es de E20. | ✅ **Resuelto en #480:** ADR-0012 escrito y test retirado. | hecho |
 
 ## B. Los 10 puntos abiertos del checklist de requisitos
 
