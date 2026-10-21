@@ -1,8 +1,8 @@
 # SPEC-032: Compuerta de publicación según el Framework de validación (Fase 1)
 
-- **Estado:** Draft
+- **Estado:** Ready
 - **Autor:** Equipo de plataforma (borrador asistido)
-- **Fecha:** 2026-10-21
+- **Fecha:** 2026-10-21 · paso a `Ready` tras `/speckit-clarify`, `/speckit-checklist` (33/43) y `/speckit-analyze`
 - **Épica:** E20 (GitHub Project)
 - **ADR relacionado:** [ADR-0011](../adr/0011-publication-gate-fail-closed.md)
 - **Severidad:** 🔴
