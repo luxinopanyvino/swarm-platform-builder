@@ -857,6 +857,15 @@ textarea.input { resize: vertical; min-height: 80px; line-height: var(--leading-
 
 .flow-canvas-area { flex: 1; position: relative; background: var(--neutral-15); }
 
+/* Estado vacío del lienzo (UX-002): centrado en el área que deja libre la barra de
+   acciones, que flota arriba. Sin pointer-events: no puede tapar el lienzo. */
+.flow-empty {
+  position: absolute; inset: 0; z-index: 0; pointer-events: none;
+  display: flex; align-items: center; justify-content: center;
+  padding: calc(var(--space-4) * 2 + 48px) var(--space-4) var(--space-4);
+}
+.flow-empty .empty-state { padding: var(--space-6); }
+
 .flow-toolbar {
   position: absolute;
   top: var(--space-4);
