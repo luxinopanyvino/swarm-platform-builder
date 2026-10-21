@@ -66,3 +66,62 @@ export function evidenceLines(criterion) {
   }
   return out;
 }
+
+// Fases del plan del framework (SPEC-032) y qué dato falta para cada criterio que aún
+// no se comprueba: se muestra para que «sin comprobar» no parezca «superado».
+export const PENDING_REASONS = {
+  V01: 'Necesita la ficha del estudio (tipo, guía y perfil) que aún no se genera.',
+  V05: 'Necesita el protocolo sellado y el registro de desviaciones.',
+  V06: 'Necesita los resultados primarios declarados en el protocolo.',
+  V07: 'Necesita el registro de búsqueda (bases, fechas y cadenas).',
+  V08: 'Necesita el diagrama de flujo de selección de estudios.',
+  V12: 'Necesita el registro de uso de agentes para componer la declaración de IA.',
+  V13: 'Necesita comprobar autores y autor responsable contra el registro.',
+  V14: 'Necesita contribuciones CRediT, conflictos de interés y financiamiento.',
+  V16: 'Necesita la declaración de datos y código y los metadatos FAIR.',
+};
+
+export const ACTION_LABELS = {
+  rerun_agent: (agent) => `Reejecutar desde ${agentLabel(agent)}`,
+  provide_doi: () => 'Aportar DOI',
+  edit_text: () => 'Editar el texto',
+};
+
+/** Líneas de lo que se comprobó en un criterio (`summary` del informe; ausente en informes antiguos). */
+export function summaryLines(criterion) {
+  const s = criterion?.summary;
+  if (!s) return [];
+  switch (s.code) {
+    case 'reference_existence':
+      return [`${s.ok} de ${s.total} referencias resueltas en Crossref/OpenAlex.`];
+    case 'reference_structure':
+      return [`${s.ok} de ${s.total} referencias con todos sus datos.`];
+    case 'placeholders':
+      return s.found ? [`${s.found} marcadores de posición en el texto.`] : ['Ningún marcador de posición en el texto.'];
+    case 'imrad_structure':
+      return s.problems?.length
+        ? []
+        : [`Secciones comprobadas, en orden: ${(s.sections || []).join(', ')}.`];
+    default:
+      return [];
+  }
+}
+
+/** Qué hacer a continuación según el informe; `null` si no hay nada que proponer. */
+export function nextStep(data) {
+  const report = data?.report;
+  if (!report) return { code: 'evaluate', text: 'Aún no hay informe: evalúa la compuerta.', action: { action: 'reevaluate' } };
+  if (!data.current) {
+    return { code: 'stale', text: 'El texto cambió desde la última evaluación: reevalúa.', action: { action: 'reevaluate' } };
+  }
+  const blocking = (report.criteria?.criteria || []).filter((c) => BLOCKING.has(c.status));
+  if (blocking.length === 0) {
+    return { code: 'approve', text: 'La compuerta no tiene bloqueantes: queda la aprobación humana.', action: null };
+  }
+  const first = blocking.find((c) => c.actions?.length) || blocking[0];
+  return {
+    code: 'fix',
+    text: `Falta corregir: ${CRITERION_LABELS[first.criterion] || first.criterion}.`,
+    action: first.actions?.[0] ? { ...first.actions[0], criterion: first.criterion } : null,
+  };
+}

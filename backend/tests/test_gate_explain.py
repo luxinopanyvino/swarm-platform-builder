@@ -60,3 +60,18 @@ def test_el_listado_de_evidencia_tiene_tope():
     muchas = [{"title": str(i), "doi": f"10.1/{i}"} for i in range(MAX_ITEMS + 10)]
     r = _run([CriterionResult("reference_existence", PASSED)], sources=muchas)["reference_existence"]
     assert r["summary"]["ok"] == MAX_ITEMS + 10 and len(r["summary"]["items"]) == MAX_ITEMS
+
+
+def test_el_frontend_sabe_traducir_cada_accion_y_cada_criterio_pendiente():
+    """Si el backend emite una acción o declara un criterio pendiente, gate.js lo explica."""
+    from pathlib import Path
+
+    from app.modules.agents.domain import alejandria
+
+    js = (Path(__file__).resolve().parents[2] / "frontend/src/projects/alejandria-magazine/gate.js").read_text(
+        encoding="utf-8"
+    )
+    for accion in ("rerun_agent", "provide_doi", "edit_text"):
+        assert f"{accion}:" in js
+    for p in alejandria.package().gate.pending:
+        assert f"{p.id}:" in js, f"gate.js no explica por qué {p.id} está sin comprobar"
