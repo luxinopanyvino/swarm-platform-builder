@@ -37,6 +37,8 @@ from app.platform.bus import get_bus
 from app.platform.audit import AuditAction, record_audit
 from app.routers.auth import get_current_user, require_redactor
 from app.core.config import settings
+from app.modules.agents.domain import alejandria
+from app.platform.flow_validation import blocking, relax_dependencies, validate_sequence
 from app.core.stream_auth import issue_ticket, consume_ticket
 from app.modules.agents.application.use_cases import (
     Orchestrator, active_tasks, publish_event,
@@ -741,7 +743,26 @@ async def run_agent_pipeline(
         )
     usuario = await usuario_actual(session, token_data)
     project = await load_project_context(session, usuario, article.project_id)
-        
+
+    # Una reanudación continúa una ejecución que ya pasó la validación al empezar.
+    if not resume:
+        issues = validate_sequence(
+            req.flow_sequence,
+            alejandria.package().flow_rules,
+            existing_output=bool((article.body or "").strip()),
+        )
+        if not settings.FLOW_RULES_ENFORCE:
+            issues = relax_dependencies(issues)
+        errors = blocking(issues)
+        if errors:
+            raise HTTPException(
+                status_code=422,
+                detail={
+                    "message": "El flujo no es válido",
+                    "issues": [issue.as_dict() for issue in errors],
+                },
+            )
+
     # Use provided keywords if given; otherwise extract from title as fallback
     title = article.title
     if req.keywords:

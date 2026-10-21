@@ -4,7 +4,7 @@ import { flowsApi } from '../api/flows';
 import { mensajeDeCarga } from '../api/errors';
 import { useProjectStore } from './projectStore';
 import { useAuthStore } from './authStore';
-import { sanitizeEdges } from '../flowValidation';
+import { effectiveSequence, sanitizeEdges } from '../flowValidation';
 
 const getProjectId = () => {
   const role = useAuthStore.getState().user?.role;
@@ -61,7 +61,8 @@ export const useFlowStore = create(
           name: draftName,
           nodes: draftNodes,
           edges: draftEdges,
-          flow_sequence: draftNodes.map(n => n.data?.agentId).filter(Boolean),
+          // El orden en que se ejecutará: el de las aristas, no el de creación de los nodos.
+          flow_sequence: effectiveSequence(draftNodes, draftEdges),
         };
         let saved;
         if (activeFlow?.id) {

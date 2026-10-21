@@ -5,5 +5,6 @@ export const flowsApi = {
   get: (id) => api.get(`/api/v1/flows/${id}`).then(r => r.data),
   create: (data) => api.post('/api/v1/flows', data).then(r => r.data),
   update: (id, data) => api.put(`/api/v1/flows/${id}`, data).then(r => r.data),
+  rules: () => api.get('/api/v1/flows/rules').then(r => r.data),
   delete: (id) => api.delete(`/api/v1/flows/${id}`).then(r => r.data),
 };

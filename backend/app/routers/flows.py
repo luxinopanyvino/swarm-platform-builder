@@ -9,14 +9,19 @@ from app.models import (
 )
 from app.core.database import get_session
 from app.routers.auth import get_current_user
-from app.platform.flow_validation import blocking, validate_flow
+from app.core.config import settings
+from app.modules.agents.domain import alejandria
+from app.platform.flow_validation import blocking, relax_dependencies, validate_flow
 
 router = APIRouter(prefix="/api/v1/flows", tags=["flows"])
 
 
-def _reject_invalid(nodes: list, edges: list) -> None:
+def _reject_invalid(nodes: list, edges: list, flow_sequence: list[str] | None = None) -> None:
     """422 con los problemas estructurados si el grafo trae errores bloqueantes."""
-    errors = blocking(validate_flow(nodes, edges))
+    issues = validate_flow(nodes, edges, alejandria.package().flow_rules, flow_sequence)
+    if not settings.FLOW_RULES_ENFORCE:
+        issues = relax_dependencies(issues)
+    errors = blocking(issues)
     if errors:
         raise HTTPException(
             status_code=422,
@@ -25,6 +30,12 @@ def _reject_invalid(nodes: list, edges: list) -> None:
                 "issues": [issue.as_dict() for issue in errors],
             },
         )
+
+
+@router.get("/rules")
+async def flow_rules(token_data=Depends(get_current_user)):
+    """Reglas de dependencia del proyecto, para que el lienzo avise mientras se dibuja."""
+    return alejandria.package().flow_rules.as_dict()
 
 
 @router.get("", response_model=list[SavedFlowResponse])
@@ -52,7 +63,7 @@ async def create_flow(
     session: AsyncSession = Depends(get_session)
 ):
     """Save a new visual flow."""
-    _reject_invalid(req.nodes, req.edges)
+    _reject_invalid(req.nodes, req.edges, req.flow_sequence)
     flow = SavedFlowModel(
         name=req.name,
         author_id=UUID(token_data["user_id"]),
@@ -109,6 +120,7 @@ async def update_flow(
     _reject_invalid(
         req.nodes if req.nodes is not None else flow.nodes,
         req.edges if req.edges is not None else flow.edges,
+        req.flow_sequence if req.flow_sequence is not None else flow.flow_sequence,
     )
 
     if req.name is not None:
