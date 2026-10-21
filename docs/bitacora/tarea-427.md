@@ -80,3 +80,58 @@ las reglas de §3, §10 y §20.
 ### Fuera de alcance / notas
 
 - El framework solo existe como PDF fuera del repo; conviene versionarlo.
+
+## 2026-10-21 — Fase 1: spec, ADR y regla de bitácora (documentación)
+
+- **Ramas / PRs:** `docs/gobernanza-bitacora-obligatoria` → #426 · `docs/spec-032-compuerta-publicacion` → #429 · `docs/spec-032-ready` → #430 (todas mergeadas en `develop`)
+- **Spec/ADR:** [SPEC-032](../specs/SPEC-032-publication-gate-framework.md), [ADR-0011](../adr/0011-publication-gate-fail-closed.md)
+- **Dependencias:** Fase 0 (matriz de implementación, #428)
+
+### Dónde estaba el problema
+
+- **Gobernanza** (`docs/governance/GOVERNANCE.md` §3.1.2 y §6): pedía bitácora solo por tarea
+  resuelta por un agente. No cubría fixes o parches hechos a mano, no exigía el *porqué* ni que
+  viajara en la misma PR. Resultado visible: las bitácoras de #415–#419 se empujaron tras el
+  merge y hubo que añadirlas aparte en #420.
+- **Publicación** (`publicador.py`, `routers/articles.py`, `revisor.py`, `routing.py`): no existe
+  compuerta; hay **tres** caminos a `PUBLISHED` (el agente, `approve` y `POST /articles/{id}/publish`)
+  y ninguno valida; el Revisor falla abierto; tras 3 vueltas el flujo avanza.
+
+### Qué se hizo y por qué
+
+- **#426:** amplía GOVERNANCE §3.1.2 a todo fix/implementación/parche, con qué, por qué, cuándo
+  y dónde, en la misma PR; añade la bitácora al DoD (§6), a la plantilla de `docs/bitacora/README.md`
+  y a `CLAUDE.md`.
+- **#429:** crea SPEC-032 (Draft) con la decisión de V09 (opción «a»: resolver contra
+  Crossref/OpenAlex, falla cerrada, sin excepción para documentos internos), 16 criterios de
+  aceptación y 15 tareas (T20.1–T20.15); ADR-0011; y el checklist de requisitos
+  (`docs/specs/checklists/SPEC-032-publication-gate.md`).
+- **Clarificación (5 preguntas):** `not_implemented` no bloquea; umbrales de coincidencia de V09;
+  quién aprueba; V03 como IMRaD por defecto; estado `requires_human_review`.
+- **Análisis (`/speckit-analyze`):** halló un tercer camino a `published` (`/publish`), la falta de
+  ADR y de plan de evaluación EDD; se corrigió en la misma spec (AC13–AC16, ADR-0011, §6).
+- **#430:** pasa SPEC-032 a Ready para que `/sdd-sync` pueda sembrar la épica E20.
+
+### Definition of Done
+
+- [x] Spec validada con `scripts/validate_specs.py` (SPEC-032 y checklist).
+- [x] ADR-0011 creado e indexado.
+- [x] Tests de gobernanza (`test_sdd_governance.py`) en verde; el único fallo del conjunto,
+  `test_la_spec_de_finetune_sigue_en_draft` (SPEC-031), ya fallaba en `develop`.
+- [ ] **Checklist de requisitos:** 33/43 puntos cumplidos; 10 abiertos (fuentes que Crossref/OpenAlex
+  no indexan, quién declara al autor responsable, «et al.» y alias de revista, aprobaciones
+  concurrentes, recuperación ante fallos, referencias duplicadas, manuscritos sin referencias,
+  nombres de métricas, cobertura real del corpus).
+
+### Verificación
+
+- Solo documentación: ni se tocó código de producto ni se ejecutó el pipeline.
+- Falta de evidencia honesta: la regla de bitácora de #426 **no tuvo bitácora propia**, y #429/#430
+  tampoco, hasta esta entrada. #426 y #429 no tenían issue porque `/sdd-sync` aún no había
+  sembrado la épica E20.
+
+### Fuera de alcance / notas
+
+- Siguiente paso: `/sdd-sync` en dry-run y, con visto bueno, `--apply` para crear la épica E20 y
+  T20.1–T20.15; después implementación por las tareas sin dependencias.
+- La implementación empezará con el gate EDD y la regresión explicada en la misma PR (T20.15).
