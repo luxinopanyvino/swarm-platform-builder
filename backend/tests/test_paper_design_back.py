@@ -15,7 +15,7 @@ PAGINA = (
 
 
 def test_volver_no_depende_del_historial():
-    assert "navigate(-1)" not in PAGINA
+    assert "navigate(-1)" not in re.sub(r"//.*", "", PAGINA)  # el comentario lo menciona
     assert "navigate(`/dashboard/articles/${id}`)" in PAGINA
 
 
