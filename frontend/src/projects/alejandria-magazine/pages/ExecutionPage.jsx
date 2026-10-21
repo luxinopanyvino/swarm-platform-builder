@@ -7,6 +7,7 @@ import { CheckCircle, XCircle, Clock, Loader, ArrowRight, ArrowLeft, FileText, U
 import { agentsApi } from '../../../platform/api/agents';
 import { useArticleStore } from '../store/articleStore';
 import toast from 'react-hot-toast';
+import { agentLabel, CRITERION_LABELS } from '../gate';
 
 
 const STATUS_ICON = {
@@ -43,6 +44,7 @@ export default function ExecutionPage() {
   const [assigning, setAssigning] = useState(false);
   // Human-in-the-loop coherence gate
   const [pendingDecision, setPendingDecision] = useState(null);
+  const [gateNotice, setGateNotice] = useState(null);
   const [decisionBusy, setDecisionBusy] = useState(false);
   const sourceInputRef = useRef(null);
   const logsEndRef = useRef(null);
@@ -131,6 +133,15 @@ export default function ExecutionPage() {
           setPendingDecision(null);
           setDecisionBusy(false);
           addLog(`▶️ Decisión: ${data.decision === 'add_source' ? 'nueva fuente añadida' : 'continuar'}`, 'info');
+        } else if (data.type === 'gate_failed') {
+          // SPEC-032/AC14: la compuerta bloqueó el texto final; el artículo vuelve a borrador.
+          const lista = (data.blockers || []).map((b) => b.criterion).join(', ');
+          setGateNotice({ kind: 'gate_failed', blockers: data.blockers || [] });
+          addLog(`⛔ La compuerta bloquea la publicación (${lista}). El artículo vuelve a borrador.`, 'error');
+        } else if (data.type === 'requires_human_review') {
+          // SPEC-032/AC7: se agotaron las vueltas sin aprobar; solo una persona decide.
+          setGateNotice({ kind: 'requires_human_review', score: data.score, feedback: data.feedback || [] });
+          addLog('⏸️ El Revisor no aprobó tras agotar las vueltas: el artículo requiere revisión humana', 'warn');
         } else if (data.type === 'log') {
           addLog(data.message, data.level || '');
         } else if (data.type === 'done') {
@@ -339,6 +350,39 @@ export default function ExecutionPage() {
             ID: {articleId?.slice(0, 8)}…
           </div>
         </div>
+
+        {/* Resultado de la compuerta de publicación (SPEC-032): el artículo no se publica solo */}
+        {gateNotice && (
+          <div role="status" style={{
+            margin: '0 0 var(--space-3)', padding: 'var(--space-4)',
+            background: 'var(--status-warning-bg)', border: '1px solid var(--status-warning)',
+            borderRadius: 'var(--radius-md)', fontSize: 'var(--font-size-sm)',
+          }}>
+            {gateNotice.kind === 'gate_failed' ? (
+              <>
+                <strong>La compuerta bloquea la publicación.</strong> El artículo vuelve a borrador.
+                <ul style={{ margin: '6px 0 0', paddingLeft: 18 }}>
+                  {gateNotice.blockers.map((b) => (
+                    <li key={b.criterion}>
+                      {CRITERION_LABELS[b.criterion] || b.criterion}
+                      {b.responsible_agent && <> — corresponde a <strong>{agentLabel(b.responsible_agent)}</strong></>}
+                    </li>
+                  ))}
+                </ul>
+              </>
+            ) : (
+              <>
+                <strong>Requiere revisión humana.</strong> El Revisor no aprobó el texto tras agotar las vueltas
+                {typeof gateNotice.score === 'number' && <> (puntuación {gateNotice.score}/100)</>}; no se ha formateado ni publicado.
+                {gateNotice.feedback.length > 0 && (
+                  <ul style={{ margin: '6px 0 0', paddingLeft: 18 }}>
+                    {gateNotice.feedback.slice(0, 4).map((f, i) => <li key={i}>{f}</li>)}
+                  </ul>
+                )}
+              </>
+            )}
+          </div>
+        )}
 
         {/* Human-in-the-loop decision panel */}
         {pendingDecision && !done && (

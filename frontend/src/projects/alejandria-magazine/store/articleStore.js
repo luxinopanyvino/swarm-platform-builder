@@ -85,6 +85,30 @@ export const useArticleStore = create((set, get) => ({
     }));
   },
 
+  gateReport: null,
+
+  fetchGateReport: async (id) => {
+    set({ gateReport: null });
+    const data = await articlesApi.gateReport(id);
+    set({ gateReport: data });
+    return data;
+  },
+
+  reevaluateGate: async (id) => {
+    const data = await articlesApi.reevaluateGate(id);
+    set({ gateReport: data });
+    return data;
+  },
+
+  declareResponsibleAuthor: async (id, userId) => {
+    const data = await articlesApi.setResponsibleAuthor(id, userId);
+    set(s => ({
+      articles: s.articles.map(a => a.id === id ? data : a),
+      currentArticle: data,
+    }));
+    return data;
+  },
+
   rejectArticle: async (id, comment) => {
     const data = await articlesApi.reject(id, comment);
     set(s => ({

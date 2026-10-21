@@ -6,7 +6,7 @@ import { useArticleStore } from '../store/articleStore';
 import { useAuthStore } from '../../../platform/store/authStore';
 import toast from 'react-hot-toast';
 
-const TABS = ['Todos', 'Drafts', 'Pendientes', 'Aprobados', 'Publicados'];
+const TABS = ['Todos', 'Drafts', 'Pendientes', 'Revisión humana', 'Aprobados', 'Publicados'];
 
 const STATUS_MAP = {
   draft: { label: 'Draft', cls: 'badge-draft', icon: <Clock size={10} /> },
@@ -14,12 +14,14 @@ const STATUS_MAP = {
   approved: { label: 'Aprobado', cls: 'badge-approved', icon: <CheckCircle size={10} /> },
   published: { label: 'Publicado', cls: 'badge-published', icon: <CheckCircle size={10} /> },
   rejected: { label: 'Rechazado', cls: 'badge-error', icon: <AlertCircle size={10} /> },
+  requires_human_review: { label: 'Revisión humana', cls: 'badge-pending', icon: <AlertCircle size={10} /> },
 };
 
 const TAB_FILTER = {
   'Todos': null,
   'Drafts': 'draft',
   'Pendientes': 'in_review',
+  'Revisión humana': 'requires_human_review',
   'Aprobados': 'approved',
   'Publicados': 'published',
 };
