@@ -37,6 +37,7 @@ Crea un ADR cuando una decisión:
 | [0007](0007-adopt-spec-kit-authoring-layer.md) | Adoptar Spec Kit como capa de autoría del SDD | Propuesto |
 | [0008](0008-agent-memory-and-context-budget.md) | Memoria a largo plazo y presupuesto de contexto para los agentes | Propuesto |
 | [0009](0009-claude-default-agentic-engine.md) | Claude (Anthropic) como motor agéntico por defecto, multi-proveedor y multi-modelo por agente | Propuesto |
+| [0011](0011-publication-gate-fail-closed.md) | Compuerta de publicación determinista con falla cerrada | Propuesto |
 
 Ver también: [docs/specs](../specs) (especificaciones SDD) y
 [docs/governance](../governance) (gobernanza, DoD, CODEOWNERS).
