@@ -52,13 +52,13 @@
 - [ ] CHK031 ¿Hay requisitos de **recuperación**: qué ocurre si falla la escritura del informe o la migración a mitad de una publicación? [Gap, Recovery, Spec §7]
 - [x] CHK032 ¿Se cubre la **reanudación** de una ejecución (`resume`) respecto a la compuerta y al contador de vueltas? [Gap, Spec §3 AC7]
 - [ ] CHK033 ¿Se define qué ocurre con una referencia **duplicada** o dos documentos que resuelven al mismo DOI? [Gap, Edge, Spec §3 AC3]
-- [ ] CHK034 ¿Se define el caso de un manuscrito **sin ninguna referencia**? [Edge, Spec §3 AC2/AC11]
+- [x] CHK034 ¿Se define el caso de un manuscrito **sin ninguna referencia**? [Edge, Spec §3 AC2/AC11]
 
 ## Non-Functional Requirements
 
 - [x] CHK035 ¿Hay un requisito de latencia/duración máxima de la compuerta (con N referencias) para no bloquear la ejecución? [Gap, Performance, Spec §7]
 - [x] CHK036 ¿Se especifican los límites de uso de las APIs externas (cortesía/ratelimit de Crossref y OpenAlex, identificación del cliente) y el comportamiento ante 429? [Gap, Spec §4]
-- [ ] CHK037 ¿Se define qué se registra en logs y métricas y con qué nombres (resultado por criterio, tasa de no verificado por motivo)? [Clarity, Spec §7]
+- [x] CHK037 ¿Se define qué se registra en logs y métricas y con qué nombres (resultado por criterio, tasa de no verificado por motivo)? [Clarity, Spec §7]
 - [x] CHK038 ¿Cubren los requisitos de seguridad la comprobación de que el informe y la aprobación no se pueden falsificar (quién puede escribir/leer `gate-report`)? [Gap, Security, Spec §3 AC6/AC8]
 
 ## Dependencies & Assumptions

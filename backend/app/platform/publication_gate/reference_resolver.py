@@ -130,20 +130,32 @@ def _abrevia(abbr: str, full: str) -> bool:
     return all(ch in it for ch in abbr)
 
 
+#: Palabras que no distinguen una publicación de otra: aparecen o no según cómo la cite
+#: cada persona o cada base («Proc.», «2016 IEEE Conference…»). Medido con Crossref real.
+_GENERICAS = {
+    "the", "of", "de", "la", "el", "and", "y", "journal", "j", "proc", "proceedings",
+    "conf", "conference", "annual", "int", "intl", "international", "symp", "symposium",
+    "workshop", "on", "in",
+}
+
+
 def journals_match(a: str, b: str) -> bool:
-    """Revista igual tras normalizar; admite abreviaturas por prefijo de cada palabra
-    («Proc. Natl. Acad. Sci.» ~ «Proceedings of the National Academy of Sciences»)."""
-    stop = {"the", "of", "de", "la", "el", "and", "y", "journal", "j"}
-    ta = [w for w in _words(a) if w not in stop]
-    tb = [w for w in _words(b) if w not in stop]
+    """¿Es la misma publicación? Tolera abreviaturas, el orden y las palabras genéricas.
+
+    Cada palabra significativa de la cita más corta debe corresponder (igual o
+    abreviada) a alguna de la otra, y se exige al menos el 60 %: es una señal débil —el
+    título, los autores y el DOI pesan más— pero distingue «Nature» de «Science»
+    y «Proc. Natl. Acad. Sci.» de «Proceedings of the National Academy of Sciences».
+    """
+    def significativas(texto: str) -> list[str]:
+        return [w for w in _words(texto) if w not in _GENERICAS and not w.isdigit()]
+
+    ta, tb = significativas(a), significativas(b)
     if not ta or not tb:
         return False
-
-    def abreviatura(abbr: list[str], full: list[str]) -> bool:
-        it = iter(full)
-        return all(any(_abrevia(c, w) for w in it) for c in abbr)
-
-    return abreviatura(ta, tb) or abreviatura(tb, ta)
+    corto, largo = (ta, tb) if len(ta) <= len(tb) else (tb, ta)
+    coinciden = sum(1 for c in corto if any(c == w or _abrevia(c, w) for w in largo))
+    return coinciden / len(corto) >= 0.6
 
 
 def _year_ok(src: str, rec: Optional[int], preprint: bool) -> bool:
@@ -384,6 +396,19 @@ async def _resolve_one(sess: _Session, src: dict) -> ReferenceOutcome:
             if not dois:
                 return ReferenceOutcome(
                     CriterionStatus.NOT_VERIFIED, "ninguna coincidencia fiable por título y autores"
+                )
+            if len(dois) > 1:
+                # Varios registros pasan por título y autores (una misma obra con dos DOI,
+                # o una homónima): el año y la revista de la cita desempatan. Si siguen
+                # quedando varios, no se elige uno al azar.
+                afinados = [c for c in cands if not _compare(src, c, cfg)]
+                dois = {c.doi for c in afinados}
+                if len(dois) == 1:
+                    cands = afinados
+            if not dois:
+                return ReferenceOutcome(
+                    CriterionStatus.NOT_VERIFIED,
+                    "varios candidatos por título y autores y ninguno coincide en año y revista",
                 )
             if len(dois) > 1:
                 return ReferenceOutcome(

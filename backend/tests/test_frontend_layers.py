@@ -107,7 +107,7 @@ def test_ningun_fichero_de_la_plataforma_lleva_el_catalogo_de_un_proyecto():
     culpables = []
     for fichero in _ficheros(PLATAFORMA):
         cuantos = _cuantos_agentes_nombra(fichero)
-        relativa = str(fichero.relative_to(FUENTE))
+        relativa = fichero.relative_to(FUENTE).as_posix()
         if cuantos and relativa not in RESIDUOS_CONOCIDOS:
             culpables.append(f"{relativa} ({cuantos} agentes)")
     assert culpables == [], (
@@ -118,7 +118,7 @@ def test_ningun_fichero_de_la_plataforma_lleva_el_catalogo_de_un_proyecto():
 def test_los_residuos_conocidos_siguen_siendo_los_declarados():
     """Si uno se arregla, hay que quitarlo de la lista; si aparece otro, añadirlo."""
     con_agentes = {
-        str(f.relative_to(FUENTE))
+        f.relative_to(FUENTE).as_posix()
         for f in _ficheros(PLATAFORMA)
         if _cuantos_agentes_nombra(f) >= 1
     }
@@ -161,7 +161,7 @@ def test_el_catalogo_no_esta_duplicado():
             if re.search(rf"^\s*{a}\s*:", texto, re.M)
         )
         if nombrados >= 3:
-            copias.append(str(fichero.relative_to(FUENTE)))
+            copias.append(fichero.relative_to(FUENTE).as_posix())
     assert copias == [], f"vuelve a haber copias del catálogo de agentes: {copias}"
 
 
