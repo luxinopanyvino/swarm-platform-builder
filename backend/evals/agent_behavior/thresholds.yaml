@@ -74,4 +74,6 @@ agents:
     dataset: formateador-golden
     metrics:
       format_compliance: {min: 100, baseline: 100.0}
+      # SPEC-032/AC2: una referencia que se imprime lleva año e identificador.
+      reference_completeness: {min: 100, baseline: 100.0}
       budget: {min: 60, baseline: 83.33}

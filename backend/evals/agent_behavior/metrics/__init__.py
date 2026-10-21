@@ -61,7 +61,7 @@ def skipped(name: str, reason: str) -> MetricResult:
 def _cargar_incorporadas() -> None:
     # Import perezoso para evitar el ciclo módulo↔registro.
     from evals.agent_behavior.metrics import (  # noqa: F401
-        budget, calibration, citations, coherence, format_compliance,
+        budget, calibration, citations, coherence, format_compliance, reference_completeness,
     )
 
 

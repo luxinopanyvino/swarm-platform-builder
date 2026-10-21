@@ -1,6 +1,6 @@
 # SPEC-032: Compuerta de publicación según el Framework de validación (Fase 1)
 
-- **Estado:** Ready
+- **Estado:** In progress
 - **Autor:** Equipo de plataforma (borrador asistido)
 - **Fecha:** 2026-10-21 · paso a `Ready` tras `/speckit-clarify`, `/speckit-checklist` (33/43) y `/speckit-analyze`
 - **Épica:** E20 (GitHub Project)
