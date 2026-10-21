@@ -324,6 +324,21 @@ Correcciones derivadas de `/speckit-analyze` y del checklist, sin cambiar las de
 - Se fijan los valores iniciales de la falla cerrada, los patrones de marcador y el objetivo de resolución.
 - La decisión de política queda registrada en ADR-0011; el plan de pruebas incorpora la evaluación EDD.
 
+### Session 2026-10-21 (implementación y medición)
+
+Hechos y decisiones que salieron de implementar E20 y de medir AC3 contra Crossref/OpenAlex reales ([informe](../reports/medicion-ac3-spec-032.md)); no cambian los criterios de aceptación. Lo que sigue abierto está en [spec-032-decisiones-pendientes.md](../reports/spec-032-decisiones-pendientes.md).
+
+- Un manuscrito **sin referencias estructuradas** deja `reference_existence` en `not_verified` y bloquea (CHK034): no se aprueba por ausencia de referencias.
+- El **autor responsable** se declara con `PUT /api/v1/articles/{id}/responsible-author` (autor del artículo o admin; usuario activo) (CHK015).
+- Con «et al.» en la cita solo se exige el primer autor; sin él, la mitad de los demás (CHK016).
+- La revista se compara por palabras significativas, tolerando abreviaturas y palabras genéricas, con un 60 % de coincidencia; sin diccionario (CHK017).
+- Si varios registros encajan por título y autores, **el año y la revista de la cita desempatan**; si siguen siendo varios o ninguno, `not_verified`.
+- La **revisión** (puntuación, `coherent`, `review_status`) se guarda con el informe de la compuerta, porque `can_publish` la necesita y fuera del pipeline no queda rastro. Sin Revisor en el flujo, `review_status = not_run` y no se publica.
+- `publish` ya no lo puede usar el propietario ni quien no sea revisor asignado o admin: aplica las mismas reglas que `approve` (AC13).
+- La salida hacia Crossref/OpenAlex es por `safe_get` con `quien="publication_gate"`; con allowlist definida, esos hosts se añaden **solo** para la compuerta.
+- **Métricas Prometheus** (CHK037): `publication_gate_criterion_total{criterion,status}`, `publication_gate_reference_total{outcome}` (`cache_hit`, `resolved`, `mismatch`, `not_verified`) y `publication_gate_external_errors_total{provider,reason}`, más un log estructurado por criterio.
+- **Medición real:** 18/20 con DOI (90 %, sin margen), 10/12 sin DOI, 6/6 controles negativos bloqueados. Los dos fallos con DOI son de arXiv (DataCite, no Crossref): ver DEC-1.
+
 ## 8. Backlog (sincronización SDD)
 
 ```yaml

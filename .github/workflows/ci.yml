@@ -43,6 +43,56 @@ jobs:
       - name: Ejecutar tests
         run: python -m pytest -q
 
+  migrations-postgres:
+    name: Migraciones · Postgres real
+    # SPEC-032/T20.6: los tests de migraciones corren sobre SQLite, donde un enum es un
+    # VARCHAR y `ALTER TYPE … ADD VALUE` no se ejecuta nunca. Este job aplica toda la
+    # cadena de Alembic en Postgres, comprueba que no queda deriva con los modelos, que
+    # el enum nativo ganó `REQUIRES_HUMAN_REVIEW` y que bajar y subir una revisión
+    # funciona.
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: alejandria
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    defaults:
+      run:
+        working-directory: backend
+    env:
+      DEBUG: "true"
+      SECRET_KEY: "ci-secret-not-for-prod"
+      DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/alejandria
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+      - name: Instalar dependencias desde el lock
+        run: pip install --require-hashes -r requirements.txt
+      - name: Aplicar todas las migraciones
+        run: alembic upgrade head
+      - name: Los modelos no van por delante de las migraciones
+        run: alembic check
+      - name: Verificar el esquema de SPEC-032 en Postgres
+        working-directory: ${{ github.workspace }}
+        run: python scripts/verify_postgres_schema.py
+      - name: Bajar y volver a subir la última revisión
+        run: |
+          alembic downgrade -1
+          alembic upgrade head
+          alembic check
+
   frontend-build:
     name: Frontend · build
     runs-on: ubuntu-latest
