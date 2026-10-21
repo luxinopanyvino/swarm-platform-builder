@@ -30,6 +30,11 @@ os.environ.setdefault("DATABASE_URL", f"sqlite+aiosqlite:///{_BASE_DE_TESTS.as_p
 # Donde vive la base de desarrollo (`config.yaml`, `dev-local.cmd`).
 DIRECTORIO_DE_DESARROLLO = ROOT_DIR / "data"
 
+# El despliegue gradual de la compuerta (DEC-4) deja `gate_enforce: false` en `config.yaml`;
+# los tests no dependen del estado del despliegue y prueban la compuerta con su valor por
+# defecto (bloquea). El entorno gana al yaml, así que basta fijarlo antes de importar `app`.
+os.environ.setdefault("PUBLICATION_GATE_ENFORCE", "true")
+
 from app.core.rate_limit import reset_auth_throttling  # noqa: E402
 
 
