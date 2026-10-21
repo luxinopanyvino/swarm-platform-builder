@@ -226,10 +226,23 @@ async def submit_for_review(
 @router.post("/{article_id}/approve", response_model=ArticleResponse)
 async def approve_article(
     article_id: UUID,
+    request: Request,
     token_data=Depends(get_current_user),
     session: AsyncSession = Depends(get_session)
 ):
-    """Approve article (in_review → published). Admin, redactor, or the assigned reviewer."""
+    """Aprobación humana explícita (in_review → published). SPEC-032/AC8.
+
+    Solo el revisor asignado o un administrador, y nunca el propietario del
+    artículo salvo autoaprobación de desarrollo. Exige autor responsable declarado
+    y un informe de compuerta vigente y sin bloqueantes. Registra quién, cuándo y
+    qué texto (huella) se aprobó.
+    """
+    import datetime
+
+    from app.core.config import settings
+    from app.platform.publication_gate.approval import approval_denial
+    from app.platform.publication_gate.service import latest_report, text_sha256
+
     role = token_data.get("role", "redactor")
     current_user_id = UUID(token_data["user_id"])
 
@@ -240,18 +253,44 @@ async def approve_article(
     if not article:
         raise HTTPException(status_code=404, detail="Article not found")
 
-    is_assigned_reviewer = article.reviewer_id == current_user_id
-    if role != UserRole.ADMIN and not is_assigned_reviewer:
-        raise HTTPException(status_code=403, detail="Solo el administrador o el revisor asignado puede aprobar artículos")
+    report = await latest_report(session, article.id)
+    denial, warning = approval_denial(
+        article=article, user_id=current_user_id, role=role, report=report,
+        enforce=settings.PUBLICATION_GATE_ENFORCE,
+        allow_self_approval=settings.PUBLICATION_ALLOW_SELF_APPROVAL,
+    )
+    if denial is not None and denial.status == 403:
+        raise HTTPException(status_code=403, detail=denial.message)
 
     if article.status != ArticleStatus.IN_REVIEW:
         raise HTTPException(status_code=409, detail="Article not under review")
-    
+
+    if denial is not None:
+        raise HTTPException(status_code=denial.status, detail={"code": denial.code, "message": denial.message})
+
     article.status = ArticleStatus.PUBLISHED
-    article.reviewer_id = UUID(token_data["user_id"])
-    article.published_at = __import__("datetime").datetime.utcnow()
-    
+    article.reviewer_id = current_user_id
+    now = datetime.datetime.utcnow()
+    article.published_at = now
+    article.approved_by = current_user_id
+    article.approved_at = now
+    article.approved_text_sha256 = text_sha256(article.body)
+
     session.add(article)
+    await record_audit(
+        session,
+        action=AuditAction.ARTICLE_APPROVED,
+        actor=token_data,
+        target_type="article",
+        target_id=article.id,
+        request=request,
+        detail={
+            "decision": "approved",
+            "text_sha256": article.approved_text_sha256,
+            # Con la compuerta en modo aviso, queda constancia de qué no se cumplía.
+            "gate_warning": warning.code if warning else None,
+        },
+    )
 
     # Mark the reviewer's assignment notification as read
     notif_stmt = select(NotificationModel).where(
@@ -400,6 +439,41 @@ async def reevaluate_gate_report(
     await session.commit()
     await session.refresh(row)
     return _gate_payload(row, article)
+
+
+class ResponsibleAuthorDTO(BaseModel):
+    user_id: UUID
+
+
+@router.put("/{article_id}/responsible-author", response_model=ArticleResponse)
+async def declare_responsible_author(
+    article_id: UUID,
+    body: ResponsibleAuthorDTO,
+    token_data=Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+):
+    """Declara al autor humano responsable (FW V13). Autor del artículo o admin.
+
+    Sin él no se puede aprobar (SPEC-032/AC8). Los agentes no son usuarios, así
+    que quien figure aquí es siempre una persona con cuenta activa.
+    """
+    result = await session.execute(select(ArticleModel).where(ArticleModel.id == article_id))
+    article = result.scalars().first()
+    if not article:
+        raise HTTPException(status_code=404, detail="Article not found")
+    if token_data.get("role") != UserRole.ADMIN and str(article.author_id) != token_data["user_id"]:
+        raise HTTPException(status_code=403, detail="Forbidden")
+    if article.status == ArticleStatus.PUBLISHED:
+        raise HTTPException(status_code=409, detail="El artículo ya está publicado")
+
+    user = (await session.execute(select(UserModel).where(UserModel.id == body.user_id))).scalars().first()
+    if user is None or not user.is_active:
+        raise HTTPException(status_code=422, detail="El autor responsable debe ser un usuario activo")
+    article.responsible_author_id = user.id
+    session.add(article)
+    await session.commit()
+    await session.refresh(article)
+    return ArticleResponse.model_validate(article)
 
 
 @router.post("/{article_id}/reject", response_model=ArticleResponse)
