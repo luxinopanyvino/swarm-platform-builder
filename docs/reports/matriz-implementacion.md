@@ -8,7 +8,7 @@
 ## Limitaciones de este documento (leer antes de las tablas)
 
 1. **Falta la tarea 0.1.** Los artefactos de PR-FW-001 (salidas intermedias, texto antes/después del Formateador, logs) no están en el repositorio. Sin ellos, aquí se afirma lo que **dice el código**, no lo que ocurrió en esa ejecución. Hay que aportarlos.
-2. **Los criterios V01–V16 no están definidos en el repo.** El plan solo nombra algunos (V01, V05, V07, V09, V10, V12–V14, V16). Los demás (V02, V03, V04, V06, V08, V11, V15) figuran como «definición pendiente» en lugar de adivinarlos. Hace falta el texto del Framework v0.1.
+2. **Criterios V01–V16:** definidos en el *Framework de redacción y validación de papers* v0.1 (29/09/2026), §9, que no está en el repo (se recibió como PDF). La matriz usa esas definiciones, con su tipo (bloqueante/advertencia) y su verificación (automática/juicio).
 3. Solo se leyó código; no se ejecutó el pipeline.
 
 Leyenda de estado: **implementado** · **parcial** · **ausente**.
@@ -72,24 +72,28 @@ Defectos adicionales del Publicador: publica **siempre**; `published_url` y los 
 
 ## 2. Matriz por criterio (0.7)
 
-| Criterio | Estado | Evidencia en código | Fase del plan |
-|---|---|---|---|
-| **V01** Ficha de estudio (tipo de estudio, clase de I+D, perfil) | **ausente** | Sin rastro de `study_type`, ficha ni perfil de reporte en `app/` ni `projects/`. | F4 (4.2) |
-| **V02** definición pendiente | — | El Revisor no emite estado por criterio. | F3 |
-| **V03** definición pendiente | — | Sin compuerta determinista. | F1 |
-| **V04** definición pendiente | — | Sin compuerta determinista. | F1 |
-| **V05** Protocolo sellado (fecha + huella + desviaciones) | **ausente** | `hashlib` solo se usa en `rag.py` para ids de fragmentos, no para sellar protocolos. | F4 (4.3) |
-| **V06** definición pendiente | — | — | F1 |
-| **V07** Registro de búsqueda (base, cadena, fecha, criterios) | **ausente** | El Investigador solo loguea la *query*; no se persiste un registro de búsqueda ni hay base bibliográfica externa. | F4 (4.1, 4.9) |
-| **V08** definición pendiente | — | — | F1 |
-| **V09** Referencias válidas (estructura y existencia) | **parcial → casi ausente** | Estructura: `format_source_deterministic` formatea pero **no valida** que haya DOI/autores/año/revista. Existencia: sin Crossref/OpenAlex. Fuentes salen con `doi/year/journal` vacíos (`investigador.py`). | F1 (1.2, 1.3) |
-| **V10** Soporte de la cita por el pasaje | **ausente** | El Revisor no comprueba pasajes ni citas; solo puntuación global. | F3 (3.3) |
-| **V11** definición pendiente | — | — | F1 |
-| **V12** Declaración de uso de IA | **parcial** | La traza `agent_run_steps` registra modelo, parámetros y tokens por paso (SPEC-014/T9.1), pero **no se genera ninguna declaración** para el manuscrito. | F5 (5.1) |
-| **V13** Autor humano responsable | **parcial** | `ArticleModel.author_id`/`authors` existen; no hay campo «autor responsable» obligatorio ni comprobación de que ningún agente figure como autor. | F5 (5.2) |
-| **V14** CRediT, conflictos de interés, financiamiento | **ausente** | Sin `credit`, `conflict` ni `funding` en el backend. | F5 (5.3) |
-| **V15** definición pendiente | — | El Revisor no lo evalúa por separado. | F3 |
-| **V16** Datos/código y metadatos FAIR | **parcial** | Publicador fija `license: CC-BY-4.0` y `publisher` como constantes; sin identificador, procedencia ni declaración de datos/código. | F5 (5.4) |
+Definiciones del Framework v0.1 §9. «Quién lo comprueba» es lo que fija el framework (§10): la compuerta determinista del Publicador (etapa 8) o el Revisor (etapa 6).
+
+| Criterio (Framework §9) | Tipo · verificación | Quién | Estado | Evidencia en código | Fase |
+|---|---|---|---|---|---|
+| **V01** Tipo de estudio, clase de I+D y guía/perfil de reporte registrados en la ficha | Bloqueante · automática | Compuerta | **ausente** | Sin `study_type`, ficha ni perfil en `app/` ni `projects/`. Los perfiles del framework (PRISMA, TRIPOD-LLM, DSRM, Frascati, Oslo/TRL…) no existen en el sistema. | F4 (4.2) |
+| **V02** Cada ítem aplicable de la guía/perfil apunta a su ubicación en el texto | Bloqueante · automática + muestreo | Revisor | **ausente** | El Revisor no carga ninguna guía ni emite estado por criterio (`revisor.py`). | F3 |
+| **V03** Estructura del perfil completa y en orden (IMRaD por defecto) | Bloqueante · automática | Compuerta | **parcial** | El prompt del Redactor pide «Resumen, Introducción, Metodología, Resultados y Discusión Preliminares» (`redactor.py`, plantillas ~l. 26/41): Resultados y Discusión van **fundidos** y no hay Referencias ni Declaraciones finales en el mandato. Nadie valida estructura ni orden. | F1 |
+| **V04** El título identifica el diseño cuando la guía lo pide | Bloqueante · automática | Compuerta | **ausente** | Sin comprobación del título. | F1 |
+| **V05** Objetivos/resultados primarios coinciden con el protocolo sellado; desviaciones registradas | Bloqueante · automática | Compuerta | **ausente** | No hay protocolo sellado: `hashlib` solo se usa en `rag.py` para ids de fragmentos. | F4 (4.3) |
+| **V06** Todos los resultados primarios declarados aparecen en Resultados | Bloqueante · automática | Compuerta | **ausente** | Depende de V05; sin protocolo no hay qué comparar. | F1 / F4 |
+| **V07** Búsqueda reproducible: bases, fechas, cadenas, criterios | Bloqueante **solo en revisiones** · automática | Compuerta | **ausente** | El Investigador solo loguea la *query*; no se persiste registro de búsqueda ni hay base externa. | F4 (4.1, 4.9) |
+| **V08** Diagrama de flujo de selección de estudios | Bloqueante **solo en revisiones** · automática | Compuerta | **ausente** | Sin cribado ni diagrama. | F4 |
+| **V09** Toda referencia tiene origen recuperado y existe con metadatos coincidentes | Bloqueante · automática | Compuerta | **parcial → casi ausente** | Origen: las fuentes vienen de RAG local, no de una base bibliográfica. Existencia: sin Crossref/OpenAlex. `investigador.py` deja `doi/year/journal/url` vacíos y `format_source_deterministic` formatea sin validar. | F1 (1.2, 1.3) |
+| **V10** Cada afirmación citada está respaldada por el pasaje de la fuente | Bloqueante · agente independiente + muestra humana | Revisor | **ausente** | El Revisor da una puntuación global; no ve pasajes ni citas. | F3 (3.3) |
+| **V11** Ninguna fuente citada está retractada | Bloqueante · automática | Compuerta | **ausente** | Sin fuente de retractaciones. | F1 |
+| **V12** Declaración de uso de IA completa (herramienta, versión, tarea, ubicación) contra el registro de agentes | Bloqueante · automática | Compuerta | **parcial** | `agent_run_steps` registra agente, modelo, parámetros y tokens por paso (SPEC-014/T9.1): hay **registro**, pero no versión del modelo, sección afectada ni declaración generada en el manuscrito. | F5 (5.1) |
+| **V13** Ningún agente figura como autor; hay autor humano responsable | Bloqueante · automática | Compuerta | **parcial** | `ArticleModel.author_id`/`authors` existen; no hay «autor responsable» obligatorio ni comprobación de que ningún agente aparezca como autor. | F5 (5.2) |
+| **V14** Contribuciones en CRediT; conflictos de interés y financiamiento declarados | Bloqueante · automática | Compuerta | **ausente** | Sin `credit`, `conflict` ni `funding` en el backend. | F5 (5.3) |
+| **V15** Las conclusiones no afirman más que los resultados; la Discusión incluye limitaciones | **Advertencia** · agente independiente + revisión humana | Revisor | **ausente** | El Revisor puntúa «rigor, claridad, coherencia» en bloque; no evalúa V15 por separado, y el prompt del Redactor ni siquiera pide una sección de limitaciones. | F3 |
+| **V16** Declaración de datos y código, y metadatos FAIR completos | **Advertencia** · automática | Compuerta | **parcial** | El Publicador fija `license: CC-BY-4.0` y `publisher` como **constantes**; sin identificador persistente, procedencia ni declaración de datos/código. | F5 (5.4) |
+
+Resumen: **ausente** 11 (V01, V02, V04–V08, V10, V11, V14, V15), **parcial** 5 (V03, V09, V12, V13, V16), **implementado** 0.
 
 ### Barreras transversales del plan
 
@@ -114,6 +118,34 @@ Defectos adicionales del Publicador: publica **siempre**; `published_url` y los 
 
 ---
 
+## 2 bis. Contraste con el Framework v0.1 (§3, §10)
+
+Reglas del framework que el código incumple hoy, además de los criterios:
+
+| Regla del framework | Cita | Código actual |
+|---|---|---|
+| El Formateador **no modifica el contenido científico** y «el cuerpo no cambia» | §3 etapa 7, §10 | Un LLM **reescribe el manuscrito entero** y se acepta si mide ≥ 50 % (`formateador.py`, N5). |
+| El Formateador **compone** declaraciones de IA, CRediT, conflictos, financiamiento y datos desde registros | §10 | No compone ninguna. |
+| El Redactor **no puede añadir fuentes** fuera de las tablas de evidencia | §10 | Hace su propia consulta RAG y la añade al contexto (`redactor.py`). |
+| El Investigador **no escribe texto del manuscrito** | §10 | Genera una «síntesis» con LLM, incluso desde conocimiento paramétrico si no hay fuentes. |
+| El Investigador busca en EuropePMC y OpenAlex y registra la búsqueda | §10 | Solo RAG local. |
+| El Revisor emite **JSON por criterio** y **no aprueba sin evidencia por criterio** | §3 etapa 6, §10 | Falla abierto: aprueba con 85 sin JSON válido (N1). |
+| Tras 3 vueltas con bloqueantes → «requiere revisión humana», **no se publica** | §3, §10 cambio 4 | Avanza a publicar (`routing.py`). |
+| El Publicador **no publica sin la firma del autor responsable** y no usa LLM | §10 | Publica siempre; no usa LLM (cumple lo segundo). |
+| **Falla cerrada** si una herramienta de la línea base no responde | §20, regla 4 | Sin herramientas. |
+
+### Implicación de diseño que el plan no recoge (para decidir)
+
+El nivel 1 de V09 exige que **toda referencia entre por recuperación desde una base bibliográfica y traiga identificador (DOI/PMID)**. Hoy las fuentes son documentos que alguien sube al RAG (PDF/MD/TXT), y sus metadatos se extraen del propio texto, sin identificador. Con una aplicación estricta, **casi ninguna fuente subida a mano pasaría V09**. Hace falta decidir entre: (a) resolver cada documento subido contra Crossref/OpenAlex por título/autores para obtener su DOI; (b) permitir una excepción documentada para «documento interno aportado por el autor»; (c) exigir que el corpus entre solo desde la búsqueda externa. Esto condiciona 1.2, 1.3 y 4.1, y es previo a D2.
+
+### Diferencias entre el plan y el framework a revisar
+
+- El plan trata V07 como bloqueante siempre; el framework lo hace bloqueante **solo en revisiones** (V08 igual).
+- El plan pide «otra familia» de modelo para el Revisor; el framework solo exige «modelo distinto del Redactor» y deja la familia como propuesta (FW-4).
+- La regla del framework para 3.5 (cero omisiones en ≥ 60 defectos por criterio, kappa ≥ 0,80) es de la Capa B y la decide el panel; el mini conjunto del plan sirve solo para elegir modelo, no para certificar.
+
+---
+
 ## 3. Qué cambia respecto a lo que suponía el informe
 
 - «No evidenciado» sobre el Publicador queda resuelto: **no hay LLM ni compuerta**; el modelo es un artefacto de traza.
@@ -123,6 +155,7 @@ Defectos adicionales del Publicador: publica **siempre**; `published_url` y los 
 ## 4. Pendiente para cerrar la Fase 0
 
 - [ ] **0.1:** aportar los artefactos completos de PR-FW-001 y archivarlos bajo `docs/reports/PR-FW-001/`.
-- [ ] Aportar el texto del Framework v0.1 para completar los criterios marcados «definición pendiente».
+- [x] Criterios V01–V16 completados con el Framework v0.1 (recibido como PDF).
+- [ ] Versionar el framework en el repo (p. ej. `docs/framework/`) para que sea la fuente de la verdad citable; hoy solo existe como PDF fuera del repo.
 - [ ] Confirmar con los artefactos quién recibe los comentarios del Revisor en el Formateador/Publicador (0.3).
 - [ ] Decisiones D1–D5 del plan (condicionan las fases 3, 4 y 5).

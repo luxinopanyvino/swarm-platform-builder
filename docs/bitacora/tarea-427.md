@@ -44,3 +44,39 @@ relevante:
 
 - Sin código de producto modificado. Las fases 1 y siguientes quedan sin empezar: dependen de
   esta matriz y, la 3, 4 y 5, de las decisiones D1–D5 del plan.
+
+## 2026-10-21 — Actualización: criterios V01–V16 con el Framework v0.1
+
+- **Rama:** `docs/fw-fase0-matriz-implementacion` (misma PR #428)
+
+### Qué se hizo y por qué
+
+Se recibió el *Framework de redacción y validación de papers* v0.1 (PDF, 29/09/2026), que
+define los criterios que faltaban. Se reescribió la tabla por criterio de
+[`docs/reports/matriz-implementacion.md`](../reports/matriz-implementacion.md) con las
+definiciones reales de §9 (tipo, verificación y responsable), y se añadió un contraste con
+las reglas de §3, §10 y §20.
+
+- Resultado: **11 criterios ausentes** (V01, V02, V04–V08, V10, V11, V14, V15), **5 parciales**
+  (V03, V09, V12, V13, V16) y **ninguno implementado**.
+- Reglas del framework que el código incumple: el Formateador reescribe el cuerpo con un LLM
+  (el framework dice que no cambia); el Redactor añade fuentes por su cuenta; el Investigador
+  genera texto; falla abierto el Revisor; tras 3 vueltas se publica.
+- **Implicación de diseño no recogida en el plan:** V09 nivel 1 exige que toda referencia
+  venga de una base bibliográfica con DOI/PMID; las fuentes actuales son documentos subidos
+  al RAG sin identificador, así que casi ninguna pasaría. Hay que decidir cómo resolverlas
+  (Crossref por título, excepción documentada o solo búsqueda externa) antes de 1.2/1.3 y D2.
+- Diferencias plan ↔ framework: V07/V08 solo bloquean en revisiones; «otra familia» de modelo
+  para el Revisor es propuesta (FW-4), no requisito.
+
+### Definition of Done
+
+- [x] **AC3** — V01–V16 completados con el framework.
+- [ ] **AC2 (0.1)** — sigue pendiente. Se buscó en todo el repo, el historial de git,
+  `backend/evals/results` y `backend/data/dev.db`: PR-FW-001 no está. Hace falta el `article_id`
+  de esa ejecución, el texto publicado (`articles.body`) y lo que la traza no guarda
+  (`output_text` se recorta a 4000 caracteres y el feedback del Revisor no se persiste).
+
+### Fuera de alcance / notas
+
+- El framework solo existe como PDF fuera del repo; conviene versionarlo.
