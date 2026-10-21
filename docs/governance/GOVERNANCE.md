@@ -59,6 +59,13 @@ por las mismas reglas que el humano, con tres principios propios:
    entrada datada en [`docs/bitacora/`](../../docs/bitacora/) (`tarea-<N>.md`): qué
    se hizo, cumplimiento del DoD, verificación y enlace a la PR. **La bitácora es el
    registro de trazabilidad de oficio** de la actividad de los agentes.
+   **Alcance: todo cambio.** Cada fix, implementación o parche —lo haga un agente o
+   una persona— deja su bitácora, con cuatro datos obligatorios: **qué** se hizo,
+   **por qué** (la causa o la necesidad, no solo el síntoma), **cuándo** (fecha de la
+   entrada) y **dónde** (archivos y funciones o componentes tocados, y dónde estaba el
+   problema). Va **en la misma PR que el cambio**, nunca después: una bitácora
+   empujada tras el merge no llega a `develop` y el cambio queda sin traza. Lo que no
+   se pudo verificar (p. ej. sin prueba en navegador) se declara en ella, no se omite.
 3. **Entrega.** Los agentes que **cambian código** entregan en **rama + PR a
    `develop`** (`Closes #N`), **una PR por unidad revisable**, sin auto-merge ni
    cierre manual del issue. Los agentes que **reconcilian estado externo** (p. ej.
@@ -115,6 +122,8 @@ Una tarea/épica está *Ready* cuando:
 - [ ] Tests automatizados que cubren el cambio (y pasan en CI).
 - [ ] Sin secretos en el diff; dependencias nuevas escaneadas.
 - [ ] Documentación/ADR/spec actualizados.
+- [ ] **Bitácora** (`docs/bitacora/tarea-<N>.md`) en la misma PR, con qué, por qué,
+  cuándo y dónde ([§3.1](#31-trabajo-dirigido-por-agentes), punto 2).
 - [ ] Observabilidad: logs/métricas relevantes añadidos si aplica.
 - [ ] **Si toca agentes o modelos**, se cumple además la DoD de evaluación
   ([edd-discipline.md §5](edd-discipline.md#5-dod-de-evaluación--para-cerrar)): el

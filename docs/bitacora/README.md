@@ -10,6 +10,8 @@ Registro cronológico de las tareas del backlog resueltas por el agente
 - Cada ejecución **exitosa** añade una entrada datada al archivo de su tarea. Si
   una tarea se retoma o re-ejecuta, se **añade** una nueva entrada (no se borra la
   anterior), preservando la traza completa.
+- **Todo fix, implementación o parche lleva bitácora** (GOVERNANCE §3.1, punto 2),
+  con: **qué** se hizo, **por qué**, **cuándo** y **dónde** (archivos y funciones).
 - La bitácora se versiona junto al código en la misma rama/PR de la tarea, de modo
   que el registro viaja con el cambio que documenta.
 
@@ -25,8 +27,11 @@ Registro cronológico de las tareas del backlog resueltas por el agente
 - **Spec/ADR:** <referencias o "—">
 - **Dependencias:** <#X resueltas o "ninguna">
 
-### Qué se hizo
-<resumen breve del cambio>
+### Dónde estaba el problema
+<archivo y función/componente donde se originaba, y por qué fallaba>
+
+### Qué se hizo y por qué
+<cambio por archivo, con el motivo de cada uno>
 
 ### Definition of Done
 - [x] <criterio 1> — <cómo se cumple>
