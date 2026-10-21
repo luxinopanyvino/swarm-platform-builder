@@ -19,6 +19,8 @@ class AgentState(TypedDict):
     draft_text: str
     feedback: Annotated[List[str], operator.add]
     approval_score: float
+    # `ok` | `not_verified` (el Revisor no produjo una revisión interpretable; SPEC-032/AC15)
+    review_status: str
     formatted_text: str
     scientific_format: str
     # Fuentes que el Formateador dejó fuera por incompletas, con los campos que faltan (SPEC-032/AC2)

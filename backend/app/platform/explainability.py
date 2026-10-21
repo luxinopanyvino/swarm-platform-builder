@@ -177,14 +177,20 @@ def decision_of(salida: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     Solo la tienen los pasos que **deciden** —hoy el revisor—; para el resto la
     columna queda a `NULL`, que dice más que un diccionario vacío.
     """
-    claves = ("approval_score", "coherent", "user_decision")
+    claves = ("approval_score", "coherent", "user_decision", "review_status")
     if not any(clave in salida for clave in claves):
         return None
-    return {
-        "score": salida.get("approval_score"),
+    status = salida.get("review_status")
+    # Una revisión no verificada no tiene puntuación: no se traza el 0 del enrutador.
+    score = None if status == "not_verified" else salida.get("approval_score")
+    decision = {
+        "score": score,
         "coherent": salida.get("coherent"),
         "hitl_outcome": salida.get("user_decision"),
     }
+    if status is not None:
+        decision["review_status"] = status
+    return decision
 
 
 def rationale_of(salida: Dict[str, Any]) -> Optional[str]:
