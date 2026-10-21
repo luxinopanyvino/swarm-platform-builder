@@ -58,6 +58,15 @@ class Settings(BaseModel):
     # con DEBUG=false** (ver `_disable_dev_only_flags`).
     ENABLE_DEV_SEED: bool = False
 
+    # Compuerta de publicación (SPEC-032, ADR-0011). Con `true` (por defecto) los
+    # resultados `failed` y `not_verified` bloquean; con `false` se registran y se
+    # avisan pero no impiden llegar a la aprobación humana, que sigue siendo
+    # obligatoria. Es el modo de despliegue gradual, no el diseño.
+    PUBLICATION_GATE_ENFORCE: bool = True
+    # Permite que el propietario apruebe su propio artículo, para entornos de un
+    # solo usuario. **Imposible de encender con DEBUG=false** (`_DEV_ONLY_FLAGS`).
+    PUBLICATION_ALLOW_SELF_APPROVAL: bool = False
+
     # Default role assigned to users who self-register. Minimal privilege by
     # design: only "lector" or "publico" are accepted; anything else falls back
     # to "lector". Never grant "redactor"/"admin" on signup.
@@ -330,9 +339,10 @@ def _build_settings() -> Settings:
 # - `ENABLE_DEV_ROLE_PROMOTION` (SPEC-015/T1.5/AC4): atajo que permite a un usuario
 #   cambiarse el rol a sí mismo. En producción es una escalada de privilegios.
 # - `ENABLE_DEV_SEED` (SPEC-015/T1.6/AC5): siembra cuentas con contraseña conocida.
+# - `PUBLICATION_ALLOW_SELF_APPROVAL` (SPEC-032/AC8): el propietario se aprueba a sí mismo.
 #
 # Cualquier flag nuevo que abra un atajo de desarrollo va en esta tupla.
-_DEV_ONLY_FLAGS = ("ENABLE_DEV_ROLE_PROMOTION", "ENABLE_DEV_SEED")
+_DEV_ONLY_FLAGS = ("ENABLE_DEV_ROLE_PROMOTION", "ENABLE_DEV_SEED", "PUBLICATION_ALLOW_SELF_APPROVAL")
 
 
 def _disable_dev_only_flags(merged: dict[str, Any]) -> None:

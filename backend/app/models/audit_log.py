@@ -33,6 +33,7 @@ class AuditAction:
 
     ROLE_CHANGED = "role.changed"
     ARTICLE_PUBLISHED = "article.published"
+    ARTICLE_APPROVED = "article.approved"
     RAG_DOCUMENT_DELETED = "rag.document.deleted"
     LOGIN_FAILED = "auth.login_failed"
     ACCOUNT_LOCKED = "auth.account_locked"
@@ -42,6 +43,7 @@ class AuditAction:
         return (
             cls.ROLE_CHANGED,
             cls.ARTICLE_PUBLISHED,
+            cls.ARTICLE_APPROVED,
             cls.RAG_DOCUMENT_DELETED,
             cls.LOGIN_FAILED,
             cls.ACCOUNT_LOCKED,
