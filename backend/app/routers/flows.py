@@ -9,8 +9,22 @@ from app.models import (
 )
 from app.core.database import get_session
 from app.routers.auth import get_current_user
+from app.platform.flow_validation import blocking, validate_flow
 
 router = APIRouter(prefix="/api/v1/flows", tags=["flows"])
+
+
+def _reject_invalid(nodes: list, edges: list) -> None:
+    """422 con los problemas estructurados si el grafo trae errores bloqueantes."""
+    errors = blocking(validate_flow(nodes, edges))
+    if errors:
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "message": "El flujo no es válido",
+                "issues": [issue.as_dict() for issue in errors],
+            },
+        )
 
 
 @router.get("", response_model=list[SavedFlowResponse])
@@ -38,6 +52,7 @@ async def create_flow(
     session: AsyncSession = Depends(get_session)
 ):
     """Save a new visual flow."""
+    _reject_invalid(req.nodes, req.edges)
     flow = SavedFlowModel(
         name=req.name,
         author_id=UUID(token_data["user_id"]),
@@ -90,6 +105,11 @@ async def update_flow(
     flow = result.scalars().first()
     if not flow:
         raise HTTPException(status_code=404, detail="Saved flow not found")
+
+    _reject_invalid(
+        req.nodes if req.nodes is not None else flow.nodes,
+        req.edges if req.edges is not None else flow.edges,
+    )
 
     if req.name is not None:
         flow.name = req.name
