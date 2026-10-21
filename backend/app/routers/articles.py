@@ -277,7 +277,11 @@ async def _publish_through_the_gate(
             # El informe se conserva aunque la publicación se rechace después: la
             # evaluación ocurrió y es evidencia (AC6), no parte de una publicación.
             await session.commit()
-            await session.refresh(article)
+            # El commit suelta el bloqueo de la fila: se vuelve a tomar y se vuelve a
+            # comprobar el estado, que pudo cambiar mientras se evaluaba (CHK030).
+            await session.refresh(article, with_for_update=True)
+            if article.status not in allowed_statuses:
+                raise HTTPException(status_code=409, detail="El artículo no está en un estado que permita publicarlo")
             denial, warning = approval_denial(
                 article=article, user_id=user_id, role=role, report=report,
                 enforce=settings.PUBLICATION_GATE_ENFORCE,
@@ -321,7 +325,9 @@ async def approve_article(
     y un informe de compuerta vigente y sin bloqueantes. Registra quién, cuándo y
     qué texto (huella) se aprobó.
     """
-    stmt = select(ArticleModel).where(ArticleModel.id == article_id)
+    # `FOR UPDATE`: dos aprobaciones simultáneas no pueden leer `in_review` a la vez;
+    # la segunda espera, ve `published` y recibe 409 (SPEC-032 CHK030). SQLite lo ignora.
+    stmt = select(ArticleModel).where(ArticleModel.id == article_id).with_for_update()
     result = await session.execute(stmt)
     article = result.scalars().first()
 
@@ -389,7 +395,7 @@ async def publish_article_direct(
     propietario, autor responsable, compuerta sobre el texto actual— y consulta
     `can_publish`. Si no hay informe vigente, evalúa la compuerta primero.
     """
-    stmt = select(ArticleModel).where(ArticleModel.id == article_id)
+    stmt = select(ArticleModel).where(ArticleModel.id == article_id).with_for_update()
     result = await session.execute(stmt)
     article = result.scalars().first()
 
