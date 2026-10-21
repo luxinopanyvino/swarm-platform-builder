@@ -161,3 +161,13 @@ def test_la_logica_del_script_de_postgres_detecta_lo_que_falta():
     sin_etiqueta = (pg.ESPERADO_ENUM - {"REQUIRES_HUMAN_REVIEW"},) + completo[1:]
     assert "REQUIRES_HUMAN_REVIEW" in pg.problemas(*sin_etiqueta)[0]
     assert pg.dsn("postgresql+asyncpg://u:p@h/db") == "postgresql://u:p@h/db"
+
+
+def test_la_muestra_de_la_revista_tiene_el_formato_del_script_y_es_real():
+    ruta = REPO / "backend" / "evals" / "reference_resolution" / "journal-sample.jsonl"
+    cabecera = json.loads(ruta.read_text(encoding="utf-8").splitlines()[0])
+    assert cabecera["provenance"] == "recorded"  # no escrita de memoria
+    filas = _script().cargar(ruta)
+    assert filas and len({f["id"] for f in filas}) == len(filas)
+    assert all(f["kind"] in ("valid_with_doi", "valid_without_doi", "fabricated", "altered") for f in filas)
+    assert all(f["expect"] == ("block" if f["kind"] in ("fabricated", "altered") else "pass") for f in filas)
