@@ -79,8 +79,8 @@ final tras el Formateador**, (3) aprobación humana explícita (FW §3, regla de
   campo vacío ya no se omite en silencio al formatear.
 - [ ] **AC3** — *Existencia y coincidencia (V09)* *Given* una referencia con DOI, o sin él pero
   con título y autores · *When* se resuelve contra Crossref y, si no aparece, OpenAlex ·
-  *Then* pasa solo si existe y coinciden título, autores, año y revista (umbral de
-  coincidencia declarado en la configuración); una discrepancia es bloqueante y una
+  *Then* pasa solo si existe y coinciden título (similitud ≥ 0,90), primer autor y al menos la mitad de los demás, año
+  (±1 solo preprint↔publicada con el mismo DOI) y revista, con umbrales en `template.yaml`; una discrepancia es bloqueante y una
   referencia sin resolver es «no verificado» y también bloquea. Si el autor aporta un DOI
   a mano, se verifica por este mismo camino.
 - [ ] **AC4** — *Falla cerrada* *Given* que Crossref y OpenAlex no responden (error, tiempo
@@ -90,7 +90,8 @@ final tras el Formateador**, (3) aprobación humana explícita (FW §3, regla de
 - [ ] **AC5** — *Posición y alcance de la compuerta* *Given* un flujo completo · *When*
   termina el Formateador · *Then* la compuerta se evalúa sobre `formatted_text` (el texto
   que se publicaría), no sobre el borrador, y cada criterio del conjunto en vigor obtiene
-  exactamente uno de: `passed`, `failed`, `not_verified`, `not_implemented`.
+  exactamente uno de: `passed`, `failed`, `not_verified`, `not_implemented`. Solo `failed` y `not_verified` bloquean;
+  `not_implemented` **no** bloquea y el informe lo lista como pendiente con la fase que lo construye.
 - [ ] **AC6** — *Informe persistido* *Given* una evaluación de la compuerta · *When* termina ·
   *Then* se guarda un informe con estado y evidencia por criterio, la huella (SHA-256) del
   texto evaluado, la fecha y la ejecución, y se puede leer por API y verlo desde el artículo.
@@ -98,11 +99,15 @@ final tras el Formateador**, (3) aprobación humana explícita (FW §3, regla de
 - [ ] **AC7** — *Revisión humana tras 3 vueltas* *Given* que se agotan las 3 vueltas y siguen
   abiertos bloqueantes de juicio · *When* el enrutador decide el siguiente paso · *Then* el
   artículo pasa a «requiere revisión humana», **no** se ejecutan Formateador ni
-  Publicador y se emite el evento SSE correspondiente.
+  Publicador y se emite el evento SSE correspondiente. El estado es `requires_human_review`;
+  solo una persona sale de él (reejecutar → `draft` con las vueltas reiniciadas, o `reject` →
+  `rejected`).
 - [ ] **AC8** — *Aprobación humana explícita* *Given* una compuerta sin bloqueantes · *When* el
   Publicador termina · *Then* el artículo queda en `IN_REVIEW` y **nunca** en `PUBLISHED`.
   `approve` registra usuario, decisión, fecha y huella del texto aprobado; se rechaza (409)
-  si el texto cambió desde la compuerta o si el último informe tiene bloqueantes.
+  si el texto cambió desde la compuerta o si el último informe tiene bloqueantes, y (403) si
+  quien aprueba es el usuario que lanzó el pipeline o no es el revisor asignado ni un admin; y
+  (409) si el artículo no tiene autor responsable declarado.
 - [ ] **AC9** — *Publicador sin LLM* *Given* una ejecución completa · *When* corre el Publicador ·
   *Then* no llama al LLM (0 tokens) y su traza no registra modelo (`model` nulo), a diferencia
   de hoy. Un test falla si el módulo importa o invoca `call_llm`.
@@ -112,7 +117,12 @@ final tras el Formateador**, (3) aprobación humana explícita (FW §3, regla de
   bloqueantes y aprobación humana. Un 80 con un bloqueante abierto no publica. Si la revisión
   no se puede interpretar o el LLM falla, el Revisor **no aprueba**: queda «no verificado» y
   cuenta como bloqueante (se elimina el 85 por defecto y la revisión inventada).
-- [ ] **AC11** — *Regresión* *Given* un manuscrito válido con referencias resueltas · *When*
+- [ ] **AC11** — *Estructura IMRaD (V03).* *Given* un texto final sin alguna de las secciones
+  Introducción, Métodos, Resultados, Discusión o Referencias, o con ellas fuera de orden, o
+  con Resultados y Discusión fundidos · *When* corre la compuerta · *Then* V03 es `failed`
+  y nombra la sección ausente o desordenada. El Redactor produce Resultados y Discusión como
+  secciones separadas.
+- [ ] **AC12** — *Regresión* *Given* un manuscrito válido con referencias resueltas · *When*
   recorre el pipeline y recibe aprobación · *Then* llega a `PUBLISHED` y los tests
   existentes siguen en verde.
 
@@ -125,31 +135,34 @@ aplican y con qué parámetros, igual que `flow_rules` en SPEC-… de flujo. As�
 vive en código disperso y otro proyecto puede traer la suya.
 
 - **Criterios de esta fase:** marcadores de posición (1.1), estructura de referencias (V09
-  nivel 1, 1.2), existencia (V09 nivel 2, 1.3), estructura (V03), y los criterios cuyos datos
+  nivel 1, 1.2), existencia (V09 nivel 2, 1.3), estructura IMRaD (V03, AC11), y los criterios cuyos datos
   aún no existen (V01, V05–V08, V12–V14, V16) se **declaran** y resultan `not_implemented`
   hasta que su fase los construya.
 - **Resolución de referencias** (`reference_resolver.py`): cliente a Crossref y OpenAlex por
   la puerta de salida única `platform/egress.py` (`safe_get`), como exige SPEC-024. Caché de
   resultados positivos con TTL; **nunca** se aprueba desde una respuesta ausente (AC4).
-  Coincidencia por similitud normalizada de título/autores, año exacto y revista; el umbral
-  se configura.
+  Coincidencia: título con similitud normalizada ≥ 0,90; primer autor y al menos la mitad de los
+  demás; año exacto (±1 solo preprint↔publicada con el mismo DOI); revista normalizada por alias.
+  Los umbrales se leen de `gate.references` en `template.yaml`.
 - **Fuentes con identificador.** El Investigador deja de dejar `doi/year/journal` vacíos:
   conserva lo que el documento traiga y, al resolver, **enriquece** la fuente con los
   metadatos canónicos; el Formateador solo imprime fuentes con campos completos.
 - **Informe:** tabla `publication_gate_reports` (migración Alembic, con test de paridad
   `create_all`/migraciones) con `article_id`, `run_id`, `text_sha256`, `criteria` (JSON),
   `created_at`; `GET /api/v1/articles/{id}/gate-report`.
-- **Estado «requiere revisión humana»:** nuevo valor de `ArticleStatus`; en `routing.py`, al
+- **Estado «requiere revisión humana»:** nuevo valor `requires_human_review` de `ArticleStatus` (reejecutar lo devuelve a `draft` y reinicia `loop_count`; `reject` lo pasa a `rejected`); en `routing.py`, al
   agotar vueltas con revisión rechazada, el router devuelve el fin en lugar de
   `next_after(...)`, y la ejecución lo marca con el nuevo estado.
 - **Aprobación:** `run_publicador` deja de escribir `PUBLISHED`; deja el artículo en
   `IN_REVIEW` con el informe. `approve` exige un informe vigente sin bloqueantes cuya huella
-  coincida con el cuerpo y guarda `approved_by`, `approved_at`, `approved_text_sha256`.
+  coincida con el cuerpo, un autor responsable declarado y que quien firma no sea quien lanzó
+  el pipeline; guarda `approved_by`, `approved_at`, `approved_text_sha256`. Se añade el campo
+  `responsible_author_id` al artículo (migración).
 - **Traza:** `use_cases.py` registra `model = null` para agentes que declaran que no usan LLM.
 - **Decisión unificada:** `can_publish(review, gate, approval)` en un único módulo, usado por
   el Publicador y por `approve`; sin copias.
 - **Ficheros afectados:** `adapters/publicador.py`, `adapters/revisor.py`,
-  `adapters/investigador.py`, `adapters/formateador.py`, `platform/engine/routing.py`,
+  `adapters/investigador.py`, `adapters/formateador.py`, `adapters/redactor.py` (prompt: separar Resultados y Discusión), `platform/engine/routing.py`,
   `application/use_cases.py`, `routers/articles.py`, `models/`, `alembic/versions/`,
   `projects/alejandria-magazine/template.yaml`, `platform/projects/loader.py`, frontend (estado
   del artículo e informe) y `docs/governance/data-retention.md` (la tabla nueva acumula rastro).
@@ -158,9 +171,9 @@ vive en código disperso y otro proyecto puede traer la suya.
 
 | Riesgo | Impacto | Mitigación |
 |--------|---------|------------|
-| Con falla cerrada y criterios aún no construidos, **nada podría publicarse** | Bloqueo total del flujo | `not_implemented` es un estado propio y se declara qué criterios **bloquean ya** (ver Clarifications); se retira conforme cada fase los implementa |
+| Con falla cerrada y criterios aún no construidos, **nada podría publicarse** | Bloqueo total del flujo | `not_implemented` es un estado propio que no bloquea; bloquean ya marcadores, V03, V09 y la decisión unificada (decidido en Clarifications); cada fase lo retira al implementar su criterio |
 | Documentos subidos a mano sin DOI no se resuelven por título | Falsos «no verificado» | El autor aporta el DOI; informe indica el motivo; se mide la tasa de resolución |
-| Falsos positivos de coincidencia (títulos parecidos) | Referencia correcta bloqueada | Umbral configurable y evidencia en el informe; revisión humana final |
+| Falsos positivos de coincidencia (títulos parecidos) | Referencia correcta bloqueada | Umbrales configurables (0,90 de partida), evidencia en el informe y revisión humana final; se mide la tasa con referencias reales |
 | Crossref/OpenAlex lentos o caídos | Publicación detenida | Caché de positivos, tiempo máximo por consulta y falla cerrada explícita |
 | Enviar títulos de manuscritos no publicados a un servicio externo | Privacidad | Solo se envían metadatos de **referencias** ya citadas, no el texto; se revisan las condiciones de uso (FW §20.7) |
 | Flujos y artículos existentes que quedarían bloqueados | Regresión | Modo de despliegue que registra sin bloquear antes de activar (como `FLOW_RULES_ENFORCE`) |
@@ -180,6 +193,9 @@ vive en código disperso y otro proyecto puede traer la suya.
 - **Publicador sin LLM:** test estructural y de traza (AC9, PR-REG-11).
 - **Migración:** `tests/test_migrations.py` verifica que el esquema migrado coincide con
   `create_all`.
+- **Estado `not_implemented`:** test que verifica que no bloquea y que el informe lo lista con su
+  fase; y un test de gobernanza que falla si un criterio se declara implementado en el código de
+  su fase pero sigue figurando como `not_implemented` en la plantilla.
 - **Regresión:** suite completa; los 4 fallos preexistentes no empeoran.
 - Las definiciones de PR-REG-xx viven en el informe de pruebas, que no está en el repositorio:
   se enlazan aquí por ID.
@@ -197,20 +213,13 @@ vive en código disperso y otro proyecto puede traer la suya.
 
 ## Clarifications
 
-- **[NEEDS CLARIFICATION] Criterios que bloquean ya.** FW §3 dice que un criterio bloqueante
-  no comprobable no se aprueba, pero V01, V05–V08, V12–V14 y V16 no tienen datos hasta las
-  Fases 4 y 5: aplicado al pie de la letra, **nada se publicaría** hasta entonces. Propuesta:
-  `not_implemented` no bloquea y se lista como pendiente; bloquean desde ya marcadores,
-  estructura (V03), referencias (V09) y la decisión unificada. Falta confirmarlo con producto
-  y el panel.
-- **[NEEDS CLARIFICATION] Umbral de coincidencia** de título/autores/año/revista para V09 y
-  si el año admite ±1 (preprint frente a versión publicada).
-- **[NEEDS CLARIFICATION] Autor humano aprobador** (D4 del plan): quién puede ejecutar
-  `approve` en las pruebas y en producción; hoy lo permite el revisor asignado o un admin.
-- **[NEEDS CLARIFICATION] V03 por perfil.** Sin ficha de estudio (Fase 4) solo se puede
-  comprobar IMRaD por defecto; el prompt del Redactor funde Resultados y Discusión.
-- **[NEEDS CLARIFICATION] Nombre y semántica del nuevo estado** (`requires_human_review`) y su
-  transición de vuelta tras la corrección.
+### Session 2026-10-21
+
+- Q: ¿Qué criterios bloquean desde la Fase 1, si V01, V05–V08, V12–V14 y V16 no tienen datos hasta las Fases 4 y 5? → A: `not_implemented` es un estado propio que **no bloquea** y se lista en el informe como pendiente; bloquean desde ya marcadores de posición, estructura (V03), referencias (V09) y la decisión unificada.
+- Q: ¿Qué cuenta como «coincidencia» de una referencia en V09? → A: **título** con similitud normalizada ≥ 0,90; **autores**: coincide el apellido del primer autor y al menos la mitad de los demás; **año** exacto, o ±1 solo si es preprint↔versión publicada con el mismo DOI; **revista** coincidente tras normalizar alias y abreviaturas. Los umbrales viven en `template.yaml` (`gate.references`), no en código.
+- Q: ¿Quién puede aprobar la publicación? → A: un **humano distinto del usuario que lanzó el pipeline**: el revisor asignado o un administrador (como hoy). El registro guarda quién firma, y el artículo debe tener un **autor responsable** declarado (V13); sin él no se puede aprobar.
+- Q: ¿Qué estructura valida V03 sin ficha de estudio? → A: **IMRaD por defecto** (Introducción, Métodos, Resultados, Discusión y Referencias, en ese orden). Se cambia el prompt del Redactor para separar Resultados y Discusión (hoy van fundidos). Con la ficha (Fase 4) V03 leerá el perfil que ella declare, con el mismo mecanismo.
+- Q: ¿Cómo se llama el estado de «requiere revisión humana» y cómo se sale de él? → A: valor `requires_human_review` de `ArticleStatus`. Solo sale por una persona: o reejecuta el pipeline (vuelve a `draft`, con el contador de vueltas reiniciado y los comentarios del Revisor visibles) o lo rechaza con `reject` (pasa a `rejected`). No hay salida automática.
 
 ## 8. Backlog (sincronización SDD)
 
@@ -240,7 +249,7 @@ tasks:
     title: "Compuerta determinista en el Publicador sobre el texto final"
     sev: high
     depends_on: [T20.1, T20.2, T20.3]
-    acceptance: [AC5]
+    acceptance: [AC5, AC11]
   - id: T20.5
     title: "Informe de compuerta persistido y consultable"
     sev: medium
@@ -265,5 +274,5 @@ tasks:
     title: "Regla de decisión unificada y Revisor que no aprueba por defecto"
     sev: high
     depends_on: [T20.4, T20.6, T20.7]
-    acceptance: [AC10, AC11]
+    acceptance: [AC10, AC12]
 ```
