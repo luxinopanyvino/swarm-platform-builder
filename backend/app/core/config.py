@@ -47,6 +47,8 @@ class Settings(BaseModel):
     # así que conservarla más tiempo alargaría por la puerta de atrás la
     # retención de lo que el usuario escribió.
     RETENTION_AGENT_RUN_STEPS_DAYS: int = 90
+    #: Informes de la compuerta de publicación (SPEC-032/AC16): solo los de artículos no publicados.
+    RETENTION_GATE_REPORTS_DAYS: int = 90
     RETENTION_CHECKPOINTS_DAYS: int = 30
     RETENTION_NOTIFICATIONS_DAYS: int = 90
     RETENTION_ORPHAN_ASSETS_DAYS: int = 30
@@ -63,6 +65,9 @@ class Settings(BaseModel):
     # avisan pero no impiden llegar a la aprobación humana, que sigue siendo
     # obligatoria. Es el modo de despliegue gradual, no el diseño.
     PUBLICATION_GATE_ENFORCE: bool = True
+    #: Correo de contacto que se envía a Crossref/OpenAlex en el `User-Agent` (su «polite
+    #: pool»). Va en configuración, no en el repositorio; vacío = sin identificar.
+    PUBLICATION_GATE_CONTACT_EMAIL: str = ""
     # Permite que el propietario apruebe su propio artículo, para entornos de un
     # solo usuario. **Imposible de encender con DEBUG=false** (`_DEV_ONLY_FLAGS`).
     PUBLICATION_ALLOW_SELF_APPROVAL: bool = False
@@ -231,6 +236,7 @@ def _build_settings() -> Settings:
     otel = yaml_config.get("otel", {})
     engine = yaml_config.get("engine", {})
     egress = yaml_config.get("egress", {})
+    publication = yaml_config.get("publication", {})
 
     merged: dict[str, Any] = {
         "APP_NAME": app.get("name", "Alejandria Magazine"),
@@ -252,6 +258,7 @@ def _build_settings() -> Settings:
         "RETENTION_AUDIT_LOG_DAYS": retention.get("audit_log_days", 365),
         "RETENTION_AGENT_RUNS_DAYS": retention.get("agent_runs_days", 90),
         "RETENTION_AGENT_RUN_STEPS_DAYS": retention.get("agent_run_steps_days", 90),
+        "RETENTION_GATE_REPORTS_DAYS": retention.get("gate_reports_days", 90),
         "RETENTION_CHECKPOINTS_DAYS": retention.get("checkpoints_days", 30),
         "RETENTION_NOTIFICATIONS_DAYS": retention.get("notifications_days", 90),
         "RETENTION_ORPHAN_ASSETS_DAYS": retention.get("orphan_assets_days", 30),
@@ -305,6 +312,10 @@ def _build_settings() -> Settings:
         "EGRESS_DENIED_DOMAINS": egress.get("denied_domains", ""),
         "EGRESS_ALLOW_HTTP": egress.get("allow_http", False),
         "EGRESS_MAX_REDIRECTS": egress.get("max_redirects", 3),
+        # Compuerta de publicación (SPEC-032)
+        "PUBLICATION_GATE_ENFORCE": publication.get("gate_enforce", True),
+        "PUBLICATION_GATE_CONTACT_EMAIL": publication.get("gate_contact_email", ""),
+        "PUBLICATION_ALLOW_SELF_APPROVAL": publication.get("allow_self_approval", False),
         # RAG global defaults
         "RAG_CHUNK_SIZE": yaml_config.get("rag", {}).get("chunk_size", 800),
         "RAG_CHUNK_OVERLAP": yaml_config.get("rag", {}).get("chunk_overlap", 80),

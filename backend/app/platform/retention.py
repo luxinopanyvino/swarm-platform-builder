@@ -41,6 +41,8 @@ from app.models.article import ArticleModel
 from app.models.audit_log import AuditLogModel
 from app.models.checkpoint import FlowCheckpointModel
 from app.models.notification import NotificationModel
+from app.models.enums import ArticleStatus
+from app.models.publication_gate_report import PublicationGateReportModel
 
 logger = logging.getLogger(__name__)
 
@@ -167,6 +169,14 @@ async def purge(session: AsyncSession, *, apply: bool = False) -> PurgeResult:
          settings.RETENTION_AGENT_RUN_STEPS_DAYS, None),
         ("flow_checkpoints", FlowCheckpointModel, FlowCheckpointModel.created_at,
          settings.RETENTION_CHECKPOINTS_DAYS, None),
+        # Informes de la compuerta (SPEC-032/AC16): se conservan mientras el artículo
+        # esté publicado, porque son la evidencia de por qué se aprobó; los demás
+        # caducan a la par que las ejecuciones del pipeline.
+        ("gate_reports", PublicationGateReportModel, PublicationGateReportModel.created_at,
+         settings.RETENTION_GATE_REPORTS_DAYS,
+         PublicationGateReportModel.article_id.notin_(
+             select(ArticleModel.id).where(ArticleModel.status == ArticleStatus.PUBLISHED)
+         )),
         # Solo las ya leídas: una notificación sin leer sigue siendo pendiente de
         # alguien, por vieja que sea.
         ("notifications", NotificationModel, NotificationModel.created_at,

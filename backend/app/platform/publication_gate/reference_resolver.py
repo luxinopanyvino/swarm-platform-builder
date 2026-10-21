@@ -26,6 +26,7 @@ from dataclasses import dataclass, field
 from typing import Any, Awaitable, Callable, Iterable, Optional
 from urllib.parse import quote
 
+from app.platform.metrics import observe_gate_external_error, observe_gate_reference
 from app.platform.publication_gate.references import is_citable
 from app.platform.publication_gate.types import CriterionResult, CriterionStatus
 
@@ -225,12 +226,21 @@ class PositiveCache:
 # ── Resolución ──────────────────────────────────────────────────────────────
 
 
+def _proveedor(url: str) -> str:
+    return "crossref" if url.startswith(CROSSREF) else "openalex"
+
+
 class _Session:
     def __init__(self, cfg: ResolverConfig, fetch: Fetch, sleep, clock, cache: PositiveCache):
         self.cfg, self.fetch, self.sleep, self.clock, self.cache = cfg, fetch, sleep, clock, cache
         self.started = clock()
         ua = "AlejandrIA-PublicationGate/1.0"
-        self.headers = {"User-Agent": f"{ua} (mailto:{cfg.contact_email})" if cfg.contact_email else ua}
+        # El correo de contacto identifica al cliente ante Crossref/OpenAlex (su «polite
+        # pool»). Sale de la configuración, nunca del repositorio.
+        from app.core.config import settings
+
+        correo = cfg.contact_email or getattr(settings, "PUBLICATION_GATE_CONTACT_EMAIL", "")
+        self.headers = {"User-Agent": f"{ua} (mailto:{correo})" if correo else ua}
 
     def expired(self) -> bool:
         return self.clock() - self.started > self.cfg.max_total_s
@@ -257,10 +267,12 @@ class _Session:
                     return data
                 # 429 y 5xx: transitorios; se reintenta con espera, sin insistir más.
                 ultimo = f"HTTP {r.status_code}"
+                observe_gate_external_error(_proveedor(url), "rate_limited" if r.status_code == 429 else "http_error")
             except Unavailable as exc:
                 ultimo = str(exc)
             except Exception as exc:  # red, TLS, tiempo agotado, egress bloqueado
                 ultimo = f"{type(exc).__name__}: {exc}"
+                observe_gate_external_error(_proveedor(url), "network")
             if intento < self.cfg.retries:
                 await self.sleep(self.cfg.backoff_s * (2**intento))
         raise Unavailable(ultimo)
@@ -269,6 +281,7 @@ class _Session:
 async def _lookup_doi(sess: _Session, doi: str) -> Optional[Canonical]:
     cached = sess.cache.get(doi)
     if cached:
+        observe_gate_reference("cache_hit")
         return cached
     errors = []
     for fetcher in (_crossref_doi, _openalex_doi):
@@ -436,6 +449,11 @@ async def check_reference_existence(
         else:
             out = await _resolve_one(sess, src)
         enriched.append(out.source or src)
+        observe_gate_reference(
+            "resolved" if out.status is CriterionStatus.PASSED
+            else "mismatch" if out.status is CriterionStatus.FAILED
+            else "not_verified"
+        )
         if out.status is not CriterionStatus.PASSED:
             evidence.append(
                 {

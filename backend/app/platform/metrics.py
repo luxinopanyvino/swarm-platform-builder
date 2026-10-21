@@ -100,6 +100,49 @@ def route_label(request, response=None) -> str:
     # sería justo el fallo de cardinalidad que este módulo evita.
     return "unmatched"
 
+# ── Compuerta de publicación (SPEC-032 §7) ─────────────────────────────────
+# Etiquetas de cardinalidad fija: el criterio (conjunto pequeño y declarado por el
+# proyecto), su estado y, para las referencias, el resultado de cada consulta.
+gate_criterion_total = Counter(
+    "publication_gate_criterion_total",
+    "Resultados de los criterios de la compuerta de publicación.",
+    ["criterion", "status"],
+    registry=REGISTRY,
+)
+gate_reference_total = Counter(
+    "publication_gate_reference_total",
+    "Resolución de referencias: aciertos de caché, resueltas, discrepancias y no verificadas por motivo.",
+    ["outcome"],
+    registry=REGISTRY,
+)
+gate_external_errors_total = Counter(
+    "publication_gate_external_errors_total",
+    "Respuestas de Crossref/OpenAlex que no sirvieron (incluido 429), por proveedor y motivo.",
+    ["provider", "reason"],
+    registry=REGISTRY,
+)
+
+
+def observe_gate_criterion(criterion: str, status: str) -> None:
+    try:
+        gate_criterion_total.labels(criterion, status).inc()
+    except Exception:  # pragma: no cover - defensivo
+        logger.debug("No se pudo registrar la métrica de la compuerta", exc_info=True)
+
+
+def observe_gate_reference(outcome: str) -> None:
+    try:
+        gate_reference_total.labels(outcome).inc()
+    except Exception:  # pragma: no cover - defensivo
+        logger.debug("No se pudo registrar la métrica de referencias", exc_info=True)
+
+
+def observe_gate_external_error(provider: str, reason: str) -> None:
+    try:
+        gate_external_errors_total.labels(provider, reason).inc()
+    except Exception:  # pragma: no cover - defensivo
+        logger.debug("No se pudo registrar el error externo de la compuerta", exc_info=True)
+
 
 def observe_llm_call(
     *,

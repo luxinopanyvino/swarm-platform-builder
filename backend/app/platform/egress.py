@@ -110,7 +110,15 @@ def _resolver(host: str, port: int) -> List[str]:
     return direcciones
 
 
-def is_egress_allowed(url: str) -> Decision:
+#: Servicios públicos de metadatos bibliográficos que la compuerta de publicación
+#: consulta (SPEC-032/AC16). Se añaden a la allowlist **solo para ella**: si
+#: `EGRESS_ALLOWED_DOMAINS` está definida, la herramienta `fetch_url` del modelo no
+#: gana acceso a estos hosts por el hecho de que la compuerta los necesite.
+HOSTS_COMPUERTA = ("api.crossref.org", "api.openalex.org")
+QUIEN_COMPUERTA = "publication_gate"
+
+
+def is_egress_allowed(url: str, *, quien: str = "egress") -> Decision:
     """¿Se puede salir a esta URL? Devuelve la decisión con su motivo; no lanza.
 
     Orden de lo barato a lo caro: esquema → denylist → allowlist → DNS → IPs. La
@@ -139,6 +147,8 @@ def is_egress_allowed(url: str) -> Decision:
             return Decision(False, f"'{host}' está en la denylist de egress ({dominio})")
 
     permitidos_dominios = _lista(getattr(settings, "EGRESS_ALLOWED_DOMAINS", ""))
+    if permitidos_dominios and quien == QUIEN_COMPUERTA:
+        permitidos_dominios = permitidos_dominios + list(HOSTS_COMPUERTA)
     if permitidos_dominios and not any(_coincide_dominio(host, d) for d in permitidos_dominios):
         return Decision(False, f"'{host}' no está en la allowlist de egress")
 
@@ -170,7 +180,7 @@ def assert_safe_url(url: str, *, quien: str = "egress") -> Decision:
     Con la versión que devuelve un booleano se puede olvidar mirar el resultado;
     con esta, olvidarlo no compila el fallo silencioso.
     """
-    decision = is_egress_allowed(url)
+    decision = is_egress_allowed(url, quien=quien)
     if not decision.allowed:
         logger.warning("Egress bloqueado en %s: %s (%s)", quien, url, decision.reason)
         raise EgressBlocked(decision.reason)
