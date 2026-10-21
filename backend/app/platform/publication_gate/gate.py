@@ -7,7 +7,10 @@ referencias, 2) validar su estructura, 3) marcadores, 4) estructura IMRaD,
 5) criterios `not_implemented`.
 """
 from dataclasses import dataclass, field
+import logging
 from typing import Any
+
+from app.platform.metrics import observe_gate_criterion
 
 from app.platform.publication_gate.config import GateConfig
 from app.platform.publication_gate.placeholders import check_placeholders
@@ -15,6 +18,9 @@ from app.platform.publication_gate.reference_resolver import check_reference_exi
 from app.platform.publication_gate.references import check_reference_structure
 from app.platform.publication_gate.structure import check_structure
 from app.platform.publication_gate.types import CriterionResult
+
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -65,6 +71,12 @@ async def evaluate_gate(
         check_structure(text, config.sections, config.titles),
     ]
     pending = [{"id": p.id, "phase": p.phase} for p in config.pending]
+    for c in criteria:
+        observe_gate_criterion(c.criterion, c.status.value)
+        logger.info(
+            "Compuerta: %s → %s", c.criterion, c.status.value,
+            extra={"event": "gate_criterion", "criterion": c.criterion, "status": c.status.value},
+        )
     return GateReport(
         criteria=criteria, sources=enriched, pending=pending, responsible=dict(config.responsible)
     )

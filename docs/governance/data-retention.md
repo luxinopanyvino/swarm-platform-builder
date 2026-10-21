@@ -22,15 +22,7 @@ Qué guarda la plataforma, cuánto tiempo y cómo se purga. Las ventanas viven e
 | `projects`, `agent_profiles`, `saved_flows` | configuración de la plataforma | No |
 | `articles` | título, cuerpo, resumen, autores, HTML maquetado | Nombres de autor |
 | `user_project_access` | qué usuario accede a qué proyecto | Referencia |
-| `publication_gate_reports` | informe de la compuerta de publicación: evidencia por criterio, huella del texto y fuentes resueltas (títulos y autores de las referencias) | Nombres de autor |
 | Figuras (`backend/app/.assets/`) | imágenes subidas a los artículos | Posible |
-
-**`publication_gate_reports` (SPEC-032, T20.6): hoy no caduca.** Es evidencia de por
-qué un texto se aprobó o se bloqueó, y se conserva con el artículo (se borra en
-cascada con él). La política objetivo —mientras exista un artículo `published`; para
-los demás, 90 días, alineada con `agent_runs`, ajuste `RETENTION_GATE_REPORTS_DAYS`—
-**aún no está implementada**: la trae T20.13 (#445). Hasta entonces este documento
-dice lo que el código hace, que es no purgar.
 
 **No se purgan por antigüedad, y es deliberado.** Son el producto, no su rastro:
 borrarlos por edad destruiría el trabajo de alguien. Se eliminan por decisión
@@ -43,6 +35,7 @@ explícita de su propietario, no por un proceso automático.
 | `audit_log` | actor, acción, objetivo, **IP**, correo enmascarado | **Sí** (IP) | **365 días** | `RETENTION_AUDIT_LOG_DAYS` |
 | `agent_runs` | entrada y salida de cada ejecución del pipeline | Posible | **90 días** | `RETENTION_AGENT_RUNS_DAYS` |
 | `agent_run_steps` | traza de explicabilidad: paso a paso de cada ejecución | Posible | **90 días** | `RETENTION_AGENT_RUN_STEPS_DAYS` |
+| `publication_gate_reports` | informe de la compuerta de publicación: evidencia por criterio, huella del texto y fuentes resueltas (títulos y autores de las referencias) | Nombres de autor | **90 días**, solo de artículos no publicados | `RETENTION_GATE_REPORTS_DAYS` |
 | `flow_checkpoints` | estado intermedio para reanudar un pipeline | Posible | **30 días** | `RETENTION_CHECKPOINTS_DAYS` |
 | `notifications` (leídas) | avisos en la aplicación | Referencia | **90 días** | `RETENTION_NOTIFICATIONS_DAYS` |
 | Figuras huérfanas | imágenes que ningún artículo referencia | Posible | **30 días** | `RETENTION_ORPHAN_ASSETS_DAYS` |
@@ -63,6 +56,13 @@ Por qué esas ventanas:
   que el usuario escribió, así que va a la par. Guarda **resúmenes recortados**
   (4.000 caracteres) y no los prompts completos: la traza explica una ejecución,
   no es un segundo almacén del artículo.
+- **`publication_gate_reports`, 90 días y solo si el artículo no está publicado**
+  (SPEC-032/AC16). El informe es la evidencia de por qué un texto se aprobó o se
+  bloqueó, así que **no caduca mientras exista un artículo `published`** que lo
+  necesite; los de borradores, rechazados o en revisión caducan a la par que las
+  ejecuciones del pipeline (`agent_runs`), que es de donde sale la evidencia. Se
+  borran además en cascada con el artículo. Contienen títulos y autores de las
+  referencias, nunca el texto del manuscrito.
 - **`flow_checkpoints`, 30 días.** Son puntos de reanudación. Un checkpoint de hace
   un mes ya no se va a reanudar; solo ocupa y conserva borradores.
 - **`notifications`, 90 días, solo las leídas.** Una notificación **sin leer** sigue
@@ -90,6 +90,13 @@ Decisiones ya tomadas en el código, no aspiraciones:
 - **El `audit_log` no tiene clave ajena a `users`**: guarda el UUID del actor, que
   identifica sin arrastrar datos personales.
 - **No se guarda nunca la contraseña intentada**, ni siquiera enmascarada.
+- **A Crossref y OpenAlex solo salen metadatos de referencias** (SPEC-032/AC16): DOI, o
+  título y autores de una referencia ya citada, por la puerta `platform/egress.py`. **Nunca
+  el texto del manuscrito**, que puede ser inédito. Los dos hosts se añaden a
+  `EGRESS_ALLOWED_DOMAINS` solo para la compuerta; la herramienta `fetch_url` del modelo
+  no los gana. El `User-Agent` lleva un correo de contacto de configuración
+  (`PUBLICATION_GATE_CONTACT_EMAIL`), no del repositorio. Revisar las condiciones de uso
+  de ambos servicios antes de enviar títulos de trabajos no publicados (FW §20.7).
 - **Las claves de API no se versionan ni se exponen**: `ANTHROPIC_API_KEY` se
   inyecta por entorno y la interfaz solo informa de si está presente.
 
@@ -115,6 +122,7 @@ retention:
   audit_log_days: 365
   agent_runs_days: 90
   agent_run_steps_days: 90
+  gate_reports_days: 90
   checkpoints_days: 30
   notifications_days: 90
   orphan_assets_days: 30

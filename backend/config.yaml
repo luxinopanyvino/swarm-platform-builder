@@ -100,6 +100,12 @@ retention:
   checkpoints_days: 30
   notifications_days: 90
   orphan_assets_days: 30
+  gate_reports_days: 90
+
+# Compuerta de publicación (SPEC-032, ADR-0011).
+publication:
+  gate_enforce: true          # false = registra y avisa, sin bloquear (despliegue gradual)
+  gate_contact_email: ""      # se envía a Crossref/OpenAlex en el User-Agent
 
 # Coordinación entre workers (SPEC-018/T4.3): pub/sub de eventos SSE, decisiones
 # HITL y tickets de stream. Necesario para correr con más de un worker; con uno
