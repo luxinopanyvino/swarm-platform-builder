@@ -164,17 +164,30 @@ async def test_role_change_is_audited(db, client):
 
 @pytest.mark.asyncio
 async def test_publishing_an_article_is_audited(db, client):
+    """Publicar pasa por la compuerta (SPEC-032): lo hace un admin que no es el
+    propietario, con un informe vigente y sin bloqueantes y una revisión que aprueba."""
+    from app.models import PublicationGateReportModel
+    from app.platform.publication_gate.service import text_sha256
+
     author = await _make_user("redactora@ejemplo.com", UserRole.REDACTOR)
+    admin = await _make_user("admin@ejemplo.com", UserRole.ADMIN)
     async with AsyncSessionLocal() as session:
         article = ArticleModel(
-            title="Un artículo", body="cuerpo", status=ArticleStatus.DRAFT, author_id=author.id
+            title="Un artículo", body="cuerpo", status=ArticleStatus.IN_REVIEW,
+            author_id=author.id, responsible_author_id=author.id,
         )
         session.add(article)
         await session.commit()
         await session.refresh(article)
+        session.add(PublicationGateReportModel(
+            article_id=article.id, text_sha256=text_sha256("cuerpo"), sources=[],
+            criteria={"passed": True, "criteria": [], "pending": [],
+                      "review": {"review_status": "ok", "approval_score": 90, "coherent": True}},
+        ))
+        await session.commit()
 
     async with client as ac:
-        token = await _token(ac, author.email)
+        token = await _token(ac, admin.email)
         response = await ac.post(
             f"/api/v1/articles/{article.id}/publish",
             headers={"Authorization": f"Bearer {token}"},
@@ -184,7 +197,7 @@ async def test_publishing_an_article_is_audited(db, client):
     entries = await _entries(AuditAction.ARTICLE_PUBLISHED)
     assert len(entries) == 1
     assert entries[0].target_id == str(article.id)
-    assert entries[0].actor_id == author.id
+    assert entries[0].actor_id == admin.id
 
 
 @pytest.mark.asyncio

@@ -14,6 +14,7 @@ from app.models.audit_log import AuditLogModel
 from app.platform.publication_gate.service import text_sha256
 
 CUERPO = "## Introducción\nTexto."
+REVISION_OK = {"review_status": "ok", "approval_score": 90, "coherent": True}
 
 
 async def _escenario(*, informe="vigente", responsable=True, estado=ArticleStatus.IN_REVIEW):
@@ -34,7 +35,7 @@ async def _escenario(*, informe="vigente", responsable=True, estado=ArticleStatu
             s.add(PublicationGateReportModel(
                 article_id=art.id,
                 text_sha256=text_sha256(CUERPO if informe != "viejo" else "otro texto"),
-                criteria={"passed": informe != "bloqueado", "criteria": [], "pending": []},
+                criteria={"passed": informe != "bloqueado", "criteria": [], "pending": [], "review": REVISION_OK},
                 sources=[],
             ))
             await s.commit()
@@ -102,7 +103,7 @@ async def test_un_admin_propietario_tampoco(db, client):
         await s.commit()
         await s.refresh(art)
         s.add(PublicationGateReportModel(article_id=art.id, text_sha256=text_sha256(CUERPO),
-                                         criteria={"passed": True}, sources=[]))
+                                         criteria={"passed": True, "review": REVISION_OK}, sources=[]))
         await s.commit()
     assert (await _aprobar(client, admin, proyecto, art)).status_code == 403
 
