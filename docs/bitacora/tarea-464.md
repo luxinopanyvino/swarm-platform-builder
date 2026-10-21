@@ -28,12 +28,17 @@
   quien llama a `jwt.decode` sin restringir `algorithms` y con claves asimétricas. Aquí `app/core/security.py` firma y verifica con
   **HS256 y una clave simétrica** (`SECRET_KEY`), y el único `jwt.decode` pasa `algorithms=[settings.ALGORITHM]`. Se añade
   `--ignore-vuln PYSEC-2026-4298` en `ci.yml` con ese razonamiento, junto a la de `PYSEC-2026-1325` que ya existía por el mismo motivo.
+- **Frontend (`npm audit`, 1 alto):** el job también falló por `follow-redirects` 1.16.0 (dos avisos, `GHSA-q3jh-wrc6-jgq8` y
+  `GHSA-8r9p-f939-6h3c`), dependencia transitiva con arreglo sin cambio de versión mayor. `npm audit fix` la sube a **1.16.1**; el diff
+  de `frontend/package-lock.json` es de 3 líneas. Los dos avisos **moderados** de `react-router` siguen: solo se arreglan con un salto
+  de versión mayor (`--force`), que `ci.yml` ya documenta como tarea aparte, y el job solo bloquea en `high`.
 - **Test que sostiene las dos excepciones** (`backend/tests/test_jwt_algorithm_pinned.py`, 4 casos): falla si el algoritmo deja de ser
   HMAC, si algún `jwt.decode` no restringe `algorithms`, si aparece otro uso de `jose` o si la CI pierde las excepciones. Así dejan
   de ser una tolerancia silenciosa.
 
 ### Definition of Done
 
+- [x] `npm audit --omit=dev --audit-level=high` → sale con 0; `npm run build` y `npm run build:public` pasan.
 - [x] `pip-audit --require-hashes -r requirements.txt --ignore-vuln PYSEC-2026-1325 --ignore-vuln PYSEC-2026-4298` → «No known
   vulnerabilities found».
 - [x] El lock se instala con `--require-hashes` en un Python 3.12 limpio y la suite pasa con las versiones nuevas: **1392 pasados, 4
