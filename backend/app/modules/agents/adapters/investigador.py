@@ -132,9 +132,11 @@ async def run_investigador(state: Dict[str, Any]) -> Dict[str, Any]:
                     seen_docs[doc_id] = {
                         "doc_title": (item.get("doc_title") or "").strip(),
                         "doc_authors": (item.get("doc_authors") or "").strip(),
-                        "journal": "",
-                        "year": "",
-                        "doi": "",
+                        # Se conserva lo que el documento traiga (también el DOI
+                        # aportado a mano); no se pisa con vacío (SPEC-032/AC2).
+                        "journal": str(item.get("journal") or "").strip(),
+                        "year": str(item.get("year") or "").strip(),
+                        "doi": str(item.get("doi") or "").strip(),
                         "url": "",
                         "filename": filename,
                         "snippet": text[:200],

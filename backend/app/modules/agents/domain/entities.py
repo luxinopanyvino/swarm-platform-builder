@@ -21,6 +21,8 @@ class AgentState(TypedDict):
     approval_score: float
     formatted_text: str
     scientific_format: str
+    # Fuentes que el Formateador dejó fuera por incompletas, con los campos que faltan (SPEC-032/AC2)
+    reference_issues: List[Dict[str, Any]]
     published_url: str
     metadata: Dict[str, Any]
     flow_sequence: List[str]
