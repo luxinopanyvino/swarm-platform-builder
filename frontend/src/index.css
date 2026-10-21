@@ -890,6 +890,16 @@ textarea.input { resize: vertical; min-height: 80px; line-height: var(--leading-
 .react-flow__edge.flow-issue-error .react-flow__edge-path { stroke: var(--error); stroke-width: 2.5; }
 .react-flow__edge.flow-issue-warning .react-flow__edge-path { stroke: var(--warning); stroke-width: 2.5; }
 
+/* Botón de borrar de la arista seleccionada (BUG-003). */
+.flow-edge-delete {
+  position: absolute; pointer-events: all; width: 22px; height: 22px;
+  display: flex; align-items: center; justify-content: center; padding: 0;
+  background: var(--bg-surface); color: var(--error);
+  border: 1px solid var(--error); border-radius: 50%; cursor: pointer;
+  box-shadow: var(--shadow-2);
+}
+.flow-edge-delete:hover, .flow-edge-delete:focus-visible { background: var(--error-bg); }
+
 /* React Flow custom node */
 .agent-node {
   background: var(--bg-surface);

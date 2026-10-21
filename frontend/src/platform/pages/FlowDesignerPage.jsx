@@ -10,6 +10,7 @@ import '@xyflow/react/dist/style.css';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Pencil, Plus, Save, Play, Trash2, GitBranch, Upload, AlertTriangle } from 'lucide-react';
 import { nodeTypes } from '../components/flow/AgentNode';
+import { edgeTypes } from '../components/flow/DeletableEdge';
 import { agentIds, agentMeta, hasOwnRag, listAgents, ragOwner } from '../agentCatalog';
 import { AgentCreateModal, AgentEditorModal } from '../components/agents/AgentEditorModal';
 import { useFlowStore } from '../store/flowStore';
@@ -88,10 +89,14 @@ export default function FlowDesignerPage() {
     issues.forEach((i) => i.edges.forEach((e) => {
       if (marks.get(e) !== ERROR) marks.set(e, i.severity);
     }));
-    return edges.map((e) => (marks.has(e.id)
-      ? { ...e, className: `flow-issue-${marks.get(e.id)}`, style: { ...e.style, stroke: `var(--${marks.get(e.id) === ERROR ? 'error' : 'warning'})` } }
-      : e));
-  }, [edges, issues]);
+    const names = new Map(nodes.map((n) => [n.id, n.data?.label || n.data?.agentId || n.id]));
+    return edges.map((e) => {
+      const withLabel = { ...e, ariaLabel: `conexión de ${names.get(e.source)} a ${names.get(e.target)}` };
+      return marks.has(e.id)
+        ? { ...withLabel, className: `flow-issue-${marks.get(e.id)}`, style: { ...e.style, stroke: `var(--${marks.get(e.id) === ERROR ? 'error' : 'warning'})` } }
+        : withLabel;
+    });
+  }, [nodes, edges, issues]);
 
   const buildPaletteAgent = useCallback((agent) => {
     const meta = agentMeta(agent.slug) || agentMeta(agent.id) || {};
@@ -453,8 +458,9 @@ export default function FlowDesignerPage() {
           onDrop={onDrop}
           onDragOver={onDragOver}
           nodeTypes={nodeTypes}
+          edgeTypes={edgeTypes}
           fitView
-          deleteKeyCode="Delete"
+          deleteKeyCode={['Backspace', 'Delete']}
         >
           <Background variant="dots" gap={20} size={1} />
           <Controls />
