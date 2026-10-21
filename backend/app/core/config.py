@@ -93,6 +93,12 @@ class Settings(BaseModel):
     # hasta que ese test forme parte de la rutina.
     AGENT_ENGINE: str = "adapters"
 
+    # VAL-004: con `false`, las reglas de dependencia entre agentes que son
+    # bloqueantes se registran como aviso y no rechazan. Es el modo de arranque
+    # para ver qué flujos ya guardados quedarían inválidos antes de bloquearlos.
+    # Los ciclos y las autoconexiones bloquean siempre.
+    FLOW_RULES_ENFORCE: bool = True
+
     # Ollama
     OLLAMA_BASE_URL: str = "http://localhost:11434"
     OLLAMA_MODEL: str = "llama3.2:1b"

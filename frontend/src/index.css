@@ -874,6 +874,22 @@ textarea.input { resize: vertical; min-height: 80px; line-height: var(--leading-
   backdrop-filter: blur(12px);
 }
 
+/* Problemas del grafo (VAL-004): se marcan en el lienzo, no solo en una lista. */
+.flow-issues {
+  list-style: none; margin: 0; padding: var(--space-2) var(--space-3);
+  max-width: 340px; display: flex; flex-direction: column; gap: var(--space-1);
+  background: var(--bg-surface); border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg); box-shadow: var(--shadow-2);
+}
+.flow-issues .flow-issue { display: flex; align-items: flex-start; gap: var(--space-2); font-size: var(--font-size-xs); }
+.flow-issues .flow-issue svg { flex: none; margin-top: 2px; }
+.flow-issues .flow-issue-error { color: var(--error); }
+.flow-issues .flow-issue-warning { color: var(--warning); }
+.react-flow__node.flow-issue-error .agent-node { border-color: var(--error); }
+.react-flow__node.flow-issue-warning .agent-node { border-color: var(--warning); }
+.react-flow__edge.flow-issue-error .react-flow__edge-path { stroke: var(--error); stroke-width: 2.5; }
+.react-flow__edge.flow-issue-warning .react-flow__edge-path { stroke: var(--warning); stroke-width: 2.5; }
+
 /* React Flow custom node */
 .agent-node {
   background: var(--bg-surface);

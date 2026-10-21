@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef } from 'react';
 import { runTarget } from '../runTarget';
 import Modal from '../components/ui/Modal';
 import { EmptyState } from '../components/ui/states';
@@ -8,14 +8,17 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Pencil, Plus, Save, Play, Trash2, GitBranch, Upload } from 'lucide-react';
+import { Pencil, Plus, Save, Play, Trash2, GitBranch, Upload, AlertTriangle } from 'lucide-react';
 import { nodeTypes } from '../components/flow/AgentNode';
 import { agentIds, agentMeta, hasOwnRag, listAgents, ragOwner } from '../agentCatalog';
 import { AgentCreateModal, AgentEditorModal } from '../components/agents/AgentEditorModal';
 import { useFlowStore } from '../store/flowStore';
-import { blocking, validateConnection, validateFlow } from '../flowValidation';
+import {
+  ERROR, NO_RULES, blocking, effectiveSequence, issueFromError, validateConnection, validateFlow,
+} from '../flowValidation';
 import { useProjectStore } from '../store/projectStore';
 import { agentsApi } from '../api/agents';
+import { flowsApi } from '../api/flows';
 import toast from 'react-hot-toast';
 
 //: Agentes de serie: los del proyecto activo, más el orquestador, que no es
@@ -65,6 +68,30 @@ export default function FlowDesignerPage() {
   const [showNewAgent, setShowNewAgent] = React.useState(false);
   const reactFlowWrapper = useRef(null);
   const [rfInstance, setRfInstance] = React.useState(null);
+  // Reglas de dependencia entre agentes: las declara el proyecto, no el lienzo.
+  const [rules, setRules] = React.useState(NO_RULES);
+
+  const issues = useMemo(() => validateFlow(nodes, edges, rules), [nodes, edges, rules]);
+  const errors = useMemo(() => blocking(issues), [issues]);
+
+  // Marca en el lienzo lo que falla: el nodo y la arista implicados, no solo un texto.
+  const displayNodes = useMemo(() => {
+    const marks = new Map();
+    issues.forEach((i) => i.nodes.forEach((n) => {
+      if (marks.get(n) !== ERROR) marks.set(n, i.severity);
+    }));
+    return nodes.map((n) => (marks.has(n.id) ? { ...n, className: `flow-issue-${marks.get(n.id)}` } : n));
+  }, [nodes, issues]);
+
+  const displayEdges = useMemo(() => {
+    const marks = new Map();
+    issues.forEach((i) => i.edges.forEach((e) => {
+      if (marks.get(e) !== ERROR) marks.set(e, i.severity);
+    }));
+    return edges.map((e) => (marks.has(e.id)
+      ? { ...e, className: `flow-issue-${marks.get(e.id)}`, style: { ...e.style, stroke: `var(--${marks.get(e.id) === ERROR ? 'error' : 'warning'})` } }
+      : e));
+  }, [edges, issues]);
 
   const buildPaletteAgent = useCallback((agent) => {
     const meta = agentMeta(agent.slug) || agentMeta(agent.id) || {};
@@ -141,6 +168,8 @@ export default function FlowDesignerPage() {
   useEffect(() => {
     let mounted = true;
     loadPaletteAgents();
+    // mejor-esfuerzo: sin reglas el lienzo valida lo estructural y el backend, el resto.
+    flowsApi.rules().then((r) => { if (mounted) setRules(r); }).catch(() => {});
     // mejor-esfuerzo: el desplegable de modelos; el lienzo funciona sin él.
     agentsApi.getModels().then((response) => {
       if (mounted) {
@@ -243,7 +272,6 @@ export default function FlowDesignerPage() {
   }, [paletteAgents, rfInstance]);
 
   const handleSave = async () => {
-    const errors = blocking(validateFlow(nodes, edges));
     if (errors.length > 0) {
       toast.error(errors[0].message);
       return;
@@ -257,8 +285,7 @@ export default function FlowDesignerPage() {
       clearLocalDraft();
       toast.success('Flujo guardado');
     } catch (err) {
-      const detail = err?.response?.data?.detail;
-      toast.error(detail?.issues?.[0]?.message || detail?.message || 'Error al guardar');
+      toast.error(issueFromError(err) || 'Error al guardar');
     } finally {
       setSaving(false);
     }
@@ -308,6 +335,7 @@ export default function FlowDesignerPage() {
   const handleRun = async () => {
     const titleValue = runTitle.trim();
     if (!titleValue && !existingArticleId) { toast.error('Escribe un título para el artículo'); return; }
+    if (errors.length > 0) { toast.error(errors[0].message); return; }
     try {
       let articleId;
       if (existingArticleId) {
@@ -322,7 +350,8 @@ export default function FlowDesignerPage() {
       }
       setShowRunModal(false);
       const agentNodes = nodes.filter(n => n.type === 'agent');
-      const flowSequence = agentNodes.map(n => n.data.agentId);
+      // En el orden en que se ejecutan: el de las aristas, que es el que se validó.
+      const flowSequence = effectiveSequence(nodes, edges);
       // Build per-agent model settings from node data
       const agentSettings = {};
       agentNodes.forEach(n => {
@@ -362,7 +391,7 @@ export default function FlowDesignerPage() {
       });
     } catch (err) {
       console.error('Error al iniciar pipeline', err);
-      toast.error(err?.response?.data?.detail || 'Error al iniciar pipeline');
+      toast.error(issueFromError(err) || err?.response?.data?.detail || 'Error al iniciar pipeline');
     }
   };
 
@@ -414,8 +443,8 @@ export default function FlowDesignerPage() {
       {/* Canvas */}
       <div className="flow-canvas-area" ref={reactFlowWrapper}>
         <ReactFlow
-          nodes={nodes}
-          edges={edges}
+          nodes={displayNodes}
+          edges={displayEdges}
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
           onConnect={onConnect}
@@ -437,6 +466,22 @@ export default function FlowDesignerPage() {
             maskColor="rgba(244,246,249,0.6)"
           />
 
+          {issues.length > 0 && (
+            <Panel position="bottom-left">
+              <ul className="flow-issues" aria-label="Problemas del flujo" role="status">
+                {issues.map((issue, i) => (
+                  <li key={`${issue.code}-${i}`} className={`flow-issue flow-issue-${issue.severity}`}>
+                    <AlertTriangle size={14} aria-hidden="true" />
+                    <span>
+                      <span className="sr-only">{issue.severity === ERROR ? 'Error: ' : 'Aviso: '}</span>
+                      {issue.message}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </Panel>
+          )}
+
           {/* Toolbar */}
           <Panel position="top-center">
             <div className="flow-toolbar">
@@ -457,7 +502,8 @@ export default function FlowDesignerPage() {
                 {saving ? 'Guardando…' : 'Guardar'}
               </button>
               <button className="btn btn-primary btn-sm" onClick={() => setShowRunModal(true)}
-                disabled={nodes.filter(n => n.type === 'agent').length === 0}>
+                disabled={nodes.filter(n => n.type === 'agent').length === 0 || errors.length > 0}
+                title={errors.length > 0 ? errors[0].message : undefined}>
                 <Play size={14} />
                 Ejecutar
               </button>

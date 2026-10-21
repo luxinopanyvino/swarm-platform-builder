@@ -71,3 +71,22 @@ graph:
       # está en el flujo, para que la fuente entre en la investigación y en las
       # citas; si no, al redactor, que al menos la usará como contexto.
       retry_targets: [investigador, redactor]
+
+  # Reglas del Flow Designer (VAL-004). Las valida el backend al guardar un flujo
+  # y al ejecutarlo, y el lienzo las aplica para avisar mientras se dibuja.
+  # «Antes» es el orden de ejecución: el de las aristas y, donde no hay arista que
+  # lo decida, el orden en que se soltaron los agentes en el lienzo.
+  # Los ciclos y las autoconexiones siempre bloquean; no son configurables.
+  flow_rules:
+    orphans: warning        # un agente sin ninguna conexión en un flujo de varios
+    requires:
+      # No se publica lo que nadie ha escrito. Un artículo que ya tiene cuerpo sí
+      # puede re-publicarse sin redactor en el flujo.
+      - agent: publicador
+        any_of: [redactor]
+        severity: error
+        satisfied_by_existing_output: true
+      # Publicar sin pasar por revisión o formato es posible, pero no lo normal.
+      - agent: publicador
+        any_of: [formateador, revisor]
+        severity: warning

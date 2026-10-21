@@ -34,6 +34,7 @@ from app.platform.capabilities.registry import get as get_capability
 from app.platform.engine.agents import AgentSpec, register_agent
 from app.platform.engine.graph import GraphSpec
 from app.platform.engine.routing import ReviewLoop
+from app.platform.flow_validation import ERROR, NO_RULES, WARNING, FlowRules, Requirement
 
 logger = logging.getLogger(__name__)
 
@@ -62,6 +63,8 @@ class ProjectPackage:
     graph: GraphSpec
     #: nombre de agente → ruta de su `.agent.md`, para la siembra.
     profiles: Dict[str, Path]
+    #: reglas de dependencia del Flow Designer (`graph.flow_rules`); sin ellas, solo las estructurales.
+    flow_rules: FlowRules = NO_RULES
 
     def profile_path(self, agent: str) -> Optional[Path]:
         return self.profiles.get(agent)
@@ -175,6 +178,36 @@ def _grafo(datos: Dict[str, Any], nombres: set[str]) -> GraphSpec:
     return GraphSpec(sequence=secuencia, loops=tuple(bucles))
 
 
+def _reglas_de_flujo(datos: Dict[str, Any], nombres: set[str]) -> FlowRules:
+    crudo = (datos.get("graph") or {}).get("flow_rules") or {}
+    _exigir(isinstance(crudo, dict), "'graph.flow_rules' debe ser un mapa")
+
+    huerfanos = crudo.get("orphans", WARNING)
+    _exigir(
+        huerfanos in (None, ERROR, WARNING),
+        f"'flow_rules.orphans' debe ser 'error', 'warning' o null, no {huerfanos!r}",
+    )
+
+    requisitos: List[Requirement] = []
+    for entrada in crudo.get("requires") or []:
+        _exigir(isinstance(entrada, dict), "Cada entrada de 'flow_rules.requires' debe ser un mapa")
+        agente = str(entrada.get("agent") or "").strip()
+        previos = tuple(entrada.get("any_of") or ())
+        gravedad = entrada.get("severity", ERROR)
+        _exigir(agente in nombres, f"'flow_rules.requires' nombra a '{agente}', que no está declarado")
+        _exigir(bool(previos), f"La regla de '{agente}' no dice qué necesita antes ('any_of')")
+        for previo in previos:
+            _exigir(previo in nombres, f"La regla de '{agente}' necesita a '{previo}', que no está declarado")
+        _exigir(gravedad in (ERROR, WARNING), f"La regla de '{agente}': severidad {gravedad!r} no válida")
+        requisitos.append(Requirement(
+            agent=agente,
+            any_of=previos,
+            severity=gravedad,
+            satisfied_by_existing_output=bool(entrada.get("satisfied_by_existing_output", False)),
+        ))
+    return FlowRules(requires=tuple(requisitos), orphans=huerfanos)
+
+
 def load_from(raiz: Path) -> ProjectPackage:
     """Lee y valida el proyecto que hay en `raiz`."""
     plantilla = raiz / PLANTILLA
@@ -200,6 +233,7 @@ def load_from(raiz: Path) -> ProjectPackage:
         agents=agentes,
         graph=grafo,
         profiles=perfiles,
+        flow_rules=_reglas_de_flujo(datos, {a.name for a in agentes}),
     )
 
 
