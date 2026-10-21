@@ -19,7 +19,7 @@ from app.platform.project_context import ProjectContext
 from app.models import AgentRunModel, AgentRunStepModel
 from app.modules.agents.domain.entities import AgentState
 from app.modules.agents.domain import alejandria
-from app.platform.engine.agents import MODO_CAPACIDADES, bundle_for, resolve_runner
+from app.platform.engine.agents import MODO_CAPACIDADES, bundle_for, resolve_runner, uses_llm
 from app.platform.capabilities.binding import CLAVE_ESTADO as CLAVE_CAPACIDADES
 from app.platform.engine.graph import GraphSpec, build_graph
 from app.platform.engine.routing import make_review_router, next_after
@@ -305,7 +305,12 @@ def make_node_wrapper(agent_name: str, run_fn):
             "agent_name": agent_name,
             "step_index": state.get("current_step_index", 0),
             "iteration": state.get("loop_count", 0),
-            "model": resolve_agent_model(agent_name, state.get("agent_settings")),
+            # Sin capacidad de LLM declarada no hay modelo: antes se resolvía uno para
+            # todos y la traza decía que el Publicador usaba un modelo (SPEC-032/AC9).
+            "model": (
+                resolve_agent_model(agent_name, state.get("agent_settings"))
+                if uses_llm(agent_name) else None
+            ),
             "params": explainability.params_of(agent_name, state),
             "input_digest": explainability.input_digest(state),
         }
