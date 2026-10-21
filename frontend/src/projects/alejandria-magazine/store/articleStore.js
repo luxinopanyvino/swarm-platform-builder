@@ -100,6 +100,12 @@ export const useArticleStore = create((set, get) => ({
     return data;
   },
 
+  setSourceDoi: async (id, index, doi) => {
+    const data = await articlesApi.setSourceDoi(id, index, doi);
+    set({ gateReport: data });
+    return data;
+  },
+
   declareResponsibleAuthor: async (id, userId) => {
     const data = await articlesApi.setResponsibleAuthor(id, userId);
     set(s => ({

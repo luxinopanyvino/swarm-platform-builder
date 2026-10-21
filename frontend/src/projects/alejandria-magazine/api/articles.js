@@ -15,6 +15,9 @@ export const articlesApi = {
   // Compuerta de publicación (SPEC-032): último informe y si describe el texto actual.
   gateReport: (id) => api.get(`/api/v1/articles/${id}/gate-report`).then(r => r.data),
   reevaluateGate: (id) => api.post(`/api/v1/articles/${id}/gate-report`).then(r => r.data),
+  // Aporta a mano el DOI de una referencia (índice del informe, desde 1) y reevalúa.
+  setSourceDoi: (id, index, doi) =>
+    api.put(`/api/v1/articles/${id}/gate-report/sources/${index}`, { doi }).then(r => r.data),
   // Autor humano responsable (FW V13): sin él no se puede aprobar.
   setResponsibleAuthor: (id, userId) =>
     api.put(`/api/v1/articles/${id}/responsible-author`, { user_id: userId }).then(r => r.data),

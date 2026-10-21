@@ -58,7 +58,7 @@ export default function ArticleDetailPage() {
   const navigate = useNavigate();
   const { user } = useAuthStore();
   const { currentArticle, fetchArticle, approveArticle, rejectArticle, assignReviewer, updateArticle, publishArticle, error,
-    gateReport, fetchGateReport, reevaluateGate, declareResponsibleAuthor } = useArticleStore();
+    gateReport, fetchGateReport, reevaluateGate, setSourceDoi, declareResponsibleAuthor } = useArticleStore();
   const [gateLoading, setGateLoading] = useState(true);
   const [gateError, setGateError] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -126,6 +126,20 @@ export default function ArticleDetailPage() {
     finally { setWorking(false); }
   };
 
+  // Acciones que ofrece el panel de la compuerta (el panel no sabe ejecutarlas).
+  const handleGateAction = (action) => {
+    if (action.action === 'rerun_agent') handleOpenPipelineModal(action.agent);
+    else if (action.action === 'edit_text') handleEditBody();
+  };
+
+  const handleProvideDoi = async (index, doi) => {
+    setWorking(true);
+    try {
+      await setSourceDoi(id, index, doi);
+      toast.success('DOI aportado: compuerta reevaluada');
+    } finally { setWorking(false); }
+  };
+
   const handleDeclareResponsible = async () => {
     setWorking(true);
     try {
@@ -169,7 +183,7 @@ export default function ArticleDetailPage() {
   // una tercera copia de la misma lista, y las tres se editaban por separado.
   const ORDERED_AGENTS = Object.keys(AGENT_CATALOG);
 
-  const handleOpenPipelineModal = async () => {
+  const handleOpenPipelineModal = async (fromAgent) => {
     setLoadingRuns(true);
     setShowPipelineModal(true);
     setUsedDefaultFlow(false);
@@ -196,7 +210,10 @@ export default function ArticleDetailPage() {
       const seenInHistory = new Set();
       runs.forEach(r => seenInHistory.add(r.agent_name));
 
-      if (seenInHistory.size > 0) {
+      if (typeof fromAgent === 'string' && allAgents.includes(fromAgent)) {
+        // Corrección sugerida por la compuerta: desde el agente responsable en adelante.
+        setSelectedAgents(allAgents.slice(allAgents.indexOf(fromAgent)));
+      } else if (seenInHistory.size > 0) {
         // Preserve canonical order for the pre-selection
         setSelectedAgents(allAgents.filter(a => seenInHistory.has(a)));
       } else {
@@ -459,6 +476,8 @@ export default function ArticleDetailPage() {
             onRetry={cargarCompuerta}
             busy={working}
             onReevaluate={(isAuthor || isReviewer) && article.status !== 'published' ? handleReevaluate : null}
+            onAction={(isAuthor || isReviewer) && article.status !== 'published' ? handleGateAction : null}
+            onProvideDoi={(isAuthor || isReviewer) && article.status !== 'published' ? handleProvideDoi : null}
           />
 
           <div className="card">

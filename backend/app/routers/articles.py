@@ -505,6 +505,53 @@ async def reevaluate_gate_report(
     return _gate_payload(row, article)
 
 
+class SourceDoiDTO(BaseModel):
+    doi: str
+
+
+@router.put("/{article_id}/gate-report/sources/{index}")
+async def set_source_doi(
+    article_id: UUID,
+    index: int,
+    body: SourceDoiDTO,
+    token_data=Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+):
+    """Aporta a mano el DOI de una referencia (`index` es el del informe, desde 1) y reevalúa.
+
+    El DOI no se da por bueno: la compuerta lo resuelve contra Crossref/OpenAlex y
+    exige que título, autores y año coincidan (SPEC-032/AC3), así que aportarlo no
+    abre ninguna excepción. Autor, revisor asignado o administrador; un artículo
+    publicado no se toca.
+    """
+    from app.modules.agents.domain import alejandria
+    from app.platform.publication_gate.reference_resolver import normalize_doi
+    from app.platform.publication_gate.references import is_citable
+    from app.platform.publication_gate.service import evaluate_and_store, latest_report
+
+    article = await _load_for_gate(session, article_id, token_data)
+    if article.status == ArticleStatus.PUBLISHED:
+        raise HTTPException(status_code=409, detail="Un artículo publicado no se modifica")
+    config = alejandria.package().gate
+    if config is None:
+        raise HTTPException(status_code=404, detail="El proyecto no declara una compuerta de publicación")
+    doi = normalize_doi(body.doi)
+    if not doi.startswith("10.") or "/" not in doi:
+        raise HTTPException(status_code=422, detail="El DOI debe tener la forma 10.xxxx/…")
+    previo = await latest_report(session, article.id)
+    fuentes = [dict(s) for s in (previo.sources if previo else [])]
+    citables = [i for i, s in enumerate(fuentes) if is_citable(s)]
+    if not 1 <= index <= len(citables):
+        raise HTTPException(status_code=404, detail="No existe esa referencia en el informe")
+    fuentes[citables[index - 1]]["doi"] = doi
+    row, _ = await evaluate_and_store(
+        session, article, config, fuentes, created_by=UUID(token_data["user_id"]),
+    )
+    await session.commit()
+    await session.refresh(row)
+    return _gate_payload(row, article)
+
+
 class ResponsibleAuthorDTO(BaseModel):
     user_id: UUID
 
