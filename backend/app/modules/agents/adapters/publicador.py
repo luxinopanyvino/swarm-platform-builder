@@ -83,7 +83,11 @@ async def run_publicador(state: Dict[str, Any]) -> Dict[str, Any]:
                 logger.error(f"Article {article_id} not found in DB during publishing")
                 log("⚠️ Artículo no encontrado en la base de datos.", "error")
     except Exception as e:
-        logger.error(f"Error updating article to PUBLISHED in DB: {str(e)}")
+        # Un fallo al evaluar o guardar la compuerta no se puede tragar: el paso
+        # debe quedar `failed` para que la persona lo vea y reanude (SPEC-032 CHK031).
+        logger.error(f"Error en el Publicador (BD o compuerta): {str(e)}")
+        log(f"❌ El Publicador no pudo completar la publicación: {e}", "error")
+        raise
 
     return {
         "published_url": published_url,
