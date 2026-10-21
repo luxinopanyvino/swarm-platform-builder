@@ -18,7 +18,7 @@ Agente redactor de artículos científicos. Genera borradores académicos en Mar
 
 ## Dominio
 - Síntesis del contexto RAG en prosa académica estructurada
-- Aplicación de formato científico: Abstract, Introducción, Metodología, Resultados y Discusión
+- Aplicación de formato científico: Abstract, Introducción, Metodología, Resultados, Discusión
 - Incorporación de feedback del Revisor en ciclos de corrección
 
 ## Sesgo
