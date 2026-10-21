@@ -54,6 +54,7 @@ export default function PaperDesignPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(false);
   const [dirty, setDirty] = useState(false);
+  const [previewKey, setPreviewKey] = useState(0);
 
   // Guards against an out-of-order response overwriting a newer preview.
   const requestSeq = useRef(0);
@@ -79,7 +80,10 @@ export default function PaperDesignPage() {
     setRendering(true);
     try {
       const out = await articlesApi.previewPaper(id, current);
-      if (seq === requestSeq.current) setHtml(out);   // ignore stale responses
+      if (seq === requestSeq.current) {   // ignore stale responses
+        setHtml(out);
+        setPreviewKey(k => k + 1);
+      }
     } catch {
       if (seq === requestSeq.current) toast.error('No se pudo generar la vista previa');
     } finally {
@@ -115,6 +119,15 @@ export default function PaperDesignPage() {
       const detail = e?.response?.data?.detail;
       toast.error(detail || 'No se pudo subir la figura');
     }
+  };
+
+  // «Volver» va a un destino explícito y no a `navigate(-1)` (BUG-005): la vista
+  // previa es un iframe que se repinta con cada edición, y cada repintado puede
+  // dejar una entrada en el historial de sesión. `-1` se comía esa entrada en el
+  // primer clic y solo el segundo salía de la página.
+  const handleBack = () => {
+    if (dirty && !globalThis.confirm('Tienes cambios sin guardar. ¿Salir sin guardarlos?')) return;
+    navigate(`/dashboard/articles/${id}`);
   };
 
   const handleSave = async () => {
@@ -163,7 +176,7 @@ export default function PaperDesignPage() {
         padding: 'var(--space-3) var(--space-5)', borderBottom: '1px solid var(--border-default)',
         background: 'var(--bg-surface)', flex: 'none',
       }}>
-        <button className="btn btn-ghost btn-sm" onClick={() => navigate(-1)} aria-label="Volver">
+        <button className="btn btn-ghost btn-sm" onClick={handleBack} aria-label="Volver">
           <ArrowLeft size={15} /> Volver
         </button>
         <strong style={{ flex: 1 }}>Diseño del paper</strong>
@@ -307,6 +320,10 @@ export default function PaperDesignPage() {
         {/* ── Live preview ────────────────────────────────────────────── */}
         <div style={{ flex: 1, minWidth: 0, background: 'var(--bg-canvas)' }}>
           <iframe
+            // Cada previa es un iframe nuevo: la primera navegación de un iframe
+            // recién creado sustituye a about:blank y no añade entrada al historial,
+            // mientras que cambiar `srcdoc` de uno ya cargado sí la añade (BUG-005).
+            key={previewKey}
             title="Vista previa de la maquetación"
             srcDoc={html}
             // Static HTML+CSS only: no scripts, no same-origin (T2.2).
