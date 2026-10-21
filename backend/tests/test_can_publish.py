@@ -110,13 +110,12 @@ def test_nada_asigna_published_salvo_can_publish():
     assert len(ASIGNACION.findall(DECISION.read_text(encoding="utf-8"))) == 1
 
 
-def test_el_dominio_hexagonal_de_articulos_sigue_sin_usarse():
-    """`modules/articles` tiene su propio `ArticleStatus` y un `publish()` que no pasa por
-    la compuerta. Está excluido del test anterior solo porque nadie lo importa; si alguien
-    lo conecta, este test falla y obliga a hacerlo pasar por `can_publish`."""
+def test_el_dominio_hexagonal_de_articulos_no_vuelve():
+    """`modules/articles` tenía su propio `ArticleStatus` y un `publish()` que no pasaba por
+    la compuerta; estaba muerto y se borró (DEC-5). Si reaparece, o alguien lo importa, este
+    test falla: cualquier camino a `published` tiene que pasar por `can_publish`."""
+    assert not DOMINIO_HUERFANO.exists(), "modules/articles reapareció: debe pasar por can_publish"
     for ruta in APP.rglob("*.py"):
-        if DOMINIO_HUERFANO in ruta.parents:
-            continue
         assert "app.modules.articles" not in ruta.read_text(encoding="utf-8"), ruta
 
 
