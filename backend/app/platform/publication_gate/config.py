@@ -27,6 +27,8 @@ class GateConfig:
     sections: tuple = DEFAULT_SECTIONS
     titles: Mapping[str, Mapping[str, tuple]] = field(default_factory=dict)
     pending: tuple = ()
+    #: criterio → agente al que se devuelve el manuscrito si ese criterio bloquea.
+    responsible: Mapping[str, str] = field(default_factory=dict)
 
 
 _NUMEROS = {
@@ -103,10 +105,18 @@ def parse_gate(raw: Any) -> GateConfig:
         )
         pendientes.append(PendingCriterion(str(entrada["id"]), str(entrada["phase"])))
 
+    responsable = raw.get("responsible") or {}
+    _exigir(
+        isinstance(responsable, dict)
+        and all(isinstance(k, str) and isinstance(v, str) and v for k, v in responsable.items()),
+        "'gate.responsible' debe ser un mapa criterio → agente",
+    )
+
     return GateConfig(
         placeholders=tuple(marcadores),
         references=ResolverConfig(**valores),
         sections=secciones,
         titles=titulos,
         pending=tuple(pendientes),
+        responsible=dict(responsable),
     )

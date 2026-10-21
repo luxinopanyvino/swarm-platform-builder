@@ -282,6 +282,8 @@ def make_node_wrapper(agent_name: str, run_fn):
         enriched_state["_log"] = log_fn
         enriched_state["_emit_token"] = emit_token_fn
         enriched_state["_request_decision"] = request_decision_fn
+        # La ejecución en curso, para que quien persista un informe lo ligue a ella.
+        enriched_state["_run_id"] = run_id
 
         # Capacidades del agente (SPEC-013/T8.3/AC8). Con el flag en
         # `capabilities` se resuelven desde el registro y el agente las usa en
@@ -338,6 +340,14 @@ def make_node_wrapper(agent_name: str, run_fn):
                 end_event["formatted_text"] = res["formatted_text"]
 
             publish_event(article_id, end_event)
+
+            # SPEC-032/AC14: la compuerta bloqueó; se avisa aparte del fin del agente.
+            if res.get("gate_failed"):
+                publish_event(article_id, {
+                    "type": "gate_failed",
+                    "agent": agent_name,
+                    "blockers": res.get("gate_blockers", []),
+                })
 
             res["current_step_index"] = state.get("current_step_index", 0) + 1
             return res
